@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Penduline",
+  "version": "0.0.1",
+  "description": "Consulte et alimente tes matrices d'Eisenhower par pièce, depuis ton navigateur.",
+  "action": {
+    "default_title": "Penduline",
+    "default_popup": "popup.html"
+  },
+  "permissions": ["storage"],
+  "host_permissions": ["https://*.supabase.co/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@penduline/supabase",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Projet Supabase local (schéma + RLS + seed) de Penduline.",
+  "scripts": {
+    "start": "supabase --workdir .. start",
+    "stop": "supabase --workdir .. stop",
+    "status": "supabase --workdir .. status",
+    "reset": "supabase --workdir .. db reset",
+    "push": "supabase --workdir .. db push",
+    "diff": "supabase --workdir .. db diff",
+    "link": "supabase --workdir .. link"
+  }
+}

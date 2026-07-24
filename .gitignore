@@ -1,0 +1,18 @@
+node_modules/
+dist/
+build/
+*.local
+.env
+.env.*
+!.env.example
+.DS_Store
+.vite/
+apps/extension/dist/
+apps/web/dist/
+coverage/
+*.log
+
+# Supabase (artefacts locaux du CLI)
+apps/supabase/.branches/
+apps/supabase/.temp/
+apps/supabase/.env

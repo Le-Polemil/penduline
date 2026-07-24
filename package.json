@@ -1,0 +1,19 @@
+{
+  "name": "penduline",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Matrices d'Eisenhower par pièce de la maison — web + extension Chrome, comptes Supabase",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @penduline/web",
+    "build": "npm run build -w @penduline/shared && npm run build -w @penduline/web && npm run build -w @penduline/extension",
+    "build:ext": "npm run build -w @penduline/extension",
+    "typecheck": "npm run typecheck --workspaces --if-present"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
