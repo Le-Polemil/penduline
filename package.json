@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "description": "Matrices d'Eisenhower par pièce de la maison — web + extension Chrome, comptes Supabase",
+  "license": "MIT",
   "workspaces": [
     "packages/*",
     "apps/*"
