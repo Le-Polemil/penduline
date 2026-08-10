@@ -1,10 +1,10 @@
 import type { QuadrantKey } from './quadrants';
 
 /**
- * Une pièce de la maison = une matrice. La maquette n'a pas de niveau
- * « matrices » séparé : chaque pièce porte directement ses tâches.
+ * Une matrice. Le découpage est libre : un lieu, un moment de la journée, un
+ * projet… Pas de niveau intermédiaire — chaque matrice porte ses tâches.
  */
-export interface Room {
+export interface Board {
   id: string;
   user_id: string;
   name: string;
@@ -12,11 +12,11 @@ export interface Room {
   created_at: string;
 }
 
-/** Un élément placé dans une case de la matrice d'une pièce. */
+/** Un élément placé dans une case d'une matrice. */
 export interface Task {
   id: string;
   user_id: string;
-  room_id: string;
+  board_id: string;
   title: string;
   quadrant: QuadrantKey;
   /** Cochée (part vers la corbeille « Terminées » après le délai d'annulation). */
@@ -27,7 +27,7 @@ export interface Task {
   archived: boolean;
   /** Supprimée (visible seulement dans la corbeille « Supprimées »). */
   deleted: boolean;
-  /** Ordre dans (room, quadrant). Fractionnaire pour insérer entre deux voisins. */
+  /** Ordre dans (board, quadrant). Fractionnaire pour insérer entre deux voisins. */
   position: number;
   /** Deux tâches partageant un `pair_id` s'affichent côte à côte (une ligne). */
   pair_id: string | null;

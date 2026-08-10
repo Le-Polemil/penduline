@@ -25,11 +25,11 @@ export function App() {
 
 function AppRoot({ userId }: { userId: string }) {
   const store = useStore(userId);
-  const [roomId, setRoomId] = useState<string | null>(null);
+  const [boardId, setBoardId] = useState<string | null>(null);
 
   if (!store.ready) return null;
 
-  const room = store.rooms.find((r) => r.id === roomId) ?? null;
+  const board = store.boards.find((r) => r.id === boardId) ?? null;
 
   return (
     <div>
@@ -38,10 +38,10 @@ function AppRoot({ userId }: { userId: string }) {
           Déconnexion
         </button>
       </div>
-      {room ? (
-        <MatrixScreen store={store} room={room} onHome={() => setRoomId(null)} onSwitch={setRoomId} />
+      {board ? (
+        <MatrixScreen store={store} board={board} onHome={() => setBoardId(null)} onSwitch={setBoardId} />
       ) : (
-        <Home store={store} onOpen={setRoomId} />
+        <Home store={store} onOpen={setBoardId} />
       )}
     </div>
   );

@@ -7,14 +7,18 @@ import {
   positionBefore,
   QUADS,
   type QuadrantKey,
-  type Room,
+  type Board,
   type Task,
 } from '@penduline/shared';
 import { isConfigured, supabase } from './supabase';
-import { getActiveRoom, setActiveRoom, useExtStore, type ExtStore } from './store';
+import { getActiveBoard, setActiveBoard, useExtStore, type ExtStore } from './store';
 
-/** Ouvre l'app web complète (à remplacer par l'URL de prod une fois déployée). */
-const WEB_APP_URL = 'http://localhost:5173';
+/**
+ * Ouvre l'app web complète. Surchargée au build par `VITE_WEB_APP_URL` (`.env`
+ * racine) ; le défaut reste le serveur de dev, pour ne pas casser le local.
+ */
+const WEB_APP_URL =
+  (import.meta.env.VITE_WEB_APP_URL as string | undefined) ?? 'http://localhost:5173';
 
 function withVT(fn: () => void) {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
@@ -72,58 +76,58 @@ function ConfigNeeded() {
 function PopupApp({ userId }: { userId: string }) {
   const store = useExtStore(userId);
   const [screen, setScreen] = useState<'home' | 'detail'>('home');
-  const [roomId, setRoomId] = useState<string | null>(null);
-  const [activeRoom, setActive] = useState<string | null>(null);
+  const [boardId, setBoardId] = useState<string | null>(null);
+  const [activeBoard, setActive] = useState<string | null>(null);
 
-  // Reprise de la dernière pièce ouverte (TTL géré côté store).
+  // Reprise de la dernière matrice ouverte (TTL géré côté store).
   useEffect(() => {
-    getActiveRoom().then((id) => {
+    getActiveBoard().then((id) => {
       setActive(id);
       if (id) {
-        setRoomId(id);
+        setBoardId(id);
         setScreen('detail');
       }
     });
   }, []);
 
-  function openRoom(id: string) {
-    void setActiveRoom(id);
+  function openBoard(id: string) {
+    void setActiveBoard(id);
     setActive(id);
-    setRoomId(id);
+    setBoardId(id);
     withVT(() => setScreen('detail'));
   }
 
   if (!store.ready) return null;
 
-  const room = store.rooms.find((r) => r.id === roomId) ?? null;
-  if (screen === 'detail' && room) {
-    return <Detail store={store} room={room} onHome={() => withVT(() => setScreen('home'))} />;
+  const board = store.boards.find((r) => r.id === boardId) ?? null;
+  if (screen === 'detail' && board) {
+    return <Detail store={store} board={board} onHome={() => withVT(() => setScreen('home'))} />;
   }
-  return <Home store={store} activeRoom={activeRoom} onOpen={openRoom} />;
+  return <Home store={store} activeBoard={activeBoard} onOpen={openBoard} />;
 }
 
 // ── Accueil ──────────────────────────────────────────────────────────────────
 function Home({
   store,
-  activeRoom,
+  activeBoard,
   onOpen,
 }: {
   store: ExtStore;
-  activeRoom: string | null;
+  activeBoard: string | null;
   onOpen: (id: string) => void;
 }) {
   const [calmOpen, setCalmOpen] = useState(false);
 
-  const openCount = (r: Room) =>
-    store.tasks.filter((t) => t.room_id === r.id && !t.done && !t.deleted).length;
-  const active = store.rooms.filter((r) => openCount(r) > 0);
-  const calm = store.rooms.filter((r) => openCount(r) === 0);
+  const openCount = (r: Board) =>
+    store.tasks.filter((t) => t.board_id === r.id && !t.done && !t.deleted).length;
+  const active = store.boards.filter((r) => openCount(r) > 0);
+  const calm = store.boards.filter((r) => openCount(r) === 0);
 
   return (
     <>
       <header className="home-head">
         <Logo />
-        <span className="home-brand">La maison</span>
+        <span className="home-brand">Penduline</span>
         <a className="home-openapp" href={WEB_APP_URL} target="_blank" rel="noreferrer">
           Ouvrir l'app ›
         </a>
@@ -131,18 +135,18 @@ function Home({
 
       <div className="home-list">
         {active.length === 0 && calm.length === 0 && (
-          <p className="empty">Aucune pièce. Ouvre l'app pour commencer.</p>
+          <p className="empty">Aucune matrice. Ouvre l'app pour commencer.</p>
         )}
 
         {active.map((r) => (
           <button
             key={r.id}
-            className="room"
-            style={{ borderColor: activeRoom === r.id ? 'var(--color-accent)' : 'transparent' }}
+            className="board"
+            style={{ borderColor: activeBoard === r.id ? 'var(--color-accent)' : 'transparent' }}
             onClick={() => onOpen(r.id)}
           >
-            <span className="room__name">{r.name}</span>
-            <span className="room__pills">
+            <span className="board__name">{r.name}</span>
+            <span className="board__pills">
               {QUADS.map((q) => ({ ink: q.ink, n: countOpen(store.tasks, r.id, q.key) }))
                 .filter((p) => p.n > 0)
                 .map((p, i) => (
@@ -151,21 +155,21 @@ function Home({
                   </span>
                 ))}
             </span>
-            <span className="room__chev">›</span>
+            <span className="board__chev">›</span>
           </button>
         ))}
 
         {calm.length > 0 && (
           <>
             <button className="calm-toggle" onClick={() => setCalmOpen((o) => !o)}>
-              {(calmOpen ? '▾' : '▸') + ` ${calm.length} ${calm.length > 1 ? 'pièces calmes' : 'pièce calme'}`}
+              {(calmOpen ? '▾' : '▸') + ` ${calm.length} ${calm.length > 1 ? 'matrices calmes' : 'matrice calme'}`}
             </button>
             {calmOpen &&
               calm.map((r) => (
-                <button key={r.id} className="room room--calm" onClick={() => onOpen(r.id)}>
-                  <span className="room__name">{r.name}</span>
-                  <span className="room__meta">rien à faire</span>
-                  <span className="room__chev">›</span>
+                <button key={r.id} className="board board--calm" onClick={() => onOpen(r.id)}>
+                  <span className="board__name">{r.name}</span>
+                  <span className="board__meta">rien à faire</span>
+                  <span className="board__chev">›</span>
                 </button>
               ))}
           </>
@@ -202,8 +206,8 @@ function Logo() {
   );
 }
 
-// ── Détail d'une pièce ───────────────────────────────────────────────────────
-function Detail({ store, room, onHome }: { store: ExtStore; room: Room; onHome: () => void }) {
+// ── Détail d'une matrice ───────────────────────────────────────────────────────
+function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHome: () => void }) {
   const { tasks, patchTask } = store;
   const [filter, setFilter] = useState<QuadrantKey | null>(null);
   const [addQuad, setAddQuad] = useState<QuadrantKey>('faire');
@@ -212,17 +216,17 @@ function Detail({ store, room, onHome }: { store: ExtStore; room: Room; onHome: 
   const [dragOverQuad, setDragOverQuad] = useState<QuadrantKey | null>(null);
   const [hoverGap, setHoverGap] = useState<{ quad: QuadrantKey; before: string } | null>(null);
 
-  const roomTasks = tasks.filter((t) => t.room_id === room.id);
+  const boardTasks = tasks.filter((t) => t.board_id === board.id);
 
   function listFor(quad: QuadrantKey): Task[] {
-    return roomTasks
+    return boardTasks
       .filter((t) => t.quadrant === quad && !t.done && !t.deleted && !t.archived)
       .sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.position - b.position);
   }
 
   function dropAt(quad: QuadrantKey, beforeId: string | null) {
     if (!drag || drag === beforeId) return;
-    const rest = roomTasks
+    const rest = boardTasks
       .filter((t) => t.quadrant === quad && !t.done && !t.deleted && !t.archived && t.id !== drag)
       .sort((a, b) => a.position - b.position);
     const pos = positionBefore(rest, beforeId);
@@ -236,7 +240,7 @@ function Detail({ store, room, onHome }: { store: ExtStore; room: Room; onHome: 
     const title = draft.trim();
     if (!title) return;
     const pos = endPosition(listFor(addQuad));
-    void store.addTask(room.id, addQuad, title, pos);
+    void store.addTask(board.id, addQuad, title, pos);
     setDraft('');
   }
 
@@ -248,10 +252,10 @@ function Detail({ store, room, onHome }: { store: ExtStore; room: Room; onHome: 
         <button className="back" onClick={onHome}>
           ‹
         </button>
-        <span className="detail-room">{room.name}</span>
+        <span className="detail-board">{board.name}</span>
         <span className="squares">
           {QUADS.map((q) => {
-            const n = countOpen(tasks, room.id, q.key);
+            const n = countOpen(tasks, board.id, q.key);
             const on = !filter || filter === q.key;
             return (
               <button
@@ -315,7 +319,7 @@ function Detail({ store, room, onHome }: { store: ExtStore; room: Room; onHome: 
               <div className="quad-head">
                 <span className="quad-label">{q.label}</span>
                 <span className="quad-sub">{q.sub}</span>
-                <span className="quad-count">{countOpen(tasks, room.id, q.key)}</span>
+                <span className="quad-count">{countOpen(tasks, board.id, q.key)}</span>
               </div>
               <div className="quad-tasks">
                 {list.map((t) => {

@@ -1,8 +1,11 @@
 -- Seed LOCAL uniquement (exécuté par `supabase db reset`, jamais par `db push`).
--- Crée un compte de démo + des pièces, pour tester tout de suite sans passer par
--- l'inscription. Identifiants : demo@penduline.test / password123
+-- Crée un compte de démo + des matrices, pour tester tout de suite sans passer
+-- par l'inscription. Identifiants : demo@penduline.test / password123
 --
 -- Ne JAMAIS reproduire ce genre d'insertion directe dans auth.users en prod.
+--
+-- Les matrices ci-dessous illustrent volontairement des découpages différents
+-- (un lieu, un moment, un projet) : l'app n'impose aucune lecture particulière.
 
 create extension if not exists pgcrypto with schema extensions;
 
@@ -30,22 +33,22 @@ insert into auth.identities (
   'email', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
--- ── Pièces + tâches (mêmes exemples que le seed applicatif) ───────────────────
-insert into rooms (id, user_id, name, position) values
-  ('a1111111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Cuisine',       0),
-  ('a1111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Salle de bain', 1),
-  ('a1111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'Salon',         2),
-  ('a1111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Garage',        3)
+-- ── Matrices + tâches ────────────────────────────────────────────────────────
+insert into boards (id, user_id, name, position) values
+  ('a1111111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Cuisine',      0),
+  ('a1111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Cette semaine', 1),
+  ('a1111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'Déménagement', 2),
+  ('a1111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Un jour peut-être', 3)
 on conflict (id) do nothing;
 
-insert into tasks (user_id, room_id, title, quadrant, pinned, position) values
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Fuite sous l''évier',            'faire',     true,  0),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Ampoule grillée',                'faire',     false, 1),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Repeindre le plafond',           'planifier', false, 0),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Détartrer la bouilloire',        'planifier', false, 1),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Appeler le plombier',            'deleguer',  false, 0),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Trier le tiroir à sacs',         'eliminer',  false, 0),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Acheter un nouveau grille-pain ?', 'parking',   false, 0),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000002', 'Joint de douche à refaire',      'faire',     false, 0),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000002', 'Remplacer le miroir',            'planifier', false, 0),
-  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000003', 'Fixer l''étagère',               'planifier', false, 0);
+insert into tasks (user_id, board_id, title, quadrant, pinned, position) values
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Fuite sous l''évier',        'faire',     true,  0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Détartrer la bouilloire',    'planifier', false, 0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000001', 'Appeler le plombier',        'deleguer',  false, 0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000002', 'Rendre le dossier vendredi', 'faire',     true,  0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000002', 'Préparer la rétro',          'planifier', false, 0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000002', 'Répondre aux relances',      'deleguer',  false, 0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000003', 'Résilier la box',            'faire',     false, 0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000003', 'Réserver le camion',         'planifier', false, 0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000003', 'Trier le garage',            'eliminer',  false, 0),
+  ('11111111-1111-1111-1111-111111111111', 'a1111111-0000-0000-0000-000000000004', 'Apprendre le piano ?',       'parking',   false, 0);

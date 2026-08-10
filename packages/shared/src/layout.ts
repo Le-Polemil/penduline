@@ -6,23 +6,23 @@ export function isVisible(t: Task, quad: QuadrantKey): boolean {
   return t.quadrant === quad && !t.pinned && !t.deleted && !(t.done && t.archived);
 }
 
-export function visibleTasks(tasks: Task[], roomId: string, quad: QuadrantKey): Task[] {
+export function visibleTasks(tasks: Task[], boardId: string, quad: QuadrantKey): Task[] {
   return tasks
-    .filter((t) => t.room_id === roomId && isVisible(t, quad))
+    .filter((t) => t.board_id === boardId && isVisible(t, quad))
     .sort((a, b) => a.position - b.position);
 }
 
-export function pinnedTasks(tasks: Task[], roomId: string, quad: QuadrantKey): Task[] {
+export function pinnedTasks(tasks: Task[], boardId: string, quad: QuadrantKey): Task[] {
   return tasks
     .filter(
-      (t) => t.room_id === roomId && t.quadrant === quad && t.pinned && !t.deleted && !(t.done && t.archived),
+      (t) => t.board_id === boardId && t.quadrant === quad && t.pinned && !t.deleted && !(t.done && t.archived),
     )
     .sort((a, b) => a.position - b.position);
 }
 
 /** Nombre de tâches ouvertes (non terminées, non supprimées) d'une case. */
-export function countOpen(tasks: Task[], roomId: string, quad: QuadrantKey): number {
-  return tasks.filter((t) => t.room_id === roomId && t.quadrant === quad && !t.done && !t.deleted).length;
+export function countOpen(tasks: Task[], boardId: string, quad: QuadrantKey): number {
+  return tasks.filter((t) => t.board_id === boardId && t.quadrant === quad && !t.done && !t.deleted).length;
 }
 
 /** Groupe les tâches visibles en lignes de 1 ou 2 (appairage via `pair_id`). */

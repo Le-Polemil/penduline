@@ -11,7 +11,7 @@ import {
   quadrant,
   visibleTasks,
   type QuadrantKey,
-  type Room,
+  type Board,
   type Task,
 } from '@penduline/shared';
 import type { Store } from '../data/store';
@@ -33,17 +33,17 @@ function withVT(fn: () => void) {
 
 export function MatrixScreen({
   store,
-  room,
+  board,
   onHome,
   onSwitch,
 }: {
   store: Store;
-  room: Room;
+  board: Board;
   onHome: () => void;
-  onSwitch: (roomId: string) => void;
+  onSwitch: (boardId: string) => void;
 }) {
   const { tasks, patchTask } = store;
-  const [roomMenu, setRoomMenu] = useState(false);
+  const [boardMenu, setBoardMenu] = useState(false);
   const [menuTask, setMenuTask] = useState<string | null>(null);
   const [binOpen, setBinOpen] = useState(false);
   const [drag, setDrag] = useState<Drag>(null);
@@ -55,8 +55,8 @@ export function MatrixScreen({
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
-  const roomTasks = tasks.filter((t) => t.room_id === room.id);
-  const totalOpen = roomTasks.filter((t) => !t.done && !t.deleted).length;
+  const boardTasks = tasks.filter((t) => t.board_id === board.id);
+  const totalOpen = boardTasks.filter((t) => !t.done && !t.deleted).length;
 
   // ── Complétion / annulation ───────────────────────────────────────────────
   function archive(id: string) {
@@ -91,13 +91,13 @@ export function MatrixScreen({
 
   // ── Menu : déplacer / épingler / supprimer ────────────────────────────────
   function menuMove(id: string, quad: QuadrantKey) {
-    const pos = endPosition(visibleTasks(tasks, room.id, quad));
+    const pos = endPosition(visibleTasks(tasks, board.id, quad));
     withVT(() => patchTask(id, { quadrant: quad, pair_id: null, position: pos }));
     setMenuTask(null);
   }
   function togglePin(t: Task) {
     if (t.pinned) {
-      const pos = endPosition(visibleTasks(tasks, room.id, t.quadrant));
+      const pos = endPosition(visibleTasks(tasks, board.id, t.quadrant));
       withVT(() => patchTask(t.id, { pinned: false, pair_id: null, position: pos }));
     } else {
       withVT(() => patchTask(t.id, { pinned: true, pair_id: null }));
@@ -112,14 +112,14 @@ export function MatrixScreen({
   // ── Drag & drop ───────────────────────────────────────────────────────────
   function dropEnd(quad: QuadrantKey) {
     if (!drag) return;
-    const pos = endPosition(visibleTasks(tasks, room.id, quad));
+    const pos = endPosition(visibleTasks(tasks, board.id, quad));
     withVT(() => patchTask(drag.id, { quadrant: quad, pair_id: null, position: pos }));
     setDrag(null);
     setHover(null);
   }
   function dropInsert(quad: QuadrantKey, rowIndex: number) {
     if (!drag) return;
-    const rows = buildRows(visibleTasks(tasks, room.id, quad).filter((t) => t.id !== drag.id));
+    const rows = buildRows(visibleTasks(tasks, board.id, quad).filter((t) => t.id !== drag.id));
     const pos = insertPosition(rows, rowIndex);
     withVT(() => patchTask(drag.id, { quadrant: quad, pair_id: null, position: pos }));
     setDrag(null);
@@ -142,13 +142,13 @@ export function MatrixScreen({
   function addTask(quad: QuadrantKey) {
     const title = (drafts[quad] ?? '').trim();
     if (!title) return;
-    const pos = endPosition(visibleTasks(tasks, room.id, quad));
-    void store.addTask(room.id, quad, title, pos);
+    const pos = endPosition(visibleTasks(tasks, board.id, quad));
+    void store.addTask(board.id, quad, title, pos);
     setDrafts((d) => ({ ...d, [quad]: '' }));
   }
 
-  const doneList = roomTasks.filter((t) => t.done && t.archived && !t.deleted);
-  const delList = roomTasks.filter((t) => t.deleted);
+  const doneList = boardTasks.filter((t) => t.done && t.archived && !t.deleted);
+  const delList = boardTasks.filter((t) => t.deleted);
 
   function renderCard(t: Task, q: ReturnType<typeof quadrant>, single: boolean, pinnedCard: boolean) {
     const isDrag = drag?.id === t.id;
@@ -241,21 +241,21 @@ export function MatrixScreen({
     <div className="matrix">
       <div className="matrix-head">
         <button className="crumb" onClick={onHome}>
-          ‹ Pièces
+          ‹ Matrices
         </button>
-        <span className="room-switch">
-          <button className="room-switch__name" onClick={() => setRoomMenu((o) => !o)}>
-            {room.name} <span className="room-switch__caret">▾</span>
+        <span className="board-switch">
+          <button className="board-switch__name" onClick={() => setBoardMenu((o) => !o)}>
+            {board.name} <span className="board-switch__caret">▾</span>
           </button>
-          {roomMenu && (
-            <span className="room-menu">
-              {store.rooms.map((r) => (
+          {boardMenu && (
+            <span className="board-menu">
+              {store.boards.map((r) => (
                 <button
                   key={r.id}
-                  className={`room-menu__item${r.id === room.id ? ' room-menu__item--active' : ''}`}
+                  className={`board-menu__item${r.id === board.id ? ' board-menu__item--active' : ''}`}
                   onClick={() => {
                     onSwitch(r.id);
-                    setRoomMenu(false);
+                    setBoardMenu(false);
                     setMenuTask(null);
                   }}
                 >
@@ -274,7 +274,7 @@ export function MatrixScreen({
           onClick={() => {
             withVT(() => setBinOpen(true));
             setMenuTask(null);
-            setRoomMenu(false);
+            setBoardMenu(false);
           }}
         >
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
@@ -288,8 +288,8 @@ export function MatrixScreen({
 
       <div className="grid">
         {ALL.map((q) => {
-          const pinned = pinnedTasks(tasks, room.id, q.key);
-          const rows = buildRows(visibleTasks(tasks, room.id, q.key));
+          const pinned = pinnedTasks(tasks, board.id, q.key);
+          const rows = buildRows(visibleTasks(tasks, board.id, q.key));
           const focused = focusQuad === q.key;
           const draft = drafts[q.key] ?? '';
           return (
@@ -318,7 +318,7 @@ export function MatrixScreen({
               <div className="quad-head">
                 <span className="quad-label">{q.label}</span>
                 <span className="quad-sub">{q.sub}</span>
-                <span className="quad-count">{countOpen(tasks, room.id, q.key)}</span>
+                <span className="quad-count">{countOpen(tasks, board.id, q.key)}</span>
               </div>
 
               {pinned.map((t) => renderCard(t, q, false, true))}
@@ -382,7 +382,7 @@ export function MatrixScreen({
 
       {binOpen && (
         <BinModal
-          roomName={room.name}
+          boardName={board.name}
           doneList={doneList}
           delList={delList}
           onClose={() => withVT(() => setBinOpen(false))}
@@ -403,13 +403,13 @@ export function MatrixScreen({
 }
 
 function BinModal({
-  roomName,
+  boardName,
   doneList,
   delList,
   onClose,
   onRestore,
 }: {
-  roomName: string;
+  boardName: string;
   doneList: Task[];
   delList: Task[];
   onClose: () => void;
@@ -419,7 +419,7 @@ function BinModal({
     <div className="bin-backdrop" onClick={onClose}>
       <div className="bin-panel" style={{ viewTransitionName: 'bin' } as CSSProperties} onClick={(e) => e.stopPropagation()}>
         <div className="bin-head">
-          <span className="bin-title">Corbeille — {roomName}</span>
+          <span className="bin-title">Corbeille — {boardName}</span>
           <button className="bin-close" onClick={onClose}>
             ✕
           </button>
