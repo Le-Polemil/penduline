@@ -3,32 +3,35 @@
     Penduline — ruche hexagonale (d'après artificial-hive), recolorée avec la
     palette des quadrants (packages/shared/src/quadrants.ts).
 
+    Fond transparent. Quatre couleurs à l'intérieur, une par section, dans la
+    disposition de la matrice :
+
+        faire (vert)    planifier (bleu)
+        déléguer (or)   éliminer (rouge)
+
+    Les trois cellules centrales sont peintes de la couleur de la trame, donc
+    invisibles : à petite taille, sept cellules colorées deviennent illisibles,
+    quatre se distinguent encore. Laissées transparentes, elles creusaient une
+    colonne qui coupait l'icône en deux.
+
     La trame est le tracé d'origine, inchangé : ses sous-chemins « cellules »
     tournent dans le sens inverse du contour, donc le remplissage nonzero en
     fait des TROUS. Les hexagones colorés sont posés DERRIÈRE et apparaissent
     exactement dans ces trous — aucun alignement manuel à maintenir.
-
-    Les 4 cellules d'angle portent les 4 quadrants, disposés comme la matrice :
-        faire (vert)   planifier (bleu)
-        déléguer (or)  éliminer (rouge)
   -->
-  <rect width="512" height="512" fill="#f5ead8"/>
-
   <g>
-    <!-- haut centre — accent terracotta -->
-    <path d="M249.906 80.906 L302.312 111.156 L302.312 171.656 L249.906 201.906 L197.5 171.656 L197.5 111.156 Z" fill="#c67139"/>
+    <!-- cellules centrales : rejoignent la trame (pas une 5e couleur) -->
+    <path d="M249.906 80.906 L302.312 111.156 L302.312 171.656 L249.906 201.906 L197.5 171.656 L197.5 111.156 Z" fill="#201e1d"/>
+    <path d="M249.906 202 L302.312 232.25 L302.312 292.75 L249.906 323 L197.5 292.75 L197.5 232.25 Z" fill="#201e1d"/>
+    <path d="M249.906 322.9 L302.312 353.15 L302.312 413.65 L249.906 443.9 L197.5 413.65 L197.5 353.15 Z" fill="#201e1d"/>
     <!-- gauche haut — faire -->
     <path d="M144.562 141.376 L196.968 171.626 L196.968 232.126 L144.562 262.376 L92.156 232.126 L92.156 171.626 Z" fill="#5c6b45"/>
     <!-- droite haut — planifier -->
     <path d="M354.875 141.376 L407.281 171.626 L407.281 232.126 L354.875 262.376 L302.469 232.126 L302.469 171.626 Z" fill="#38607f"/>
-    <!-- centre — à trier -->
-    <path d="M249.906 202 L302.312 232.25 L302.312 292.75 L249.906 323 L197.5 292.75 L197.5 232.25 Z" fill="#7b756a"/>
     <!-- gauche bas — déléguer -->
     <path d="M144.562 262.391 L196.968 292.641 L196.968 353.141 L144.562 383.391 L92.156 353.141 L92.156 292.641 Z" fill="#8f6a14"/>
     <!-- droite bas — éliminer -->
     <path d="M354.875 262.391 L407.281 292.641 L407.281 353.141 L354.875 383.391 L302.469 353.141 L302.469 292.641 Z" fill="#a63d2a"/>
-    <!-- bas centre — accent terracotta -->
-    <path d="M249.906 322.9 L302.312 353.15 L302.312 413.65 L249.906 443.9 L197.5 413.65 L197.5 353.15 Z" fill="#c67139"/>
   </g>
 
   <!-- Trame : tracé d'origine, seule la couleur change. -->

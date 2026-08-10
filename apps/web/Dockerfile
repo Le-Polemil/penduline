@@ -18,10 +18,18 @@ COPY packages/shared/package.json packages/shared/
 COPY apps/web/package.json apps/web/
 COPY apps/extension/package.json apps/extension/
 COPY apps/supabase/package.json apps/supabase/
-RUN npm ci
+RUN npm ci --no-audit --no-fund
 
 COPY . .
-RUN npm run build -w @penduline/web
+
+# Volontairement `vite build` seul, PAS `npm run build -w @penduline/web` : ce
+# script enchaîne `tsc --noEmit && vite build`, soit deux process Node gourmands.
+# Le typecheck tourne déjà en CI (.github/workflows) et en local — le refaire ici
+# doublait la pression mémoire, ce qui a suffi à saturer l'hôte de prod, qui
+# héberge aussi la stack Supabase.
+# Le plafond de tas garde le build sous contrôle sur une petite machine.
+WORKDIR /app/apps/web
+RUN NODE_OPTIONS=--max-old-space-size=512 npx vite build
 
 FROM nginx:alpine
 COPY apps/web/nginx.conf /etc/nginx/conf.d/default.conf
