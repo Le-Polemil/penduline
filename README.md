@@ -1,6 +1,6 @@
 # Penduline
 
-Matrices d'Eisenhower (urgent/important) par pièce de la maison, accessibles sur
+Matrices d'Eisenhower (urgent/important) par contexte, accessibles sur
 n'importe quel device en web, avec une extension Chrome compagnon. Chaque
 utilisateur a son compte ; les matrices sont privées et isolées.
 
@@ -19,8 +19,8 @@ penduline/
 
 ## Modèle
 
-- **Une pièce = une matrice.** `rooms` → `tasks` directement (pas de niveau
-  `matrices` intermédiaire).
+- **Une matrice = un contexte, au choix de l'utilisateur** (un lieu, un moment,
+  un projet). `boards` → `tasks` directement, pas de niveau intermédiaire.
 - **4 cases + « À trier »**, 1 couleur par case (palette de la maquette Claude
   Design) : `faire`=vert, `planifier`=bleu, `deleguer`=doré, `eliminer`=rouge,
   `parking`=neutre.
@@ -53,8 +53,9 @@ npm run dev            # app web (premier port libre à partir de 5173)
 ```
 
 En local, le seed crée le compte `demo@penduline.test` / `password123` avec des
-pièces. Sinon, au premier login d'un compte vide, l'app web **sème** des pièces
-d'exemple (Cuisine, Salle de bain, Salon, Garage) comme la maquette.
+matrices d'exemple aux découpages variés (un lieu, une semaine, un projet).
+Ailleurs, un compte vide **reste vide** : le découpage appartient à
+l'utilisateur, l'app n'en impose aucun.
 
 Extension : `npm run build:ext` (lit le même `.env` racine), puis charge le dossier
 `apps/extension/dist` dans `chrome://extensions` (mode développeur, « Charger
@@ -63,14 +64,21 @@ l'extension non empaquetée »). Le popup a sa propre connexion (session dans
 
 ## État
 
-**App web** (maquette « Matrice Maison.dc.html ») : accueil pièces, matrice 2×2 +
+**App web** (maquette « Matrice Maison.dc.html ») : accueil matrices, matrice 2×2 +
 « À trier », drag & drop (déplacement / insertion / appairage), épinglage,
-complétion + toast d'annulation, corbeille, ajout inline, sélecteur de pièce.
+complétion + toast d'annulation, corbeille, ajout inline, sélecteur de matrice,
+création nommée d'une matrice.
 
 **Extension** (maquette « Extension Prototype.dc.html ») : popup 400×600, liste des
-pièces (actives + « calmes » repliables), détail d'une pièce (4 quadrants empilés),
+matrices (actives + « calmes » repliables), détail d'une matrice (4 quadrants empilés),
 drag & drop vertical, filtres par quadrant, épinglage, complétion, ajout ciblé,
-reprise de la dernière pièce ouverte (2 h), connexion embarquée. Typecheck + build OK.
+reprise de la dernière matrice ouverte (2 h), connexion embarquée. Typecheck + build OK.
 
-À faire : édition du titre d'une tâche, renommage de pièce, temps réel Supabase,
-notifications, URL de prod pour « Ouvrir l'app ». Détails dans `work/architecture.md`.
+À faire : édition du titre d'une tâche, renommage de matrice, temps réel Supabase,
+notifications. Détails dans `work/architecture.md`.
+
+## Production
+
+Déployée sur Coolify : app web sur https://penduline.polemil.dev, Supabase
+auto-hébergé sur https://api.penduline.polemil.dev. Voir
+[work/coolify-deploy.md](work/coolify-deploy.md) pour les décisions et les pièges.
