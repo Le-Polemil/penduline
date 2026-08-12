@@ -168,7 +168,7 @@ function Home({
               calm.map((r) => (
                 <button key={r.id} className="board board--calm" onClick={() => onOpen(r.id)}>
                   <span className="board__name">{r.name}</span>
-                  <span className="board__meta">rien à faire</span>
+                  <span className="board__meta">Rien à faire</span>
                   <span className="board__chev">›</span>
                 </button>
               ))}
@@ -318,7 +318,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
             >
               <div className="quad-head">
                 <span className="quad-label">{q.label}</span>
-                <span className="quad-sub">{q.sub}</span>
+                {q.sub && <span className="quad-sub">{q.sub}</span>}
                 <span className="quad-count">{countOpen(tasks, board.id, q.key)}</span>
               </div>
               <div className="quad-tasks">

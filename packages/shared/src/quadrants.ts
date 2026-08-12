@@ -22,8 +22,8 @@ export interface Quadrant {
   key: QuadrantKey;
   /** Titre affiché (police heading) */
   label: string;
-  /** Sous-titre explicatif */
-  sub: string;
+  /** Sous-titre explicatif. Absent quand le titre parle de lui-même (« À trier »). */
+  sub?: string;
   /** Couleur pleine (badges, cercle de checkbox, contours au drag) */
   ink: string;
   /** Variante foncée lisible sur fond clair (titres, texte sur `bg`) */
@@ -42,7 +42,6 @@ export const QUADS: Quadrant[] = [
 export const PARK: Quadrant = {
   key: 'parking',
   label: 'À trier',
-  sub: 'déposez ici ce que vous ne savez pas encore classer',
   ink: '#7b756a',
   dark: '#5d5850',
   bg: 'transparent',

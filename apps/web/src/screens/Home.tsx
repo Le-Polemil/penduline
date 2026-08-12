@@ -55,7 +55,7 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
               (p) => p.n > 0,
             );
             const total = store.tasks.filter((t) => t.board_id === board.id && !t.done && !t.deleted).length;
-            const meta = total ? `${total} ${total > 1 ? 'tâches' : 'tâche'}` : 'rien à faire';
+            const meta = total ? `${total} ${total > 1 ? 'tâches' : 'tâche'}` : 'Rien à faire';
             const isEditing = editing?.id === board.id;
 
             return (
@@ -163,7 +163,7 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
           title={`Supprimer « ${doomed.name} » ?`}
           body={
             doomedCount > 0
-              ? `Ses ${doomedCount} ${doomedCount > 1 ? 'tâches seront supprimées' : 'tâche sera supprimée'} avec elle, corbeille comprise. C'est définitif.`
+              ? `${doomedCount > 1 ? `Ses ${doomedCount} tâches seront supprimées` : 'Sa tâche sera supprimée'} avec elle, corbeille comprise. C'est définitif.`
               : "Cette matrice est vide. C'est définitif."
           }
           onCancel={() => setToDelete(null)}

@@ -315,7 +315,7 @@ export function MatrixScreen({
           )}
         </span>
         <span className="matrix-total">
-          {totalOpen ? `${totalOpen} ${totalOpen > 1 ? 'tâches ouvertes' : 'tâche ouverte'}` : 'tout est fait'}
+          {totalOpen ? `${totalOpen} ${totalOpen > 1 ? 'tâches ouvertes' : 'tâche ouverte'}` : 'Tout est fait'}
         </span>
         <button
           className="bin-btn"
@@ -366,7 +366,7 @@ export function MatrixScreen({
             >
               <div className="quad-head">
                 <span className="quad-label">{q.label}</span>
-                <span className="quad-sub">{q.sub}</span>
+                {q.sub && <span className="quad-sub">{q.sub}</span>}
                 <span className="quad-count">{countOpen(tasks, board.id, q.key)}</span>
               </div>
 
@@ -402,7 +402,14 @@ export function MatrixScreen({
 
               <div className="quad-fill" />
 
-              <div className={`add-row${focused ? ' add-row--focused' : ''}`}>
+              {/*
+                Le « ＋ » reste le MÊME élément au repos et en saisie : il glisse
+                du centre vers la droite pendant que le mot « ajouter » se replie.
+                Le remplacer par un autre bouton le faisait se téléporter.
+                Au repos il est inerte (pointer-events), pour que le clic tombe
+                sur le champ et le focus ; actif, il devient le bouton d'envoi.
+              */}
+              <div className={`add-row${focused || draft ? ' add-row--active' : ''}`}>
                 <input
                   className="add-input"
                   value={draft}
@@ -413,16 +420,20 @@ export function MatrixScreen({
                   onFocus={() => setFocusQuad(q.key)}
                   onBlur={() => setFocusQuad((f) => (f === q.key ? null : f))}
                 />
-                {focused || draft ? (
-                  <button className="add-submit" onMouseDown={(e) => { e.preventDefault(); addTask(q.key); }}>
+                <span className="add-cue">
+                  <button
+                    className="add-plus"
+                    type="button"
+                    aria-label="Ajouter une tâche"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      addTask(q.key);
+                    }}
+                  >
                     ＋
                   </button>
-                ) : (
-                  <span className="add-hint">
-                    <span style={{ font: '700 14px/1 var(--font-body)' }}>＋</span>
-                    <span>ajouter</span>
-                  </span>
-                )}
+                  <span className="add-word">ajouter</span>
+                </span>
               </div>
             </div>
           );
@@ -445,7 +456,7 @@ export function MatrixScreen({
           title={`Supprimer « ${board.name} » ?`}
           body={
             boardTasks.length > 0
-              ? `Ses ${boardTasks.length} ${boardTasks.length > 1 ? 'tâches seront supprimées' : 'tâche sera supprimée'} avec elle, corbeille comprise. C'est définitif.`
+              ? `${boardTasks.length > 1 ? `Ses ${boardTasks.length} tâches seront supprimées` : 'Sa tâche sera supprimée'} avec elle, corbeille comprise. C'est définitif.`
               : "Cette matrice est vide. C'est définitif."
           }
           onCancel={() => setConfirmDelete(false)}
