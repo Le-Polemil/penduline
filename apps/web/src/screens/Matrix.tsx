@@ -46,6 +46,9 @@ export function MatrixScreen({
   const [boardMenu, setBoardMenu] = useState(false);
   const [menuTask, setMenuTask] = useState<string | null>(null);
   const [binOpen, setBinOpen] = useState(false);
+  /** `null` = titre affiché ; une chaîne = renommage en cours. */
+  const [renaming, setRenaming] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [drag, setDrag] = useState<Drag>(null);
   const [hover, setHover] = useState<Hover>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -244,9 +247,35 @@ export function MatrixScreen({
           ‹ Matrices
         </button>
         <span className="board-switch">
-          <button className="board-switch__name" onClick={() => setBoardMenu((o) => !o)}>
-            {board.name} <span className="board-switch__caret">▾</span>
-          </button>
+          {renaming === null ? (
+            <button className="board-switch__name" onClick={() => setBoardMenu((o) => !o)}>
+              {board.name} <span className="board-switch__caret">▾</span>
+            </button>
+          ) : (
+            <form
+              className="board-rename"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const name = renaming.trim();
+                if (name && name !== board.name) void store.renameBoard(board.id, name);
+                setRenaming(null);
+              }}
+            >
+              <input
+                className="board-rename__input"
+                value={renaming}
+                autoFocus
+                maxLength={120}
+                onChange={(e) => setRenaming(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setRenaming(null);
+                }}
+              />
+              <button className="board-rename__ok" type="submit" disabled={!renaming.trim()}>
+                OK
+              </button>
+            </form>
+          )}
           {boardMenu && (
             <span className="board-menu">
               {store.boards.map((r) => (
@@ -262,6 +291,25 @@ export function MatrixScreen({
                   {r.name}
                 </button>
               ))}
+              <span className="board-menu__sep" />
+              <button
+                className="board-menu__item"
+                onClick={() => {
+                  setRenaming(board.name);
+                  setBoardMenu(false);
+                }}
+              >
+                Renommer
+              </button>
+              <button
+                className="board-menu__item board-menu__item--danger"
+                onClick={() => {
+                  setBoardMenu(false);
+                  setConfirmDelete(true);
+                }}
+              >
+                Supprimer la matrice
+              </button>
             </span>
           )}
         </span>
@@ -387,7 +435,37 @@ export function MatrixScreen({
           delList={delList}
           onClose={() => withVT(() => setBinOpen(false))}
           onRestore={(id) => withVT(() => patchTask(id, { done: false, archived: false, deleted: false }))}
+          onPurge={(ids) => void store.purgeTasks(ids)}
         />
+      )}
+
+      {confirmDelete && (
+        <div className="bin-backdrop" onClick={() => setConfirmDelete(false)}>
+          <div className="confirm-panel" onClick={(e) => e.stopPropagation()}>
+            <p className="confirm-title">Supprimer « {board.name} » ?</p>
+            <p className="confirm-body">
+              {boardTasks.length > 0
+                ? `Ses ${boardTasks.length} ${boardTasks.length > 1 ? 'tâches seront supprimées' : 'tâche sera supprimée'} avec elle, corbeille comprise.`
+                : 'Cette matrice est vide.'}{' '}
+              C'est définitif.
+            </p>
+            <div className="confirm-actions">
+              <button className="confirm-cancel" onClick={() => setConfirmDelete(false)}>
+                Annuler
+              </button>
+              <button
+                className="confirm-danger"
+                onClick={async () => {
+                  setConfirmDelete(false);
+                  await store.deleteBoard(board.id);
+                  onHome();
+                }}
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {pending && (
@@ -408,13 +486,56 @@ function BinModal({
   delList,
   onClose,
   onRestore,
+  onPurge,
 }: {
   boardName: string;
   doneList: Task[];
   delList: Task[];
   onClose: () => void;
   onRestore: (id: string) => void;
+  onPurge: (ids: string[]) => void;
 }) {
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [confirmAll, setConfirmAll] = useState(false);
+
+  const all = [...doneList, ...delList];
+  const toggle = (id: string) =>
+    setPicked((p) => {
+      const n = new Set(p);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+
+  function section(title: string, cls: string, list: Task[], empty: string, doneStyle: boolean) {
+    return (
+      <>
+        <div className={`bin-section ${cls}`}>{title}</div>
+        {list.length === 0 ? (
+          <div className="bin-empty">{empty}</div>
+        ) : (
+          <div className="bin-list">
+            {list.map((t) => (
+              <div className={`bin-item${picked.has(t.id) ? ' bin-item--picked' : ''}`} key={t.id}>
+                <input
+                  type="checkbox"
+                  className="bin-check"
+                  checked={picked.has(t.id)}
+                  onChange={() => toggle(t.id)}
+                  aria-label={`Sélectionner « ${t.title} »`}
+                />
+                <span className="bin-dot" style={{ background: quadrant(t.quadrant).ink }} />
+                <span className={`bin-item__title${doneStyle ? ' bin-item__title--done' : ''}`}>{t.title}</span>
+                <button className="bin-restore" onClick={() => onRestore(t.id)}>
+                  {doneStyle ? 'Rétablir' : 'Restaurer'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </>
+    );
+  }
+
   return (
     <div className="bin-backdrop" onClick={onClose}>
       <div className="bin-panel" style={{ viewTransitionName: 'bin' } as CSSProperties} onClick={(e) => e.stopPropagation()}>
@@ -425,37 +546,35 @@ function BinModal({
           </button>
         </div>
 
-        <div className="bin-section bin-section--done">Terminées</div>
-        {doneList.length === 0 ? (
-          <div className="bin-empty">Rien de terminé pour l'instant.</div>
-        ) : (
-          <div className="bin-list">
-            {doneList.map((t) => (
-              <div className="bin-item" key={t.id}>
-                <span className="bin-dot" style={{ background: quadrant(t.quadrant).ink }} />
-                <span className="bin-item__title bin-item__title--done">{t.title}</span>
-                <button className="bin-restore" onClick={() => onRestore(t.id)}>
-                  Rétablir
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {section('Terminées', 'bin-section--done', doneList, "Rien de terminé pour l'instant.", true)}
+        {section('Supprimées', 'bin-section--del', delList, 'Rien de supprimé.', false)}
 
-        <div className="bin-section bin-section--del">Supprimées</div>
-        {delList.length === 0 ? (
-          <div className="bin-empty">Rien de supprimé.</div>
-        ) : (
-          <div className="bin-list">
-            {delList.map((t) => (
-              <div className="bin-item" key={t.id}>
-                <span className="bin-dot" style={{ background: quadrant(t.quadrant).ink }} />
-                <span className="bin-item__title">{t.title}</span>
-                <button className="bin-restore" onClick={() => onRestore(t.id)}>
-                  Restaurer
+        {all.length > 0 && (
+          <div className="bin-foot">
+            {picked.size > 0 ? (
+              <>
+                <button className="bin-purge" onClick={() => { onPurge([...picked]); setPicked(new Set()); }}>
+                  Supprimer définitivement ({picked.size})
                 </button>
-              </div>
-            ))}
+                <button className="bin-foot__link" onClick={() => setPicked(new Set())}>
+                  Tout désélectionner
+                </button>
+              </>
+            ) : confirmAll ? (
+              <>
+                <span className="bin-foot__ask">Vider toute la corbeille ? C'est définitif.</span>
+                <button className="bin-purge" onClick={() => { onPurge(all.map((t) => t.id)); setConfirmAll(false); }}>
+                  Confirmer
+                </button>
+                <button className="bin-foot__link" onClick={() => setConfirmAll(false)}>
+                  Annuler
+                </button>
+              </>
+            ) : (
+              <button className="bin-foot__link" onClick={() => setConfirmAll(true)}>
+                Vider la corbeille ({all.length})
+              </button>
+            )}
           </div>
         )}
       </div>

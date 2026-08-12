@@ -5,13 +5,19 @@ import type { Store } from '../data/store';
 export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string) => void }) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
   const [draft, setDraft] = useState<string | null>(null);
+  // Dernière matrice créée : porte l'animation d'apparition, le temps de celle-ci.
+  const [fresh, setFresh] = useState<string | null>(null);
 
   async function create() {
     const name = (draft ?? '').trim();
     if (!name) return;
     const id = await store.addBoard(name);
     setDraft(null);
-    if (id) onOpen(id);
+    // Pas de redirection : la matrice apparaît simplement au bout de la liste.
+    if (id) {
+      setFresh(id);
+      window.setTimeout(() => setFresh((f) => (f === id ? null : f)), 700);
+    }
   }
 
   return (
@@ -33,7 +39,11 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
             const total = store.tasks.filter((t) => t.board_id === board.id && !t.done && !t.deleted).length;
             const meta = total ? `${total} ${total > 1 ? 'tâches' : 'tâche'}` : 'rien à faire';
             return (
-              <button key={board.id} className="board-card" onClick={() => onOpen(board.id)}>
+              <button
+                key={board.id}
+                className={`board-card${board.id === fresh ? ' board-card--fresh' : ''}`}
+                onClick={() => onOpen(board.id)}
+              >
                 <span className="board-card__name">{board.name}</span>
                 <span className="board-card__meta">{meta}</span>
                 <span className="board-card__pills">
