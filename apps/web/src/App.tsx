@@ -33,7 +33,16 @@ function AppRoot({ userId }: { userId: string }) {
 
   return (
     <div>
+      {/* Le retour vit dans la barre du haut, face à « Déconnexion » — et non
+          dans l'en-tête de la matrice, où il était mêlé à son titre. */}
       <div className="userbar">
+        {board ? (
+          <button className="crumb" onClick={() => setBoardId(null)}>
+            ‹ Retour
+          </button>
+        ) : (
+          <span />
+        )}
         <button className="signout" onClick={() => supabase.auth.signOut()}>
           Déconnexion
         </button>

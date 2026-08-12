@@ -69,14 +69,66 @@ button { font: inherit; }
 .board-card {
   display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
   background: none; border: none; text-align: left;
-  padding: 16px 4px 16px 20px; cursor: pointer; border-radius: var(--radius-lg);
+  padding: 16px 20px; cursor: pointer; border-radius: var(--radius-lg);
+  /* L'appui long ouvre notre propre menu : on coupe les comportements natifs
+     qui se déclenchent en même temps (sélection du texte, bulle iOS, menu
+     contextuel). `manipulation` supprime aussi le délai du double-tap. */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
 }
 /* Les actions restent discrètes jusqu'au survol, mais toujours atteignables
    au clavier — d'où le :focus-within plutôt qu'un simple :hover. */
-.board-row__actions { display: flex; align-items: center; gap: 4px; padding-right: 14px; }
-.board-row__actions .board-act { opacity: 0; transition: opacity 0.15s; }
+/* Au repos la zone est repliée (largeur 0), pour que les pastilles restent
+   collées au bord droit ; elle se déplie au survol ou au focus clavier.
+   `max-width` plutôt que `width: auto`, qui ne s'anime pas. */
+.board-row__actions {
+  display: flex; align-items: center; gap: 4px;
+  max-width: 0; padding-right: 0; overflow: hidden;
+  transition: max-width 0.26s cubic-bezier(0.22, 1, 0.36, 1), padding-right 0.26s;
+}
+.board-row:hover .board-row__actions,
+.board-row:focus-within .board-row__actions { max-width: 260px; padding-right: 20px; }
+.board-row__actions .board-act { opacity: 0; transition: opacity 0.18s; }
 .board-row:hover .board-act,
 .board-row:focus-within .board-act { opacity: 1; }
+
+/* Sans survol (tactile), ces actions sont inatteignables : on les retire et on
+   passe par l'appui long, qui ouvre `.sheet`. */
+@media (hover: none) {
+  .board-row__actions { display: none; }
+}
+
+/* ── Menu d'actions tactile (appui long) ──────────────────────────────────── */
+.sheet-backdrop {
+  position: fixed; inset: 0; z-index: 60; display: flex; align-items: flex-end;
+  background: color-mix(in srgb, #2e2b25 45%, transparent);
+  animation: mm-in 0.18s ease both;
+}
+.sheet {
+  width: 100%; background: var(--card-warm);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  padding: 10px 10px calc(10px + env(safe-area-inset-bottom));
+  display: flex; flex-direction: column; gap: 2px;
+  animation: mm-slideup-sheet 0.24s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes mm-slideup-sheet { from { transform: translateY(100%); } to { transform: none; } }
+.sheet__title {
+  font: 400 18px var(--font-heading); color: var(--color-text);
+  margin: 6px 12px 10px;
+}
+.sheet__item {
+  border: none; background: none; text-align: left;
+  font: 600 15px var(--font-body); color: var(--color-text);
+  padding: 15px 12px; border-radius: 14px; cursor: pointer;
+}
+.sheet__item:active { background: var(--color-accent-100); }
+.sheet__item--danger { color: #a63d2a; }
+.sheet__item--cancel { color: var(--color-neutral-600); font-weight: 400; }
+@media (prefers-reduced-motion: reduce) {
+  .sheet-backdrop, .sheet { animation: none; }
+}
 .board-act {
   border: none; background: transparent; border-radius: 999px;
   padding: 7px 11px; font: 600 12px var(--font-body);
@@ -150,8 +202,16 @@ button { font: inherit; }
 .crumb { font: 600 13px var(--font-body); color: var(--color-accent-700); background: none; border: none; cursor: pointer; }
 .crumb:hover { color: var(--color-accent-800); }
 .board-switch { position: relative; }
-.board-switch__name { font: 400 30px/1 var(--font-heading); color: var(--color-text); cursor: pointer; background: none; border: none; padding: 0; }
-.board-switch__caret { font-size: 17px; color: var(--color-neutral-500); }
+/* `nowrap` : sans lui, le chevron passe à la ligne dès que la largeur manque —
+   très visible sur mobile, où il se retrouvait sous le nom. */
+.board-switch__name {
+  font: 400 30px/1 var(--font-heading); color: var(--color-text);
+  cursor: pointer; background: none; border: none; padding: 0;
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  max-width: 100%;
+}
+.board-switch__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.board-switch__caret { font-size: 24px; line-height: 1; color: var(--color-neutral-500); flex: none; }
 .board-menu {
   position: absolute; left: 0; top: 110%; z-index: 30; background: var(--card-warm);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 8px;
@@ -176,6 +236,14 @@ button { font: inherit; }
   border-radius: var(--radius-lg); padding: 14px 16px 16px; display: flex; flex-direction: column;
   min-height: 180px; transition: border-color 0.18s;
 }
+/* Coin central carré : les 4 cases se referment sur le centre de la matrice,
+   comme les tuiles de l'icône. Uniquement pertinent en 2×2 — la règle est
+   annulée dans le média mobile, où la grille passe en colonne et n'a plus de
+   centre. `--park` est exclue : elle occupe toute la largeur. */
+.grid > .quad:nth-child(1) { border-bottom-right-radius: 0; }
+.grid > .quad:nth-child(2) { border-bottom-left-radius: 0; }
+.grid > .quad:nth-child(3) { border-top-right-radius: 0; }
+.grid > .quad:nth-child(4) { border-top-left-radius: 0; }
 .quad--park { grid-column: 1 / -1; min-height: 90px; }
 .quad--drag { border-color: var(--q-ink); }
 .quad-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
@@ -324,7 +392,9 @@ button { font: inherit; }
 .error { color: #a63d2a; font: 13px var(--font-body); margin: 0; }
 
 /* ── Barre du haut (déconnexion) ──────────────────────────────────────────── */
-.userbar { max-width: 1060px; margin: 0 auto; padding: 14px 24px 0; display: flex; justify-content: flex-end; }
+/* Retour à gauche, déconnexion à droite. `space-between` avec un `<span/>` vide
+   quand il n'y a pas de retour, pour que « Déconnexion » ne se recentre pas. */
+.userbar { max-width: 1060px; margin: 0 auto; padding: 14px 24px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .signout { background: none; border: 1.5px solid var(--color-neutral-300); color: var(--color-neutral-600); border-radius: 999px; padding: 6px 14px; font: 600 12px var(--font-body); cursor: pointer; }
 .signout:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
 
@@ -332,6 +402,8 @@ button { font: inherit; }
 @media (max-width: 720px) {
   .grid { grid-template-columns: 1fr; grid-template-rows: none; }
   .quad--park { grid-column: auto; }
+  /* En colonne, plus de centre : on rend leur rayon aux quatre coins. */
+  .grid > .quad { border-radius: var(--radius-lg); }
 }
 
 /* ── Renommage / suppression d'une matrice ────────────────────────────────── */

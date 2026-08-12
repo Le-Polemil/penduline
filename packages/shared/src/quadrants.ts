@@ -33,9 +33,17 @@ export interface Quadrant {
 }
 
 export const QUADS: Quadrant[] = [
-  { key: 'faire',     label: 'Faire',     sub: 'urgent + important',      ink: '#5c6b45', dark: '#43502f', bg: '#e3e8da' },
+  // `bg` légèrement approfondi : 1.05 de contraste avec le fond de page était
+  // un peu court, on passe à 1.11.
+  { key: 'faire',     label: 'Faire',     sub: 'urgent + important',      ink: '#5c6b45', dark: '#43502f', bg: '#dbe3ce' },
   { key: 'planifier', label: 'Planifier', sub: 'important, pas urgent',   ink: '#38607f', dark: '#27455c', bg: '#dde7ef' },
-  { key: 'deleguer',  label: 'Déléguer',  sub: 'urgent, pas important',   ink: '#8f6a14', dark: '#6b4f0e', bg: '#f3e7cd' },
+  // `bg` : la seule case dont la teinte est de la même famille que le beige de
+  // la page, donc la seule qui ne peut pas se détacher par la teinte. L'origine
+  // (#f3e7cd) n'offrait que 1.03 de contraste. Attention en le fonçant : au-delà,
+  // l'écart vert-bleu grimpe (45 pour #ebdcaf, contre 18 pour le fond) et la
+  // couleur vire au kaki. Ici 1.09 de contraste pour un écart de 28, soit le
+  // niveau de teinte de l'origine.
+  { key: 'deleguer',  label: 'Déléguer',  sub: 'urgent, pas important',   ink: '#8f6a14', dark: '#6b4f0e', bg: '#f2e0c4' },
   { key: 'eliminer',  label: 'Éliminer',  sub: 'ni urgent, ni important', ink: '#a63d2a', dark: '#7c2d1e', bg: '#e3d8d4' },
 ];
 

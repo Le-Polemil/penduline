@@ -58,3 +58,55 @@ entre les deux (fenêtre de casse de quelques secondes, assumée : app perso).
 vaut `false` ; n'importe qui atteignant l'API peut créer un compte fonctionnel
 (ses données restent isolées par les policies RLS). À basculer à `true` une fois
 les comptes voulus créés — ou configurer SMTP et repasser autoconfirm à `false`.
+
+## La machine est le facteur limitant
+
+4 Go de RAM, 2 vCPU, avec Supabase auto-hébergé (14 conteneurs), Coolify et
+d'autres sites. Le serveur s'est effondré **deux fois** pendant un build de
+l'app : les ports TCP restaient ouverts mais plus aucune requête HTTP
+n'aboutissait — signature d'une machine qui swappe, pas d'un CPU saturé. La
+deuxième fois SSH est tombé aussi, et il a fallu redémarrer depuis la console.
+
+Mesure au moment de l'incident : **273 Mo disponibles, swap plein à 100 %**
+(2047/2047). Plus rien pour absorber le pic d'un `npm ci`. Ajouter du swap
+n'était donc pas le correctif : il y en avait déjà, et il était saturé.
+
+**Ce n'est pas Docker.** Les 714 Mo de Logflare sont le tas préalloué de sa VM
+Elixir ; il coûterait autant hors conteneur. Et l'app web est un bundle statique
+de 370 Ko. Le poids, c'est Supabase au repos.
+
+## Dégraissage de Supabase
+
+Penduline n'utilise que PostgREST et GoTrue. Sept services retirés du compose —
+analytics (Logflare, 714 Mo à lui seul), vector, supavisor, storage, minio,
+imgproxy, edge-functions — soit **~1 Go récupéré** : de 273 Mo à ~1,5 Go
+disponibles.
+
+**Piège :** `supabase-analytics` était déclaré en `depends_on ... service_healthy`
+par huit services, et `supabase-db` dépendait de `supabase-vector`. Il faut
+retirer ces dépendances en même temps que les services, **et supprimer la clé
+`depends_on` devenue vide** — un `depends_on:` sans entrée empêche le démarrage.
+
+**Deux avertissements.** Le compose est désormais **modifié à la main** dans
+Coolify : une mise à jour du template Supabase l'écraserait. Et redéployer une
+stack recrée les conteneurs, donc provoque un pic — c'est cette opération qui a
+tué la machine la deuxième fois. La faire à froid, avec de la marge.
+
+## CI et image GHCR
+
+`.github/workflows/ci.yml` typecheck et build à chaque PR, puis **construit et
+pousse l'image sur GHCR depuis `main`**. Le typecheck vit là parce qu'il a été
+retiré du Dockerfile, où il doublait le pic mémoire. Aucun secret à créer :
+Actions fournit son `GITHUB_TOKEN`, il suffit de `packages: write`. Les clés Vite
+passent par des variables de dépôt, et leur absence **fait échouer le job**
+plutôt que de publier une image muette.
+
+`ghcr.io/le-polemil/penduline-web:latest` est publiquement tirable, et validée
+localement (bundle correct, clés inlinées).
+
+**Bascule non faite, volontairement.** « Docker Image » n'est pas un build pack
+dans Coolify mais un *type de ressource*, choisi à la création : la ressource
+existante n'est pas convertible. Il faudrait en créer une nouvelle, lui
+transférer `penduline.polemil.dev` (après l'avoir retiré de l'actuelle, sinon
+Traefik voit deux fois le même domaine), puis supprimer l'ancienne. À faire à
+froid. En attendant, l'image publiée sert de filet.
