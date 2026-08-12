@@ -12,8 +12,13 @@ export interface Store {
   tasks: Task[];
   /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
   addBoard: (name: string) => Promise<string | null>;
+  renameBoard: (id: string, name: string) => Promise<void>;
+  /** Supprime la matrice ET ses tâches (cascade assurée par la clé étrangère). */
+  deleteBoard: (id: string) => Promise<void>;
   addTask: (boardId: string, quadrant: QuadrantKey, title: string, position: number) => Promise<void>;
   patchTask: (id: string, patch: TaskPatch) => Promise<void>;
+  /** Suppression DÉFINITIVE (contrairement au drapeau `deleted`, qui est réversible). */
+  purgeTasks: (ids: string[]) => Promise<void>;
   reload: () => Promise<void>;
 }
 
@@ -54,6 +59,21 @@ export function useStore(userId: string): Store {
     [boards, userId],
   );
 
+  const renameBoard = useCallback(async (id: string, name: string) => {
+    setBoards((bs) => bs.map((b) => (b.id === id ? { ...b, name } : b)));
+    const { error } = await supabase.from('boards').update({ name }).eq('id', id);
+    if (error) console.error('[penduline] renameBoard', error.message);
+  }, []);
+
+  const deleteBoard = useCallback(async (id: string) => {
+    // Les tâches partent avec la matrice : `tasks.board_id` porte un
+    // `on delete cascade`. On nettoie l'état local en conséquence.
+    setBoards((bs) => bs.filter((b) => b.id !== id));
+    setTasks((ts) => ts.filter((t) => t.board_id !== id));
+    const { error } = await supabase.from('boards').delete().eq('id', id);
+    if (error) console.error('[penduline] deleteBoard', error.message);
+  }, []);
+
   const addTask = useCallback(
     async (boardId: string, quadrant: QuadrantKey, title: string, position: number) => {
       const { data, error } = await supabase
@@ -74,6 +94,24 @@ export function useStore(userId: string): Store {
     if (error) console.error('[penduline] patchTask', error.message);
   }, []);
 
-  return { ready, boards, tasks, addBoard, addTask, patchTask, reload: load };
+  const purgeTasks = useCallback(async (ids: string[]) => {
+    if (ids.length === 0) return;
+    setTasks((ts) => ts.filter((t) => !ids.includes(t.id)));
+    const { error } = await supabase.from('tasks').delete().in('id', ids);
+    if (error) console.error('[penduline] purgeTasks', error.message);
+  }, []);
+
+  return {
+    ready,
+    boards,
+    tasks,
+    addBoard,
+    renameBoard,
+    deleteBoard,
+    addTask,
+    patchTask,
+    purgeTasks,
+    reload: load,
+  };
 }
 
