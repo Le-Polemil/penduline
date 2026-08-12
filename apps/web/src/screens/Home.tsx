@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { countOpen, QUADS } from '@penduline/shared';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';
+
+/** Durée d'un appui long, alignée sur la convention des OS mobiles. */
+const LONG_PRESS_MS = 500;
 
 export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string) => void }) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
@@ -11,6 +14,24 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
   // Renommage en place : { id, nom en cours de saisie }.
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [toDelete, setToDelete] = useState<string | null>(null);
+  // Menu d'actions ouvert à l'appui long (tactile) : les actions au survol sont
+  // inatteignables au doigt.
+  const [sheet, setSheet] = useState<string | null>(null);
+  const pressTimer = useRef<number>();
+  /** Un appui long déclenche aussi un `click` : on le neutralise. */
+  const swallowClick = useRef(false);
+
+  function pressStart(e: ReactPointerEvent, id: string) {
+    if (e.pointerType !== 'touch') return;
+    swallowClick.current = false;
+    pressTimer.current = window.setTimeout(() => {
+      swallowClick.current = true;
+      setSheet(id);
+    }, LONG_PRESS_MS);
+  }
+  function pressEnd() {
+    window.clearTimeout(pressTimer.current);
+  }
 
   async function create() {
     const name = (draft ?? '').trim();
@@ -87,7 +108,21 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
                   </form>
                 ) : (
                   <>
-                    <button className="board-card" onClick={() => onOpen(board.id)}>
+                    <button
+                      className="board-card"
+                      onClick={() => {
+                        if (swallowClick.current) {
+                          swallowClick.current = false;
+                          return;
+                        }
+                        onOpen(board.id);
+                      }}
+                      onPointerDown={(e) => pressStart(e, board.id)}
+                      onPointerUp={pressEnd}
+                      onPointerCancel={pressEnd}
+                      onPointerLeave={pressEnd}
+                      onContextMenu={(e) => e.preventDefault()}
+                    >
                       <span className="board-card__name">{board.name}</span>
                       <span className="board-card__meta">{meta}</span>
                       <span className="board-card__pills">
@@ -157,6 +192,39 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
           </button>
         </form>
       )}
+
+      {sheet && (() => {
+        const b = store.boards.find((x) => x.id === sheet);
+        if (!b) return null;
+        return (
+          <div className="sheet-backdrop" onClick={() => setSheet(null)}>
+            <div className="sheet" onClick={(e) => e.stopPropagation()}>
+              <p className="sheet__title">{b.name}</p>
+              <button
+                className="sheet__item"
+                onClick={() => {
+                  setEditing({ id: b.id, name: b.name });
+                  setSheet(null);
+                }}
+              >
+                Renommer
+              </button>
+              <button
+                className="sheet__item sheet__item--danger"
+                onClick={() => {
+                  setToDelete(b.id);
+                  setSheet(null);
+                }}
+              >
+                Supprimer
+              </button>
+              <button className="sheet__item sheet__item--cancel" onClick={() => setSheet(null)}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        );
+      })()}
 
       {doomed && (
         <Confirm

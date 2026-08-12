@@ -244,13 +244,11 @@ export function MatrixScreen({
   return (
     <div className="matrix">
       <div className="matrix-head">
-        <button className="crumb" onClick={onHome}>
-          ‹ Matrices
-        </button>
         <span className="board-switch">
           {renaming === null ? (
             <button className="board-switch__name" onClick={() => setBoardMenu((o) => !o)}>
-              {board.name} <span className="board-switch__caret">▾</span>
+              <span className="board-switch__label">{board.name}</span>
+              <span className="board-switch__caret">▾</span>
             </button>
           ) : (
             <form

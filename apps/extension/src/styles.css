@@ -52,6 +52,13 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .logo { width: 26px; height: 26px; border-radius: 50%; background: var(--color-accent); display: flex; align-items: center; justify-content: center; flex: none; }
 .logo__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5px; }
 .logo__cell { width: 5px; height: 5px; border-radius: 1.5px; }
+/* Coin central carré : les 4 cases se referment sur le centre, comme les tuiles
+   de l'icône. Ordre des cellules = ordre de QUADS (faire, planifier, déléguer,
+   éliminer), donc la diagonale des coins à redresser suit le 2×2. */
+.logo__cell:nth-child(1) { border-bottom-right-radius: 0; }
+.logo__cell:nth-child(2) { border-bottom-left-radius: 0; }
+.logo__cell:nth-child(3) { border-top-right-radius: 0; }
+.logo__cell:nth-child(4) { border-top-left-radius: 0; }
 
 .home-list { flex: 1; overflow: auto; padding: 6px 12px; display: flex; flex-direction: column; gap: 6px; animation: mm-in 0.25s ease backwards; }
 .empty { font: 12.5px var(--font-body); color: var(--color-neutral-500); text-align: center; padding: 24px 8px; }
