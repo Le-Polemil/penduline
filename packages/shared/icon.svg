@@ -1,39 +1,22 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!--
-    Penduline — ruche hexagonale (d'après artificial-hive), recolorée avec la
-    palette des quadrants (packages/shared/src/quadrants.ts).
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="12.25 6 87.5 87.5">
+<!--
+  Penduline : nid suspendu de la rémiz penduline, avec la matrice 2x2 dedans.
+  Terracotta = la couleur d'accent du thème ; les 4 tuiles reprennent les teintes
+  « bg » des quadrants de packages/shared/src/quadrants.ts, dans l'ordre de la
+  matrice : faire (vert) / planifier (bleu) puis déléguer (or) / éliminer (rouge).
 
-    Fond transparent. Quatre couleurs à l'intérieur, une par section, dans la
-    disposition de la matrice :
+  viewBox recadrée sur la boîte englobante réelle du dessin (mesurée au
+  getBBox, contours compris) : le tracé d'origine occupait 59x87.5 dans un
+  canevas de 112, d'où d'énormes marges. Carrée et centrée -> remplit le
+  viewport sans déformation, contrainte par la hauteur.
+  Aucun « path » n'a été modifié.
+-->
 
-        faire (vert)    planifier (bleu)
-        déléguer (or)   éliminer (rouge)
-
-    Les trois cellules centrales sont peintes de la couleur de la trame, donc
-    invisibles : à petite taille, sept cellules colorées deviennent illisibles,
-    quatre se distinguent encore. Laissées transparentes, elles creusaient une
-    colonne qui coupait l'icône en deux.
-
-    La trame est le tracé d'origine, inchangé : ses sous-chemins « cellules »
-    tournent dans le sens inverse du contour, donc le remplissage nonzero en
-    fait des TROUS. Les hexagones colorés sont posés DERRIÈRE et apparaissent
-    exactement dans ces trous — aucun alignement manuel à maintenir.
-  -->
-  <g>
-    <!-- cellules centrales : rejoignent la trame (pas une 5e couleur) -->
-    <path d="M249.906 80.906 L302.312 111.156 L302.312 171.656 L249.906 201.906 L197.5 171.656 L197.5 111.156 Z" fill="#201e1d"/>
-    <path d="M249.906 202 L302.312 232.25 L302.312 292.75 L249.906 323 L197.5 292.75 L197.5 232.25 Z" fill="#201e1d"/>
-    <path d="M249.906 322.9 L302.312 353.15 L302.312 413.65 L249.906 443.9 L197.5 413.65 L197.5 353.15 Z" fill="#201e1d"/>
-    <!-- gauche haut — faire -->
-    <path d="M144.562 141.376 L196.968 171.626 L196.968 232.126 L144.562 262.376 L92.156 232.126 L92.156 171.626 Z" fill="#5c6b45"/>
-    <!-- droite haut — planifier -->
-    <path d="M354.875 141.376 L407.281 171.626 L407.281 232.126 L354.875 262.376 L302.469 232.126 L302.469 171.626 Z" fill="#38607f"/>
-    <!-- gauche bas — déléguer -->
-    <path d="M144.562 262.391 L196.968 292.641 L196.968 353.141 L144.562 383.391 L92.156 353.141 L92.156 292.641 Z" fill="#8f6a14"/>
-    <!-- droite bas — éliminer -->
-    <path d="M354.875 262.391 L407.281 292.641 L407.281 353.141 L354.875 383.391 L302.469 353.141 L302.469 292.641 Z" fill="#a63d2a"/>
-  </g>
-
-  <!-- Trame : tracé d'origine, seule la couleur change. -->
-  <path d="M251.313 23.844 49.438 140.25l-.376 233.5 202.625 116.406L453.563 373.75l.375-233.5L251.313 23.844zm-1.407 57.062 52.406 30.25v60.5l-52.406 30.25-52.406-30.25v-60.5l52.406-30.25zm-105.344 60.47 52.407 30.25v60.5l-52.407 30.25 52.406 30.25v60.53l-52.407 30.25-52.407-30.25v-60.53l52.406-30.25-52.406-30.25v-60.5l52.406-30.25zm210.313 0 52.406 30.25v60.5l-52.405 30.25 52.406 30.25v60.53l-52.405 30.25-52.406-30.25v-60.53l52.405-30.25-52.406-30.25v-60.5l52.405-30.25zM249.905 202l52.407 30.25v60.5l-52.28 30.188 52.28 30.156v60.53l-52.406 30.25-52.406-30.25v-60.53l52.28-30.156-52.28-30.188v-60.5L249.906 202z" fill="#201e1d"/>
+  <path d="M48 12 C48 6 64 6 64 12 L62 25 C60 31 52 31 50 25 Z" fill="#c67139" stroke="#f5ead8" stroke-width="3"></path>
+  <path d="M56 21 C39 21 28 37 28 56 C28 75 39 92 56 92 C73 92 84 75 84 56 C84 37 73 21 56 21 Z" fill="#c67139" stroke="#f5ead8" stroke-width="3"></path>
+  <path d="M56 26 C42 26 33 40 33 56 C33 72 42 87 56 87 C70 87 79 72 79 56 C79 40 70 26 56 26 Z" fill="none" stroke="#f5ead8" stroke-width="2.5" opacity=".6"></path>
+  <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#e3e8da"></path>
+  <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#dde7ef"></path>
+  <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#f3e7cd"></path>
+  <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#e3d8d4"></path>
 </svg>
