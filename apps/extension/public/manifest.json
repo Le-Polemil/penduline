@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Penduline",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "Consulte et alimente tes matrices d'Eisenhower depuis ton navigateur.",
   "icons": {
     "16": "icon16.png",
@@ -20,11 +20,7 @@
     }
   },
   "permissions": ["storage"],
-  "host_permissions": [
-    "https://api.penduline.polemil.dev/*",
-    "https://*.supabase.co/*",
-    "http://127.0.0.1/*"
-  ],
+  "host_permissions": ["https://api.penduline.polemil.dev/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

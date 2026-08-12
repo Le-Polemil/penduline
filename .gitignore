@@ -9,6 +9,8 @@ build/
 .vite/
 apps/extension/dist/
 apps/web/dist/
+# Paquet du Chrome Web Store : artefact de build, reproductible via `npm run build:ext`.
+apps/extension/*.zip
 coverage/
 *.log
 

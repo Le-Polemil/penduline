@@ -1,5 +1,27 @@
 /* Penduline — popup d'extension, porté depuis « Extension Prototype.dc.html ». */
 
+/*
+  Polices EMBARQUÉES, et non chargées depuis Google Fonts. Une extension publiée
+  ne doit pas dépendre d'un CDN : chaque ouverture du popup enverrait une requête
+  à un tiers (à déclarer au Chrome Web Store) et le rendu casserait hors ligne.
+  Sous-ensemble « latin » : il couvre les accents français, œ compris (U+0153).
+  Figtree est une fonte variable — un seul fichier sert les graisses 400 à 700.
+*/
+@font-face {
+  font-family: 'Caprasimo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/caprasimo-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/figtree-latin.woff2') format('woff2');
+}
+
 :root {
   --color-bg: #f5ead8;
   --color-surface: #ebddc5;
