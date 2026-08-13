@@ -12,10 +12,26 @@ d'usage des données — et le rendu se dégradait hors ligne. Sous-ensemble
 « latin », qui couvre les accents français dont `œ`. Figtree étant une fonte
 variable, un seul fichier sert les graisses 400 à 700. Coût : +40 Ko.
 
-**`host_permissions` réduit à `https://api.penduline.polemil.dev/*`.** Il
-déclarait aussi `https://*.supabase.co/*` (inutilisé : le build pointe sur le
-domaine propre) et `http://127.0.0.1/*` (dev local). Les permissions larges ou
-injustifiées sont un motif classique de rejet.
+**`host_permissions` retiré entièrement.** Il déclarait au départ trois hôtes,
+dont deux inutilisés. Mais la bonne réponse était de tout supprimer : en MV3, un
+`fetch()` cross-origin depuis l'extension aboutit **sans autorisation d'hôte** dès
+lors que le serveur renvoie les en-têtes CORS voulus — et Kong répond
+`Access-Control-Allow-Origin: *` en reflétant les en-têtes demandés (`apikey`,
+`authorization`, `prefer`, `x-client-info`…).
+
+Vérifié de deux façons : préflights `POST /auth/v1/token`, `GET /rest/v1/boards`
+et `PATCH /rest/v1/tasks` avec une origine `chrome-extension://` (tous 200) ; et
+surtout le popup servi depuis une origine étrangère, sans la moindre autorisation,
+qui exécute son rafraîchissement de jeton et ses deux lectures en 200.
+
+L'enjeu est concret : déclarer une autorisation d'hôte déclenche un **examen
+approfondi** du Store, qui retarde la publication. Sans elle, il ne reste que
+`storage`, et la revue est standard.
+
+**Contrepartie à connaître :** ça repose sur le CORS permissif de l'API. Si tu
+restreins un jour `Access-Control-Allow-Origin` sur Kong, l'extension cessera de
+fonctionner et il faudra remettre `host_permissions` — en acceptant l'examen
+approfondi.
 
 **Version passée à 1.0.0.**
 
@@ -52,11 +68,9 @@ coup.
 > l'identifiant de la dernière matrice consultée, afin de la rouvrir directement
 > pendant deux heures. Rien n'est transmis à un tiers.
 
-**Justification de l'accès à `https://api.penduline.polemil.dev/*`**
-
-> C'est l'API de Penduline, seule source des données de l'utilisateur.
-> L'extension s'y authentifie, y lit et y écrit ses matrices et ses tâches.
-> Aucun autre domaine n'est contacté : les polices sont embarquées dans le paquet.
+**Autorisation d'hôte** — il n'y en a plus. Rien à justifier, et pas d'examen
+approfondi. L'extension joint son API par un `fetch` cross-origin classique,
+autorisé par les en-têtes CORS du serveur.
 
 **Code distant** — répondre non : le paquet ne charge ni script ni ressource
 externe.
