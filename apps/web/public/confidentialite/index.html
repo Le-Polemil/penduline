@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Penduline — Politique de confidentialité</title>
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <meta name="theme-color" content="#f5ead8" />
+    <meta name="robots" content="index, follow" />
+    <style>
+      /* Page volontairement autonome : aucune police distante, aucun script.
+         Elle doit rester lisible même si l'application est en panne. */
+      :root {
+        --bg: #f5ead8;
+        --text: #201e1d;
+        --muted: #82796a;
+        --accent: #8c491a;
+        --card: #fdf6e9;
+        --rule: #eee7db;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.65 system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      main { max-width: 720px; margin: 0 auto; padding: 48px 24px 80px; }
+      h1 { font-size: 1.9rem; line-height: 1.2; margin: 0 0 6px; }
+      .maj { color: var(--muted); font-size: 0.9rem; margin: 0 0 32px; }
+      h2 { font-size: 1.15rem; margin: 36px 0 10px; }
+      p, li { margin: 0 0 12px; }
+      ul { padding-left: 22px; }
+      a { color: var(--accent); }
+      .card {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 18px 22px;
+        margin: 24px 0;
+      }
+      .card p:last-child { margin-bottom: 0; }
+      footer {
+        margin-top: 48px; padding-top: 18px;
+        border-top: 1px solid var(--rule);
+        color: var(--muted); font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Politique de confidentialité</h1>
+      <p class="maj">Penduline — application web et extension Chrome. Dernière mise à jour : 12 août 2026.</p>
+
+      <div class="card">
+        <p>
+          Penduline est un projet personnel. Vos données ne sont ni vendues, ni
+          louées, ni transmises à des tiers, et ne servent à aucune publicité ni
+          à aucun profilage. Aucun outil de mesure d'audience n'est installé.
+        </p>
+      </div>
+
+      <h2>Données collectées</h2>
+      <ul>
+        <li>
+          <strong>Votre adresse e-mail</strong>, pour identifier votre compte.
+        </li>
+        <li>
+          <strong>Votre mot de passe</strong>, jamais conservé en clair : il est
+          haché par le service d'authentification avant enregistrement.
+        </li>
+        <li>
+          <strong>Le contenu que vous créez</strong> : noms de vos matrices,
+          intitulés de vos tâches et leur classement.
+        </li>
+        <li>
+          <strong>Un jeton de session</strong>, conservé sur votre appareil pour
+          vous éviter de vous reconnecter — dans le stockage local du navigateur
+          pour l'application web, dans le stockage de l'extension pour
+          l'extension.
+        </li>
+      </ul>
+      <p>
+        Aucune autre donnée n'est recueillie. Ni adresse IP conservée à des fins
+        d'analyse, ni historique de navigation, ni contenu des pages que vous
+        visitez. L'extension ne lit aucune page web.
+      </p>
+
+      <h2>Où vont ces données</h2>
+      <p>
+        Elles sont envoyées à <code>api.penduline.polemil.dev</code> et
+        enregistrées sur une instance <a href="https://supabase.com/">Supabase</a>
+        auto-hébergée, sur un serveur situé en France. Elles ne transitent par
+        aucun autre service : les polices de caractères sont embarquées dans
+        l'application, il n'y a donc aucun appel à un réseau de diffusion externe.
+      </p>
+      <p>
+        Chaque enregistrement porte votre identifiant, et des règles de sécurité
+        au niveau des lignes (<em>row level security</em>) empêchent tout accès
+        aux données d'un autre compte.
+      </p>
+
+      <h2>Durée de conservation</h2>
+      <p>
+        Vos données sont conservées tant que votre compte existe. La suppression
+        d'une matrice efface définitivement ses tâches. À la suppression du
+        compte, l'ensemble de vos matrices et tâches est effacé par effet de
+        cascade.
+      </p>
+
+      <h2>Vos droits</h2>
+      <p>
+        Vous pouvez demander l'accès à vos données, leur rectification, leur
+        export ou leur suppression complète en écrivant à l'adresse ci-dessous.
+        La demande est traitée manuellement, dans un délai raisonnable.
+      </p>
+
+      <h2>Contact</h2>
+      <p>
+        <a href="mailto:contact@polemil.dev">contact@polemil.dev</a>
+      </p>
+
+      <footer>
+        <a href="/">← Retour à Penduline</a>
+      </footer>
+    </main>
+  </body>
+</html>

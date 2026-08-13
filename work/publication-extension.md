@@ -19,30 +19,72 @@ injustifiées sont un motif classique de rejet.
 
 **Version passée à 1.0.0.**
 
-## Ce qui reste, et qui n'est pas du code
+## Politique de confidentialité
 
-**Compte développeur** — 5 $ une fois, sur
-`chrome.google.com/webstore/devconsole`.
+Publiée à `https://penduline.polemil.dev/confidentialite`
+(`apps/web/public/confidentialite/index.html`). Page autonome : aucune police
+distante, aucun script, pour rester lisible même si l'application est en panne.
+C'est cette URL à renseigner dans la fiche du Store — elle est **obligatoire**,
+l'extension gérant des comptes et du contenu utilisateur.
 
-**Politique de confidentialité : obligatoire ici.** L'extension gère des comptes
-et du contenu utilisateur, donc le Store exige une URL publique. À héberger, par
-exemple sur `penduline.polemil.dev/confidentialite`. Elle doit dire quoi est
-collecté (email, mot de passe, contenu des matrices), où ça part
-(`api.penduline.polemil.dev`, instance Supabase auto-hébergée), et que rien n'est
-revendu.
+## Captures d'écran
 
-**Captures d'écran** — au moins une, 1280×800 ou 640×400. L'accueil du popup et
-le détail d'une matrice suffisent.
+`apps/extension/store/01-liste.png` et `02-matrice.png`, 1280×800, le format
+attendu. Le popup y est composé à ses dimensions réelles (400×600) dans un cadre,
+avec une accroche à gauche.
 
-**Déclarations du formulaire :**
-- *Objet unique* : consulter et alimenter ses matrices d'Eisenhower.
-- *Justification de `storage`* : conserver la session et la dernière matrice
-  ouverte.
-- *Justification de l'hôte* : joindre l'API de l'utilisateur, seule source de
-  ses données.
-- *Usage des données* : cocher « informations d'authentification » et
-  « informations personnelles identifiables » (email). Certifier que rien n'est
-  vendu, ni utilisé à des fins étrangères.
+**Elles utilisent du contenu de démonstration neutre, volontairement.** Les vraies
+tâches du compte de test nommaient des projets clients — les publier sur le Store
+les aurait rendues publiques. La matrice de démonstration a été supprimée après
+coup.
+
+## Textes à coller dans le formulaire
+
+**Objet unique**
+
+> Penduline permet de consulter et d'alimenter ses propres matrices d'Eisenhower,
+> hébergées sur son compte Penduline. L'extension n'a aucune autre fonction.
+
+**Justification de la permission `storage`**
+
+> L'extension conserve deux choses dans le stockage local : le jeton de session,
+> pour éviter à l'utilisateur de se reconnecter à chaque ouverture du popup, et
+> l'identifiant de la dernière matrice consultée, afin de la rouvrir directement
+> pendant deux heures. Rien n'est transmis à un tiers.
+
+**Justification de l'accès à `https://api.penduline.polemil.dev/*`**
+
+> C'est l'API de Penduline, seule source des données de l'utilisateur.
+> L'extension s'y authentifie, y lit et y écrit ses matrices et ses tâches.
+> Aucun autre domaine n'est contacté : les polices sont embarquées dans le paquet.
+
+**Code distant** — répondre non : le paquet ne charge ni script ni ressource
+externe.
+
+**Usage des données** — cocher :
+- *Informations permettant d'identifier une personne* : l'adresse e-mail du compte.
+- *Informations d'authentification* : le mot de passe à la connexion, et le jeton
+  de session.
+
+Ne PAS cocher activité de navigation, contenu des sites web, localisation ni
+communications personnelles : l'extension ne lit aucune page.
+
+Puis certifier les trois points : données non revendues, non utilisées à des fins
+étrangères à l'objet unique, non utilisées pour évaluer une solvabilité.
+
+**Description proposée pour la fiche**
+
+> Urgent n'est pas important. Penduline range vos tâches selon ces deux axes —
+> faire, planifier, déléguer, éliminer — et vous les rend en un clic depuis votre
+> barre d'outils.
+>
+> Organisez autant de matrices que vous voulez, selon le découpage qui vous
+> convient : un lieu, un moment de la journée, un projet. L'extension retrouve la
+> dernière matrice consultée, affiche d'un coup d'œil ce qui reste ouvert, et
+> permet d'ajouter une tâche directement dans la bonne case.
+>
+> Un compte Penduline est nécessaire. Vos données restent les vôtres : rien n'est
+> revendu, aucun traceur, aucune mesure d'audience.
 
 Compter quelques jours de revue.
 
