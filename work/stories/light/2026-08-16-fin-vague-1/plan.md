@@ -3,7 +3,7 @@ story: "Fin de la Vague 1"
 story_code: "fin-vague-1"
 issues: [12, 13, 15]
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Fin de la Vague 1 — #12 renommer, #13 changer de matrice, #15 chargement
