@@ -7,13 +7,14 @@ import {
   endPosition,
   PARK,
   partnerOf,
+  planPairMove,
   positionBefore,
   QUADS,
   type Quadrant,
   type QuadrantKey,
   type Board,
   type Task,
-  type TaskPatch,
+  type TaskWrite,
 } from '@penduline/shared';
 import { isConfigured, supabase } from './supabase';
 import { getActiveBoard, setActiveBoard } from './active-board';
@@ -366,17 +367,17 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
   }
 
   /**
-   * Déplace une tâche ET sa partenaire, en les gardant adjacentes.
+   * Applique des écritures préparées par `packages/shared`.
    *
    * Le popup n'affiche pas les paires côte à côte — c'est une mise en page du
-   * web. Mais il ne doit pas pour autant **casser** un lien que le web garantit :
-   * jusqu'ici il remettait `pair_id` à `null` à chaque déplacement, détruisant
-   * en silence des appairages créés ailleurs.
+   * web — mais il ne doit pas pour autant **casser** un lien que le web
+   * garantit. La règle vit désormais en un seul endroit, partagé par les deux
+   * applications : c'est précisément parce qu'elle existait en double que
+   * l'extension a continué à détruire des paires plusieurs jours après que le
+   * web eut été corrigé.
    */
-  function movePair(task: Task, patch: TaskPatch, position: number) {
-    const mate = partnerOf(tasks, task);
-    patchTask(task.id, { ...patch, position });
-    if (mate) patchTask(mate.id, { ...patch, position: position + 0.001 });
+  function apply(writes: TaskWrite[]) {
+    for (const w of writes) patchTask(w.id, w.patch);
   }
 
   function dropAt(quad: QuadrantKey, beforeId: string | null) {
@@ -396,7 +397,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
       )
       .sort((a, b) => a.position - b.position);
     const pos = positionBefore(rest, beforeId);
-    withVT(() => movePair(task, { quadrant: quad }, pos));
+    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
     setDrag(null);
     setDragOverQuad(null);
     setHoverGap(null);
@@ -412,7 +413,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
 
   function menuMove(task: Task, quad: QuadrantKey) {
     const pos = endPosition(listFor(quad));
-    withVT(() => movePair(task, { quadrant: quad }, pos));
+    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
     setMenuTask(null);
   }
 
@@ -426,7 +427,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
     const rest = tasks.filter(
       (t) => t.board_id === targetId && t.quadrant === task.quadrant && !t.done && !t.deleted && !t.archived,
     );
-    withVT(() => movePair(task, { board_id: targetId }, endPosition(rest)));
+    withVT(() => apply(planPairMove(tasks, task, { board_id: targetId }, endPosition(rest))));
     setMenuTask(null);
   }
 
