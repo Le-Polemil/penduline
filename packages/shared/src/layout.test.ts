@@ -7,6 +7,8 @@ import {
   isVisible,
   partnerOf,
   pinnedTasks,
+  planPairDetach,
+  planPairMove,
   positionBefore,
   visibleTasks,
 } from './layout';
@@ -210,5 +212,125 @@ describe('matrice d’états', () => {
   it('trie les visibles par position', () => {
     const tasks = [makeTask({ id: 'z', position: 2 }), makeTask({ id: 'a', position: 1 })];
     expect(visibleTasks(tasks, 'b1', 'faire').map((t) => t.id)).toEqual(['a', 'z']);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('préservation des paires', () => {
+  const pair = 'p1';
+
+  it('déplace une tâche seule sans rien inventer', () => {
+    const t = makeTask({ id: 'a' });
+    expect(planPairMove([t], t, { quadrant: 'planifier' }, 5)).toEqual([
+      { id: 'a', patch: { quadrant: 'planifier', position: 5 } },
+    ]);
+  });
+
+  it('emmène la partenaire, avec le MÊME patch', () => {
+    // Changer de case ou de matrice concerne la paire entière : seule la
+    // position diffère, pour que la partenaire se range juste derrière.
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const writes = planPairMove([a, b], a, { board_id: 'b2' }, 5);
+
+    expect(writes).toHaveLength(2);
+    expect(writes[0]).toEqual({ id: 'a', patch: { board_id: 'b2', position: 5 } });
+    expect(writes[1].id).toBe('b');
+    expect(writes[1].patch.board_id).toBe('b2');
+    expect(writes[1].patch.position).toBeGreaterThan(5);
+  });
+
+  it('ignore une partenaire supprimée', () => {
+    // Sinon le déplacement ressusciterait un lien vers la corbeille.
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair, deleted: true });
+    expect(planPairMove([a, b], a, {}, 5)).toHaveLength(1);
+  });
+
+  it('ignore un pair_id orphelin', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    expect(planPairMove([a], a, {}, 5)).toHaveLength(1);
+  });
+
+  it('détache des deux côtés', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    expect(planPairDetach([a, b], a)).toEqual([
+      { id: 'a', patch: { pair_id: null } },
+      { id: 'b', patch: { pair_id: null } },
+    ]);
+  });
+
+  it('n’applique le patch propre qu’à la tâche qui part', () => {
+    // La survivante perd son lien, pas son état : archiver l'une ne doit pas
+    // archiver l'autre.
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const writes = planPairDetach([a, b], a, { archived: true, pinned: false });
+
+    expect(writes[0].patch).toEqual({ archived: true, pinned: false, pair_id: null });
+    expect(writes[1].patch).toEqual({ pair_id: null });
+  });
+
+  it('détache une tâche sans partenaire sans échouer', () => {
+    const a = makeTask({ id: 'a' });
+    expect(planPairDetach([a], a, { deleted: true })).toEqual([
+      { id: 'a', patch: { deleted: true, pair_id: null } },
+    ]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('placement de la partenaire', () => {
+  const pair = 'p1';
+
+  it('se glisse entre la tâche déplacée et la voisine suivante', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const voisine = makeTask({ id: 'v', position: 10 });
+    const [, mate] = planPairMove([a, b, voisine], a, {}, 4);
+    expect(mate.patch.position).toBeGreaterThan(4);
+    expect(mate.patch.position).toBeLessThan(10);
+  });
+
+  it('se pose après quand il n’y a pas de voisine', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const [, mate] = planPairMove([a, b], a, {}, 4);
+    expect(mate.patch.position).toBe(5);
+  });
+
+  it('ne déborde pas sur la voisine, même dans un interstice minuscule', () => {
+    // LE cas que la correction règle. Un décalage fixe de 0,001 ferait atterrir
+    // la partenaire au-delà de `v` dès que l'écart passe sous ce seuil — ce qui
+    // arrive après une dizaine d'insertions au même endroit.
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const voisine = makeTask({ id: 'v', position: 0.5005 });
+    const [task, mate] = planPairMove([a, b, voisine], a, {}, 0.50025);
+
+    expect(mate.patch.position).toBeGreaterThan(task.patch.position!);
+    expect(mate.patch.position).toBeLessThan(0.5005);
+  });
+
+  it('cherche la voisine dans la case d’ARRIVÉE, pas celle de départ', () => {
+    // Le patch dit où la paire va. Lire les voisines de la case d'origine
+    // placerait la partenaire d'après un voisinage qu'elle vient de quitter.
+    const a = makeTask({ id: 'a', quadrant: 'faire', pair_id: pair });
+    const b = makeTask({ id: 'b', quadrant: 'faire', pair_id: pair });
+    const iciTresProche = makeTask({ id: 'ici', quadrant: 'faire', position: 4.0001 });
+    const laBas = makeTask({ id: 'la', quadrant: 'planifier', position: 10 });
+
+    const [, mate] = planPairMove([a, b, iciTresProche, laBas], a, { quadrant: 'planifier' }, 4);
+    // La voisine pertinente est `la` (position 10), pas `ici` (4,0001).
+    expect(mate.patch.position).toBe(7);
+  });
+
+  it('ignore les voisines supprimées', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const fantome = makeTask({ id: 'f', position: 4.5, deleted: true });
+    const [, mate] = planPairMove([a, b, fantome], a, {}, 4);
+    expect(mate.patch.position).toBe(5);
   });
 });

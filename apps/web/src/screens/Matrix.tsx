@@ -8,13 +8,16 @@ import {
   insertPosition,
   partnerOf,
   pinnedTasks,
+  planPairDetach,
+  planPairMove,
+  planPairPatch,
   QUADS,
   quadrant,
   visibleTasks,
   type QuadrantKey,
   type Board,
   type Task,
-  type TaskPatch,
+  type TaskWrite,
 } from '@penduline/shared';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';
@@ -69,20 +72,14 @@ export function MatrixScreen({
   const totalOpen = boardTasks.filter((t) => !t.done && !t.deleted).length;
 
   /**
-   * Déplace une tâche ET sa partenaire, en les gardant adjacentes.
+   * Applique des écritures préparées par `packages/shared`.
    *
-   * L'invariant de l'appairage est qu'une paire reste ensemble, toujours. C'est
-   * ce que les cinq points d'appel violaient en remettant `pair_id` à `null` :
-   * l'utilisateur appariait deux tâches, en déplaçait une, et le lien
-   * disparaissait sans un mot.
-   *
-   * Les 0,001 d'écart placent la partenaire juste derrière, sans risquer de
-   * tomber sur la position d'une voisine.
+   * La règle d'appairage vit désormais là-bas, sous forme de fonctions pures qui
+   * rendent ce qu'il y a à écrire. Ici on ne fait plus que persister — et c'est
+   * cette séparation qui rend la règle testable.
    */
-  function movePair(task: Task, patch: TaskPatch, position: number) {
-    const mate = partnerOf(tasks, task);
-    patchTask(task.id, { ...patch, position });
-    if (mate) patchTask(mate.id, { ...patch, position: position + 0.001 });
+  function apply(writes: TaskWrite[]) {
+    for (const w of writes) patchTask(w.id, w.patch);
   }
 
   function commitTaskRename() {
@@ -102,7 +99,7 @@ export function MatrixScreen({
    */
   function moveToBoard(task: Task, target: Board) {
     const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
-    withVT(() => movePair(task, { board_id: target.id }, pos));
+    withVT(() => apply(planPairMove(tasks, task, { board_id: target.id }, pos)));
   }
 
   /**
@@ -120,23 +117,17 @@ export function MatrixScreen({
 
   /** Défait le lien des deux côtés — un `pair_id` orphelin ne sert à rien. */
   function unpair(task: Task) {
-    const mate = partnerOf(tasks, task);
-    withVT(() => {
-      patchTask(task.id, { pair_id: null });
-      if (mate) patchTask(mate.id, { pair_id: null });
-    });
+    withVT(() => apply(planPairDetach(tasks, task)));
     setMenuTask(null);
   }
 
   // ── Complétion / annulation ───────────────────────────────────────────────
   function archive(id: string) {
     const task = tasks.find((t) => t.id === id);
-    const mate = task ? partnerOf(tasks, task) : null;
     // La tâche archivée sort de sa case : sa partenaire se retrouverait seule
     // avec un `pair_id` sans vis-à-vis. On dissocie au moment où le lien perd
     // son sens, pas plus tôt — annuler dans les 4 s le préserve donc.
-    patchTask(id, { archived: true, pinned: false, pair_id: null });
-    if (mate) patchTask(mate.id, { pair_id: null });
+    if (task) apply(planPairDetach(tasks, task, { archived: true, pinned: false }));
     setPending((cur) => (cur && cur.id === id ? null : cur));
   }
   function completeTask(task: Task) {
@@ -170,33 +161,25 @@ export function MatrixScreen({
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
     const pos = endPosition(visibleTasks(tasks, board.id, quad));
-    withVT(() => movePair(task, { quadrant: quad }, pos));
+    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
     setMenuTask(null);
   }
   function togglePin(t: Task) {
-    const mate = partnerOf(tasks, t);
     if (t.pinned) {
       const pos = endPosition(visibleTasks(tasks, board.id, t.quadrant));
-      withVT(() => movePair(t, { pinned: false }, pos));
+      withVT(() => apply(planPairMove(tasks, t, { pinned: false }, pos)));
     } else {
       // Épingler ne change pas les positions : les épinglées ont leur propre
       // zone, et la paire y sera regroupée par `buildRows` comme ailleurs.
-      withVT(() => {
-        patchTask(t.id, { pinned: true });
-        if (mate) patchTask(mate.id, { pinned: true });
-      });
+      withVT(() => apply(planPairPatch(tasks, t, { pinned: true })));
     }
     setMenuTask(null);
   }
   function removeTask(id: string) {
     const task = tasks.find((t) => t.id === id);
-    const mate = task ? partnerOf(tasks, task) : null;
-    withVT(() => {
-      patchTask(id, { deleted: true, pinned: false, pair_id: null });
-      // Même règle qu'à l'archivage : la survivante est dissociée plutôt que de
-      // garder un lien qui ne pointe plus vers rien.
-      if (mate) patchTask(mate.id, { pair_id: null });
-    });
+    // Même règle qu'à l'archivage : la survivante est dissociée plutôt que de
+    // garder un lien qui ne pointe plus vers rien.
+    if (task) withVT(() => apply(planPairDetach(tasks, task, { deleted: true, pinned: false })));
     setMenuTask(null);
   }
 
@@ -208,7 +191,7 @@ export function MatrixScreen({
     const pos = endPosition(visibleTasks(tasks, board.id, quad));
     // Glisser une tâche appairée emmène sa partenaire : c'est le comportement
     // inverse de l'ancien, et c'est voulu.
-    withVT(() => movePair(task, { quadrant: quad }, pos));
+    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
     setDrag(null);
     setHover(null);
   }
@@ -223,7 +206,7 @@ export function MatrixScreen({
       (t) => t.id !== task.id && t.id !== mate?.id,
     );
     const pos = insertPosition(buildRows(rest), rowIndex);
-    withVT(() => movePair(task, { quadrant: quad }, pos));
+    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
     setDrag(null);
     setHover(null);
   }

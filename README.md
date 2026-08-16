@@ -33,8 +33,11 @@ penduline/
   `pair_id` s'affichent côte à côte, mais surtout elles **restent ensemble** :
   elles changent de case, s'épinglent et se déplacent d'un bloc. Le lien ne se
   défait que volontairement (« Dissocier »), ou quand il perd son sens — l'une des
-  deux supprimée ou terminée. `partnerOf()` est le point unique où l'on retrouve
-  l'autre moitié.
+  deux supprimée ou terminée.
+- **Cette règle vit dans `layout.ts`, et nulle part ailleurs** : `planPairMove`,
+  `planPairPatch` et `planPairDetach` rendent les écritures à appliquer, sans rien
+  persister. C'est ce qui les rend testables — et ce qui évite qu'elles divergent
+  entre le web et l'extension, ce qui s'était déjà produit une fois.
 - L'ordre des matrices (`boards.position`) et celui des tâches partagent la même
   logique de position fractionnaire : `positionBefore()`, dans `layout.ts`.
 
