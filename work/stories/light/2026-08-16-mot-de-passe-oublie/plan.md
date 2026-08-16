@@ -3,7 +3,7 @@ story: "Mot de passe oublié : parcours de récupération"
 story_code: "mot-de-passe-oublie"
 issue: 33
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # #33 — Mot de passe oublié : parcours de récupération
