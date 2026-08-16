@@ -3,7 +3,7 @@ story: "Lot Vague 1 — extension"
 story_code: "extension-vague-1"
 issues: [11, 29, 16, 52]
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
