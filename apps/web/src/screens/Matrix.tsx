@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type DragEvent } from 'react';
+import { useState, type CSSProperties, type DragEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   ALL,
@@ -11,16 +11,18 @@ import {
   planPairDetach,
   planPairMove,
   planPairPatch,
-  QUADS,
-  quadrant,
   visibleTasks,
   type QuadrantKey,
   type Board,
+  type Quadrant,
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';
+import { BinModal } from '../components/BinModal';
+import { TaskCard } from '../components/TaskCard';
+import { useCompletion } from '../data/useCompletion';
 
 type Hover =
   | { type: 'end'; quad: QuadrantKey }
@@ -59,17 +61,16 @@ export function MatrixScreen({
   const [hover, setHover] = useState<Hover>(null);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [focusQuad, setFocusQuad] = useState<QuadrantKey | null>(null);
-  const [pending, setPending] = useState<{ id: string; label: string } | null>(null);
   /** Renommage en place : `{ id, titre en cours de saisie }`. */
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
-  const timer = useRef<number>();
 
-  useEffect(() => () => window.clearTimeout(timer.current), []);
+  const { pending, onCheck, undo } = useCompletion(tasks, patchTask);
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
   const totalOpen = boardTasks.filter((t) => !t.done && !t.deleted).length;
+  const otherBoards = store.boards.filter((b) => b.id !== board.id);
 
   /**
    * Applique des écritures préparées par `packages/shared`.
@@ -119,41 +120,6 @@ export function MatrixScreen({
   function unpair(task: Task) {
     withVT(() => apply(planPairDetach(tasks, task)));
     setMenuTask(null);
-  }
-
-  // ── Complétion / annulation ───────────────────────────────────────────────
-  function archive(id: string) {
-    const task = tasks.find((t) => t.id === id);
-    // La tâche archivée sort de sa case : sa partenaire se retrouverait seule
-    // avec un `pair_id` sans vis-à-vis. On dissocie au moment où le lien perd
-    // son sens, pas plus tôt — annuler dans les 4 s le préserve donc.
-    if (task) apply(planPairDetach(tasks, task, { archived: true, pinned: false }));
-    setPending((cur) => (cur && cur.id === id ? null : cur));
-  }
-  function completeTask(task: Task) {
-    if (pending) {
-      window.clearTimeout(timer.current);
-      archive(pending.id);
-    }
-    patchTask(task.id, { done: true });
-    setPending({ id: task.id, label: task.title });
-    window.clearTimeout(timer.current);
-    timer.current = window.setTimeout(() => archive(task.id), 4000);
-  }
-  function onCheck(task: Task) {
-    if (task.done) {
-      window.clearTimeout(timer.current);
-      patchTask(task.id, { done: false, archived: false });
-      setPending((cur) => (cur && cur.id === task.id ? null : cur));
-    } else {
-      completeTask(task);
-    }
-  }
-  function undo() {
-    if (!pending) return;
-    window.clearTimeout(timer.current);
-    patchTask(pending.id, { done: false, archived: false });
-    setPending(null);
   }
 
   // ── Menu : déplacer / épingler / supprimer ────────────────────────────────
@@ -235,148 +201,52 @@ export function MatrixScreen({
   const doneList = boardTasks.filter((t) => t.done && t.archived && !t.deleted);
   const delList = boardTasks.filter((t) => t.deleted);
 
-  function renderCard(t: Task, q: ReturnType<typeof quadrant>, single: boolean, pinnedCard: boolean) {
-    const isDrag = drag?.id === t.id;
-    const renaming = renamingTask?.id === t.id;
+  /**
+   * Une carte, câblée sur l'état local de l'écran.
+   *
+   * `drag` et `split` sont fournis ici parce que la matrice les autorise tous
+   * les deux — la vue globale, elle, les omet.
+   */
+  function card(t: Task, q: Quadrant, single: boolean, pinnedCard: boolean) {
     const splitOk = single && !t.pinned && !t.done && !!drag && drag.id !== t.id;
-    const splitActive = splitOk && hover?.type === 'card' && hover.taskId === t.id;
-    const cls = [
-      'task',
-      pinnedCard ? 'task--pinned' : '',
-      isDrag ? 'task--dragging' : '',
-      splitActive ? 'task--split' : '',
-      t.done ? 'task--done' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-
     return (
-      <div className="card-wrap" key={t.id}>
-        <div
-          className={cls}
-          style={{ viewTransitionName: `vt-${t.id}` } as CSSProperties}
-          // Pas de déplacement pendant une saisie : le glisser volerait le curseur.
-          draggable={!t.pinned && !t.done && !renaming}
-          onDragStart={(e: DragEvent) => {
-            e.dataTransfer.effectAllowed = 'move';
-            window.setTimeout(() => {
-              setDrag({ id: t.id, quad: q.key });
-              setMenuTask(null);
-            }, 0);
-          }}
-          onDragEnd={() => {
+      <TaskCard
+        key={t.id}
+        task={t}
+        quad={q}
+        tasks={tasks}
+        otherBoards={otherBoards}
+        pinnedCard={pinnedCard}
+        menuOpen={menuTask === t.id}
+        onMenu={(open) => setMenuTask(open ? t.id : null)}
+        rename={{
+          value: renamingTask?.id === t.id ? renamingTask.title : null,
+          start: () => setRenamingTask({ id: t.id, title: t.title }),
+          change: (value) => setRenamingTask({ id: t.id, title: value }),
+          cancel: () => setRenamingTask(null),
+          commit: commitTaskRename,
+        }}
+        onCheck={() => onCheck(t)}
+        onMoveQuad={(key) => menuMove(t.id, key)}
+        onMoveBoard={(b) => askMoveToBoard(t, b)}
+        onTogglePin={() => togglePin(t)}
+        onUnpair={() => unpair(t)}
+        onDelete={() => removeTask(t.id)}
+        drag={{
+          dragging: drag?.id === t.id,
+          start: () => setDrag({ id: t.id, quad: q.key }),
+          end: () => {
             setDrag(null);
             setHover(null);
-          }}
-          onDragOver={(e: DragEvent) => {
-            if (splitOk) {
-              e.preventDefault();
-              e.stopPropagation();
-              setHover({ type: 'card', taskId: t.id });
-            }
-          }}
-          onDrop={(e: DragEvent) => {
-            if (splitOk) {
-              e.preventDefault();
-              e.stopPropagation();
-              dropPair(q.key, t.id);
-            }
-          }}
-        >
-          {pinnedCard ? <span className="task__flag">⚑</span> : <span className="task__grip">⠿</span>}
-          <button
-            className={`task__check${t.done ? ' task__check--done' : ''}`}
-            onClick={() => onCheck(t)}
-            aria-label={t.done ? 'Rétablir' : 'Terminer'}
-          />
-          {renaming ? (
-            <form
-              className="task__rename"
-              onSubmit={(e) => {
-                e.preventDefault();
-                commitTaskRename();
-              }}
-            >
-              <input
-                className="task__rename-input"
-                value={renamingTask.title}
-                autoFocus
-                maxLength={500}
-                onChange={(e) => setRenamingTask({ id: t.id, title: e.target.value })}
-                // Échap annule. Pas de fermeture au blur : elle avalerait la
-                // saisie dès qu'on clique ailleurs pour valider.
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') setRenamingTask(null);
-                }}
-              />
-            </form>
-          ) : (
-            <span className={`task__title${t.done ? ' task__title--done' : ''}`}>{t.title}</span>
-          )}
-          <button className="task__more" onClick={() => setMenuTask((m) => (m === t.id ? null : t.id))}>
-            ⋯
-          </button>
-        </div>
-        {menuTask === t.id && (
-          <div className="task-menu">
-            <button
-              className="task-menu__action"
-              onClick={() => {
-                setRenamingTask({ id: t.id, title: t.title });
-                setMenuTask(null);
-              }}
-            >
-              Renommer
-            </button>
-            <div className="task-menu__label">Déplacer vers</div>
-            <div className="task-menu__grid">
-              {QUADS.map((b) => (
-                <button
-                  key={b.key}
-                  className="move-btn"
-                  style={{ background: b.bg, color: b.dark }}
-                  disabled={b.key === q.key}
-                  onClick={() => menuMove(t.id, b.key)}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-            {/* Les autres matrices sont listées à plat plutôt qu'en sous-menu :
-                un menu déjà flottant qui en ouvrirait un second serait pénible
-                à viser, et la liste reste courte dans l'usage réel. */}
-            {store.boards.length > 1 && (
-              <>
-                <div className="task-menu__label">Vers une autre matrice</div>
-                <div className="task-menu__boards">
-                  {store.boards
-                    .filter((b) => b.id !== board.id)
-                    .map((b) => (
-                      <button key={b.id} className="board-btn" onClick={() => askMoveToBoard(t, b)}>
-                        {b.name}
-                      </button>
-                    ))}
-                </div>
-              </>
-            )}
-            {q.key !== 'parking' && (
-              <button className="task-menu__action task-menu__action--pin" onClick={() => togglePin(t)}>
-                {t.pinned ? 'Désépingler' : '⚑ Épingler en haut'}
-              </button>
-            )}
-            {/* Seule sortie volontaire du lien : sans elle, il ne se déferait
-                plus que par suppression ou complétion — soit par accident. */}
-            {t.pair_id && partnerOf(tasks, t) && (
-              <button className="task-menu__action" onClick={() => unpair(t)}>
-                Dissocier
-              </button>
-            )}
-            <button className="task-menu__action task-menu__action--del" onClick={() => removeTask(t.id)}>
-              Supprimer
-            </button>
-          </div>
-        )}
-      </div>
+          },
+        }}
+        split={{
+          ok: splitOk,
+          active: splitOk && hover?.type === 'card' && hover.taskId === t.id,
+          over: () => setHover({ type: 'card', taskId: t.id }),
+          drop: () => dropPair(q.key, t.id),
+        }}
+      />
     );
   }
 
@@ -512,7 +382,7 @@ export function MatrixScreen({
                   vient justement de garantir qu'une paire reste ensemble. */}
               {buildRows(pinned).map((cards, i) => (
                 <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`pin-${i}`}>
-                  {cards.map((t) => renderCard(t, q, cards.length === 1, true))}
+                  {cards.map((t) => card(t, q, cards.length === 1, true))}
                 </div>
               ))}
 
@@ -540,7 +410,7 @@ export function MatrixScreen({
                       <div className="row-gap__line" />
                     </div>
                     <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`}>
-                      {cards.map((t) => renderCard(t, q, cards.length === 1, false))}
+                      {cards.map((t) => card(t, q, cards.length === 1, false))}
                     </div>
                   </div>
                 );
@@ -588,7 +458,7 @@ export function MatrixScreen({
 
       {binOpen && (
         <BinModal
-          boardName={board.name}
+          scope={board.name}
           doneList={doneList}
           delList={delList}
           onClose={() => withVT(() => setBinOpen(false))}
@@ -636,134 +506,6 @@ export function MatrixScreen({
           </button>
         </div>
       )}
-    </div>
-  );
-}
-
-function BinModal({
-  boardName,
-  doneList,
-  delList,
-  onClose,
-  onRestore,
-  onPurge,
-}: {
-  boardName: string;
-  doneList: Task[];
-  delList: Task[];
-  onClose: () => void;
-  onRestore: (id: string) => void;
-  onPurge: (ids: string[]) => void;
-}) {
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [confirmAll, setConfirmAll] = useState(false);
-  /** Dernier item cliqué sans Maj : point d'ancrage des sélections par plage. */
-  const [anchor, setAnchor] = useState<number | null>(null);
-
-  // La plage Maj+clic court sur l'ordre visuel COMPLET, les deux sections
-  // confondues : c'est ce qu'on attend en voyant la liste à l'écran.
-  const all = [...doneList, ...delList];
-
-  function select(index: number, shift: boolean) {
-    setPicked((p) => {
-      const n = new Set(p);
-      // L'ancre peut désigner un index disparu après une purge : on la borne et
-      // on saute les trous plutôt que d'insérer des `undefined` dans la sélection.
-      if (shift && anchor !== null && anchor < all.length) {
-        const [a, b] = anchor <= index ? [anchor, index] : [index, anchor];
-        for (let k = a; k <= b; k++) if (all[k]) n.add(all[k].id);
-        return n;
-      }
-      const id = all[index].id;
-      n.has(id) ? n.delete(id) : n.add(id);
-      return n;
-    });
-    // L'ancre ne bouge pas sur Maj+clic : on peut étendre la plage plusieurs fois.
-    if (!shift) setAnchor(index);
-  }
-
-  function section(title: string, cls: string, list: Task[], offset: number, empty: string, doneStyle: boolean) {
-    return (
-      <>
-        <div className={`bin-section ${cls}`}>{title}</div>
-        {list.length === 0 ? (
-          <div className="bin-empty">{empty}</div>
-        ) : (
-          <div className="bin-list">
-            {list.map((t, i) => {
-              const q = quadrant(t.quadrant);
-              // « À trier » n'a pas de fond propre (transparent) : on retombe sur
-              // un neutre, sinon l'item n'aurait aucune couleur.
-              const tint = q.bg === 'transparent' ? 'var(--color-neutral-200)' : q.bg;
-              return (
-              <div
-                className={`bin-item${picked.has(t.id) ? ' bin-item--picked' : ''}`}
-                key={t.id}
-                style={{ background: tint }}
-              >
-                <input
-                  type="checkbox"
-                  className="bin-check"
-                  checked={picked.has(t.id)}
-                  onChange={() => {}}
-                  onClick={(e) => select(offset + i, e.shiftKey)}
-                  aria-label={`Sélectionner « ${t.title} »`}
-                />
-                <span className={`bin-item__title${doneStyle ? ' bin-item__title--done' : ''}`}>{t.title}</span>
-                <button className="bin-restore" onClick={() => onRestore(t.id)}>
-                  {doneStyle ? 'Rétablir' : 'Restaurer'}
-                </button>
-              </div>
-              );
-            })}
-          </div>
-        )}
-      </>
-    );
-  }
-
-  return (
-    <div className="bin-backdrop" onClick={onClose}>
-      <div className="bin-panel" style={{ viewTransitionName: 'bin' } as CSSProperties} onClick={(e) => e.stopPropagation()}>
-        <div className="bin-head">
-          <span className="bin-title">Corbeille ({boardName})</span>
-          <button className="bin-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
-        {section('Terminées', 'bin-section--done', doneList, 0, "Rien de terminé pour l'instant.", true)}
-        {section('Supprimées', 'bin-section--del', delList, doneList.length, 'Rien de supprimé.', false)}
-
-        {all.length > 0 && (
-          <div className="bin-foot">
-            {picked.size > 0 ? (
-              <>
-                <button className="bin-purge" onClick={() => { onPurge([...picked]); setPicked(new Set()); setAnchor(null); }}>
-                  Supprimer définitivement ({picked.size})
-                </button>
-                <button className="bin-foot__link" onClick={() => setPicked(new Set())}>
-                  Tout désélectionner
-                </button>
-              </>
-            ) : confirmAll ? (
-              <>
-                <span className="bin-foot__ask">Vider toute la corbeille ? C'est définitif.</span>
-                <button className="bin-purge" onClick={() => { onPurge(all.map((t) => t.id)); setConfirmAll(false); setPicked(new Set()); setAnchor(null); }}>
-                  Confirmer
-                </button>
-                <button className="bin-foot__link" onClick={() => setConfirmAll(false)}>
-                  Annuler
-                </button>
-              </>
-            ) : (
-              <button className="bin-foot__link" onClick={() => setConfirmAll(true)}>
-                Vider la corbeille ({all.length})
-              </button>
-            )}
-          </div>
-        )}
-      </div>
     </div>
   );
 }
