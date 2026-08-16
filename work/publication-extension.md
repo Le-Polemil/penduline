@@ -1,7 +1,8 @@
 # Publier l'extension sur le Chrome Web Store
 
-Paquet prêt : `apps/extension/penduline-extension-v1.0.0.zip` (165 Ko), produit par
-`npm run build:ext` puis un zip du contenu de `apps/extension/dist`.
+Paquet produit par `npm run build:ext` puis un zip du contenu de
+`apps/extension/dist`. Version courante : **1.1.0** (voir les notes de publication
+plus bas) ; la 1.0.0 reste décrite ici pour l'historique des arbitrages.
 
 ## Corrections faites pour la publication
 
@@ -68,9 +69,19 @@ coup.
 > l'identifiant de la dernière matrice consultée, afin de la rouvrir directement
 > pendant deux heures. Rien n'est transmis à un tiers.
 
-**Autorisation d'hôte** — il n'y en a plus. Rien à justifier, et pas d'examen
-approfondi. L'extension joint son API par un `fetch` cross-origin classique,
-autorisé par les en-têtes CORS du serveur.
+**Justification de la permission `contextMenus`** *(nouveau en 1.1.0)*
+
+> L'extension ajoute une entrée « Ajouter à Penduline » au menu contextuel, pour
+> créer une tâche à partir d'un texte sélectionné, d'un lien ou de la page en
+> cours. Cette permission sert uniquement à afficher cette entrée. Elle
+> n'accorde aucun accès au contenu des pages : l'extension ne reçoit que ce que
+> l'utilisateur a lui-même sélectionné, et seulement au moment où il clique sur
+> l'entrée.
+
+**Autorisation d'hôte** — il n'y en a toujours pas. Rien à justifier, et pas
+d'examen approfondi. L'extension joint son API par un `fetch` cross-origin
+classique, autorisé par les en-têtes CORS du serveur. À noter : `contextMenus`
+n'affiche **aucun avertissement à l'installation** — le manifeste reste sobre.
 
 **Code distant** — répondre non : le paquet ne charge ni script ni ressource
 externe.
@@ -79,9 +90,26 @@ externe.
 - *Informations permettant d'identifier une personne* : l'adresse e-mail du compte.
 - *Informations d'authentification* : le mot de passe à la connexion, et le jeton
   de session.
+- *Contenu des sites web* ⚠️ **à cocher depuis la 1.1.0** — voir ci-dessous.
 
-Ne PAS cocher activité de navigation, contenu des sites web, localisation ni
-communications personnelles : l'extension ne lit aucune page.
+> ⚠️ **La capture contextuelle change cette déclaration.** Jusqu'en 1.0.0 la case
+> « contenu des sites web » devait rester décochée, l'extension ne lisant aucune
+> page. Depuis la 1.1.0 elle reçoit le texte sélectionné, l'URL du lien visé ou le
+> titre de la page — ce qui relève de cette catégorie au sens du formulaire, même
+> si la lecture est déclenchée par l'utilisateur et limitée à ce qu'il a désigné.
+> Déclarer moins que la réalité est le meilleur moyen de se faire retirer.
+
+Justification à joindre :
+
+> Lorsque l'utilisateur choisit « Ajouter à Penduline » dans le menu contextuel,
+> le texte qu'il a sélectionné (ou, à défaut, l'adresse du lien ou le titre de la
+> page) devient l'intitulé de la tâche créée dans son propre compte. Rien n'est
+> lu en dehors de cette action explicite, rien n'est transmis à un tiers, et
+> aucune page n'est parcourue en arrière-plan.
+
+Ne PAS cocher activité de navigation, localisation ni communications
+personnelles : l'extension ne suit aucune navigation et ne lit rien de sa propre
+initiative.
 
 Puis certifier les trois points : données non revendues, non utilisées à des fins
 étrangères à l'objet unique, non utilisées pour évaluer une solvabilité.
@@ -101,6 +129,30 @@ Puis certifier les trois points : données non revendues, non utilisées à des 
 > revendu, aucun traceur, aucune mesure d'audience.
 
 Compter quelques jours de revue.
+
+## Version 1.1.0 — notes de publication
+
+Quatre changements, livrés ensemble parce que **chaque version repasse en revue** :
+les séparer coûtait quatre examens pour trois jours de travail.
+
+- **Correction** : la case « À trier » n'apparaissait pas dans le popup. Les tâches
+  qui y étaient rangées depuis le web étaient donc invisibles dans l'extension —
+  ce qui se lisait comme une perte de données, pas comme un défaut d'affichage.
+- On peut désormais **créer une matrice depuis le popup**. Un compte neuf n'oblige
+  plus à quitter l'extension à sa toute première utilisation.
+- Le sélecteur de case se lit comme **une seule matrice** : coins extérieurs
+  arrondis, cinquième zone au centre.
+- **Capture depuis la page consultée** par le menu contextuel, sur une sélection,
+  un lien ou la page.
+
+Seul le dernier point touche au manifeste (`contextMenus`) et à la déclaration
+d'usage des données.
+
+**Texte court pour la fiche :**
+
+> Nouveau : ajoutez une tâche depuis n'importe quelle page par un clic droit, et
+> créez vos matrices directement dans l'extension. La case « À trier » s'affiche
+> désormais correctement.
 
 ## Deux points à peser avant de publier
 

@@ -2,16 +2,20 @@ import { useEffect, useState, type CSSProperties, type DragEvent, type FormEvent
 import { flushSync } from 'react-dom';
 import type { Session } from '@supabase/supabase-js';
 import {
+  ALL,
   countOpen,
   endPosition,
+  PARK,
   positionBefore,
   QUADS,
+  type Quadrant,
   type QuadrantKey,
   type Board,
   type Task,
 } from '@penduline/shared';
 import { isConfigured, supabase } from './supabase';
-import { getActiveBoard, setActiveBoard, useExtStore, type ExtStore } from './store';
+import { getActiveBoard, setActiveBoard } from './active-board';
+import { useExtStore, type ExtStore } from './store';
 
 /**
  * Ouvre l'app web complète. Surchargée au build par `VITE_WEB_APP_URL` (`.env`
@@ -19,6 +23,58 @@ import { getActiveBoard, setActiveBoard, useExtStore, type ExtStore } from './st
  */
 const WEB_APP_URL =
   (import.meta.env.VITE_WEB_APP_URL as string | undefined) ?? 'http://localhost:5173';
+
+/**
+ * « À trier » n'a pas de fond propre : `PARK.bg` vaut `'transparent'`
+ * (packages/shared/src/quadrants.ts), parce que sur le web la zone occupe toute
+ * la largeur sous la grille et se fond dans la page. Dans le popup elle est une
+ * case comme les autres, il lui faut donc un fond — même repli neutre que celui
+ * déjà appliqué au rendu de la corbeille côté web.
+ */
+function quadBg(q: Quadrant): string {
+  return q.bg === 'transparent' ? 'var(--color-neutral-200)' : q.bg;
+}
+
+/**
+ * Le disque « À trier », au centre de la grille des quatre cases.
+ *
+ * Au repos il occupe 72 % d'une tuile et n'affiche qu'un caractère : son compte
+ * s'il tient, un « + » au-delà de neuf. Deux chiffres ne rentrent pas à cette
+ * taille — plutôt que de les tronquer, on dit « il y en a beaucoup » et le
+ * survol donne le chiffre exact, en agrandissant le disque à 100 %.
+ *
+ * Sélectionné, il reste grand : le rétrécir cacherait précisément le compte que
+ * l'utilisateur vient de choisir de regarder.
+ */
+function ParkSquare({
+  n,
+  dimmed,
+  selected,
+  onClick,
+}: {
+  n: number;
+  dimmed: boolean;
+  selected: boolean;
+  onClick: () => void;
+}) {
+  const plus = n > 9;
+  return (
+    <button
+      className={`square square--park${selected ? ' square--park-on' : ''}`}
+      title={`${PARK.label} — ${n}`}
+      style={{ background: PARK.ink, opacity: dimmed ? 0.3 : 1 }}
+      onClick={onClick}
+    >
+      {/*
+        Le « + » porte sa propre classe : il est centré sur l'axe mathématique de
+        la fonte et non sur la hauteur des chiffres, donc il pend dans le disque
+        sans un relèvement de 0,046 em (mesuré — voir `.square__idle--plus`).
+      */}
+      <span className={`square__idle${plus ? ' square__idle--plus' : ''}`}>{plus ? '+' : n}</span>
+      <span className="square__full">{n}</span>
+    </button>
+  );
+}
 
 function withVT(fn: () => void) {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
@@ -90,6 +146,22 @@ function PopupApp({ userId }: { userId: string }) {
     });
   }, []);
 
+  // Le service worker a besoin de la liste des matrices pour construire son menu
+  // contextuel, qui doit être enregistré AVANT tout clic droit. Plutôt que de le
+  // faire interroger Supabase — il peut être tué à tout moment — on lui pousse
+  // celle qu'on vient de charger.
+  useEffect(() => {
+    if (!store.ready) return;
+    try {
+      chrome.runtime.sendMessage({
+        type: 'boards',
+        boards: store.boards.map((b) => ({ id: b.id, name: b.name })),
+      });
+    } catch {
+      /* pas de runtime (aperçu web) */
+    }
+  }, [store.ready, store.boards]);
+
   function openBoard(id: string) {
     void setActiveBoard(id);
     setActive(id);
@@ -117,11 +189,25 @@ function Home({
   onOpen: (id: string) => void;
 }) {
   const [calmOpen, setCalmOpen] = useState(false);
+  // `null` = bouton au repos ; une chaîne (même vide) = champ ouvert. Même
+  // convention que l'accueil web, pour que les deux se lisent pareil.
+  const [draft, setDraft] = useState<string | null>(null);
 
   const openCount = (r: Board) =>
     store.tasks.filter((t) => t.board_id === r.id && !t.done && !t.deleted).length;
   const active = store.boards.filter((r) => openCount(r) > 0);
   const calm = store.boards.filter((r) => openCount(r) === 0);
+  const empty = store.boards.length === 0;
+
+  async function create() {
+    const name = (draft ?? '').trim();
+    if (!name) return;
+    const id = await store.addBoard(name);
+    setDraft(null);
+    // On ouvre la matrice créée : dans un popup, rester sur une liste pour aller
+    // rechercher ce qu'on vient de nommer serait une étape de trop.
+    if (id) onOpen(id);
+  }
 
   return (
     <>
@@ -134,8 +220,15 @@ function Home({
       </header>
 
       <div className="home-list">
-        {active.length === 0 && calm.length === 0 && (
-          <p className="empty">Aucune matrice. Ouvre l'app pour commencer.</p>
+        {/* L'état vide ne renvoie plus vers le web : c'était le seul moment où
+            l'extension avouait son incomplétude, et il tombait au pire endroit —
+            la toute première utilisation. */}
+        {empty && draft === null && (
+          <p className="empty">
+            Aucune matrice pour l'instant.
+            <br />
+            Créez la première : une pièce, une journée, un projet…
+          </p>
         )}
 
         {active.map((r) => (
@@ -173,6 +266,47 @@ function Home({
                 </button>
               ))}
           </>
+        )}
+
+        {draft === null ? (
+          <button className="add-board" onClick={() => setDraft('')}>
+            ＋ Nouvelle matrice
+          </button>
+        ) : (
+          <form
+            className="add-board-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void create();
+            }}
+          >
+            <input
+              className="add-board-input"
+              value={draft}
+              autoFocus
+              placeholder="Nom de la matrice"
+              maxLength={120}
+              onChange={(e) => setDraft(e.target.value)}
+              // Échap annule. Pas de fermeture au blur : cliquer sur « Créer »
+              // déclenche d'abord le blur, ce qui perdrait la saisie.
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setDraft(null);
+              }}
+            />
+            {/* Dans 400 px, pas de bouton « Annuler » à côté du champ : la croix
+                tient le rôle et laisse la place au nom. */}
+            <button className="add-board-submit" type="submit" disabled={!draft.trim()}>
+              Créer
+            </button>
+            <button
+              className="add-board-cancel"
+              type="button"
+              aria-label="Annuler"
+              onClick={() => setDraft(null)}
+            >
+              ✕
+            </button>
+          </form>
         )}
       </div>
 
@@ -244,7 +378,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
     setDraft('');
   }
 
-  const addQuadObj = QUADS.find((q) => q.key === addQuad) ?? QUADS[0];
+  const addQuadObj = ALL.find((q) => q.key === addQuad) ?? ALL[0];
 
   return (
     <>
@@ -253,14 +387,20 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
           ‹
         </button>
         <span className="detail-board">{board.name}</span>
-        <span className="squares">
-          {QUADS.map((q) => {
+        {/*
+          Les cinq zones ne partagent plus ni géométrie ni comportement : les
+          quatre tuiles forment la grille, le parking est un disque au centre qui
+          grandit au survol. Les fondre dans une seule boucle rendrait le rendu
+          illisible pour rien.
+        */}
+        <span className={`squares${filter === 'parking' ? ' squares--park-on' : ''}`}>
+          {QUADS.map((q, i) => {
             const n = countOpen(tasks, board.id, q.key);
             const on = !filter || filter === q.key;
             return (
               <button
                 key={q.key}
-                className="square"
+                className={`square square--${i + 1}`}
                 title={q.label}
                 style={{
                   background: q.ink,
@@ -273,13 +413,19 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
               </button>
             );
           })}
+          <ParkSquare
+            n={countOpen(tasks, board.id, PARK.key)}
+            dimmed={!!filter && filter !== PARK.key}
+            selected={filter === PARK.key}
+            onClick={() => setFilter((f) => (f === PARK.key ? null : PARK.key))}
+          />
         </span>
       </header>
 
       {filter && (
         <div className="filter-banner">
           <span>
-            Filtre : <strong>{QUADS.find((q) => q.key === filter)?.label}</strong>
+            Filtre : <strong>{ALL.find((q) => q.key === filter)?.label}</strong>
           </span>
           <button className="filter-clear" onClick={() => setFilter(null)}>
             ✕ tout voir
@@ -288,7 +434,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
       )}
 
       <div className="detail-list">
-        {QUADS.filter((q) => !filter || filter === q.key).map((q) => {
+        {ALL.filter((q) => !filter || filter === q.key).map((q) => {
           const list = listFor(q.key);
           const outline = drag ? (dragOverQuad === q.key ? q.ink : `${q.ink}66`) : 'transparent';
           return (
@@ -299,7 +445,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                 {
                   '--q-ink': q.ink,
                   '--q-dark': q.dark,
-                  background: q.bg,
+                  background: quadBg(q),
                   borderColor: outline,
                 } as CSSProperties
               }
@@ -395,16 +541,31 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
             if (e.key === 'Enter') addTask();
           }}
         />
+        {/*
+          Même figure que l'en-tête, mais géométrie SEULE : ces pastilles ne
+          portent aucun compteur, donc l'agrandissement au survol n'aurait rien
+          à révéler — ce serait un geste qui promet quelque chose et ne le tient
+          pas.
+        */}
         <span className="add-squares">
-          {QUADS.map((q) => (
+          {QUADS.map((q, i) => (
             <button
               key={q.key}
-              className="add-square"
+              className={`add-square add-square--${i + 1}`}
               title={`Ajouter dans ${q.label}`}
               style={{ background: q.ink, outline: addQuad === q.key ? '2px solid var(--color-text)' : 'none' }}
               onClick={() => setAddQuad(q.key)}
             />
           ))}
+          <button
+            className="add-square add-square--park"
+            title={`Ajouter dans ${PARK.label}`}
+            style={{
+              background: PARK.ink,
+              outline: addQuad === PARK.key ? '2px solid var(--color-text)' : 'none',
+            }}
+            onClick={() => setAddQuad(PARK.key)}
+          />
         </span>
       </footer>
     </>

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Penduline",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Consulte et alimente tes matrices d'Eisenhower depuis ton navigateur.",
   "icons": {
     "16": "icon16.png",
@@ -19,7 +19,7 @@
       "128": "icon128.png"
     }
   },
-  "permissions": ["storage"],
+  "permissions": ["storage", "contextMenus"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
