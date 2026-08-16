@@ -22,3 +22,7 @@ apps/supabase/.env
 # `--workdir apps`). `cli-latest` y était suivi et salissait chaque git status.
 supabase/.branches/
 supabase/.temp/
+
+# Outillage local de Claude Code (worktrees, état de session). Jamais versionné :
+# un worktree est une vue sur le dépôt, pas un contenu du dépôt.
+.claude/
