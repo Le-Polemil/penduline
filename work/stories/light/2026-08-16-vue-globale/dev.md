@@ -2,8 +2,9 @@
 story: "Vue globale : toutes matrices ou par univers"
 story_code: "vue-globale"
 issues: [18]
+pr: 63
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -18,7 +19,7 @@ status: "In Progress"
 | 4. Écran `Global.tsx`, routage par vue dans `App.tsx`, deux points d'entrée | Terminé | 2026-08-16 |
 | 5. Styles des trois cadres dans `styles.css` | Terminé | 2026-08-16 |
 | 6. Vérifications automatiques (`npm test`, `typecheck`, `build`) | Terminé | 2026-08-16 |
-| 7. Validation manuelle (12 points du plan) | En attente | |
+| 7. Validation manuelle (12 points du plan) | Terminé | 2026-08-17 |
 | 8. Commit, push et PR ciblant `story-light/univers` | Terminé | 2026-08-16 |
 
 ## Journal

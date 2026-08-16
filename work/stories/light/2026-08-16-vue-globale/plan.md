@@ -2,8 +2,9 @@
 story: "Vue globale : toutes matrices ou par univers"
 story_code: "vue-globale"
 issues: [18]
+pr: 63
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # #18 — Vue globale : toutes matrices ou par univers
