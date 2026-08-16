@@ -3,7 +3,7 @@ story: "Préservation des paires dans shared"
 story_code: "paires-dans-shared"
 issues: [60]
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
