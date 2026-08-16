@@ -49,7 +49,10 @@ file_size_limit = "50MiB"
 [auth]
 enabled = true
 site_url = "http://localhost:5173"
-additional_redirect_urls = ["http://localhost:5173"]
+# Vite prend le premier port libre à partir de 5173 : si 5173 est occupé, le
+# `redirectTo` du parcours de réinitialisation vaudra 5174 et GoTrue le
+# refuserait s'il n'était pas listé ici.
+additional_redirect_urls = ["http://localhost:5173", "http://localhost:5174"]
 jwt_expiry = 3600
 enable_refresh_token_rotation = true
 refresh_token_reuse_interval = 10
@@ -60,8 +63,11 @@ minimum_password_length = 8
 [auth.email]
 enable_signup = true
 double_confirm_changes = true
-# En local on désactive la confirmation d'email pour tester vite.
-enable_confirmations = false
+# Confirmation ACTIVE en local, pour refléter la production une fois le SMTP en
+# place (cf. work/coolify-deploy.md). Sans coût de confort : Inbucket capture
+# les mails sur http://127.0.0.1:54324, il n'y a jamais de vraie boîte à ouvrir.
+# C'est aussi la seule façon de tester le parcours de réinitialisation en local.
+enable_confirmations = true
 
 [analytics]
 enabled = false

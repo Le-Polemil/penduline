@@ -18,3 +18,7 @@ coverage/
 apps/supabase/.branches/
 apps/supabase/.temp/
 apps/supabase/.env
+# Le CLI écrit aussi à la RACINE selon d'où il est lancé (`supabase/` sans
+# `--workdir apps`). `cli-latest` y était suivi et salissait chaque git status.
+supabase/.branches/
+supabase/.temp/

@@ -35,6 +35,7 @@ Sans le `:8000`, le routage Traefik ne pointe pas sur Kong.
 - `GOTRUE_SITE_URL` pointait sur l'URL de l'API → corrigé vers l'app web.
 - `ENABLE_EMAIL_AUTOCONFIRM=false` **sans SMTP configuré** : `signUp()` crée un
   utilisateur jamais confirmé, donc impossible à connecter. Passé à `true`.
+  → Contournement levé depuis, voir « SMTP » plus bas (#33).
 
 **Le `.env` racine est partagé web + extension : le pointer sur la prod fait que
 `npm run dev` tape aussi la prod.** C'est le prix du `envDir` commun. Pour
@@ -58,6 +59,58 @@ entre les deux (fenêtre de casse de quelques secondes, assumée : app perso).
 vaut `false` ; n'importe qui atteignant l'API peut créer un compte fonctionnel
 (ses données restent isolées par les policies RLS). À basculer à `true` une fois
 les comptes voulus créés — ou configurer SMTP et repasser autoconfirm à `false`.
+
+## SMTP et e-mails transactionnels
+
+**L'absence de SMTP n'était pas un détail de configuration : elle rendait la
+récupération de compte impossible.** Sans elle, `resetPasswordForEmail()`
+n'envoie rien, et un utilisateur qui oublie son mot de passe perd son compte
+définitivement. C'est ce qui a motivé #33.
+
+**Fournisseur : Resend.** GoTrue n'a besoin que d'identifiants SMTP — il envoie
+lui-même, aucun conteneur supplémentaire. Sur une machine à 4 Go déjà en tension
+(voir plus bas), c'est la seule forme d'envoi d'e-mail acceptable : héberger un
+serveur mail ici était exclu d'avance.
+
+Variables sur le service `supabase-auth`, sans préfixe comme le reste de la
+configuration Coolify (le compose les mappe vers les `GOTRUE_*`) :
+
+```
+SMTP_HOST=smtp.resend.com
+SMTP_PORT=465
+SMTP_USER=resend
+SMTP_PASS=<clé API Resend>
+SMTP_ADMIN_EMAIL=penduline@polemil.dev
+SMTP_SENDER_NAME=Penduline
+```
+
+Prérequis Resend : vérifier le domaine `polemil.dev` (SPF + DKIM). Sans cette
+vérification, les envois partent en spam ou sont refusés.
+
+**Gabarits en français**, servis en statique par l'app web — même mécanisme que
+`/confidentialite/`, donc versionnés dans le dépôt et déployés avec le front :
+
+```
+MAILER_SUBJECTS_RECOVERY=Réinitialiser votre mot de passe Penduline
+MAILER_TEMPLATES_RECOVERY=https://penduline.polemil.dev/emails/recovery.html
+MAILER_SUBJECTS_CONFIRMATION=Confirmez votre adresse — Penduline
+MAILER_TEMPLATES_CONFIRMATION=https://penduline.polemil.dev/emails/confirmation.html
+```
+
+⚠️ Ces quatre variables **ne figurent pas dans le compose Supabase standard** :
+il faut les ajouter au passage d'environnement du service `auth`. C'est le seul
+point de #33 qui touche au compose, déjà modifié par le dégraissage.
+
+⚠️ `GOTRUE_URI_ALLOW_LIST` doit contenir `https://penduline.polemil.dev`, sinon
+GoTrue refuse le `redirectTo` envoyé par le client et le lien devient inerte.
+
+**Ordre d'exécution.** Configurer le SMTP **puis** vérifier le parcours de
+réinitialisation de bout en bout, et seulement ensuite repasser
+`ENABLE_EMAIL_AUTOCONFIRM=false`. L'inverse enfermerait dehors tout nouvel
+inscrit si l'envoi ne fonctionnait pas.
+
+Les comptes existants ont tous été créés en autoconfirm : ils restent confirmés
+et connectables. Aucune migration n'est nécessaire.
 
 ## La machine est le facteur limitant
 

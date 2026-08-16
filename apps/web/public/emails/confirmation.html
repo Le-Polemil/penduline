@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Confirmez votre adresse — Penduline</title>
+  </head>
+  <!--
+    Gabarit servi à GoTrue via MAILER_TEMPLATES_CONFIRMATION. Mêmes contraintes
+    que recovery.html (tables, styles en ligne, polices système, lien répété en
+    texte) — voir le commentaire détaillé dans ce fichier.
+  -->
+  <body style="margin: 0; padding: 0; background: #f5ead8;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f5ead8;">
+      <tr>
+        <td align="center" style="padding: 40px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background: #fdf6e9; border-radius: 18px;">
+            <tr>
+              <td style="padding: 32px 32px 8px; font: 700 22px/1.25 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #201e1d;">
+                Penduline
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0 32px 20px; font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #201e1d;">
+                <p style="margin: 0 0 16px;">
+                  Bienvenue&nbsp;! Il ne reste qu'à confirmer cette adresse pour activer
+                  votre compte Penduline.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding: 0 32px 24px;">
+                <a
+                  href="{{ .ConfirmationURL }}"
+                  style="display: inline-block; background: #c67139; color: #ffffff; text-decoration: none; border-radius: 999px; padding: 14px 28px; font: 600 15px system-ui, -apple-system, 'Segoe UI', sans-serif;"
+                >
+                  Confirmer mon adresse
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0 32px 28px; font: 13px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #82796a;">
+                <p style="margin: 0 0 14px;">
+                  Si le bouton ne fonctionne pas, copiez cette adresse dans votre
+                  navigateur&nbsp;:
+                </p>
+                <p style="margin: 0 0 20px; word-break: break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color: #8c491a;">{{ .ConfirmationURL }}</a>
+                </p>
+                <p style="margin: 0; padding-top: 16px; border-top: 1px solid #eee7db;">
+                  <strong style="color: #201e1d;">Si vous n'avez pas créé de compte
+                  Penduline, ignorez ce message</strong>&nbsp;: sans confirmation, aucun
+                  compte ne sera activé pour cette adresse.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px;">
+            <tr>
+              <td align="center" style="padding: 20px 16px 0; font: 12px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #82796a;">
+                Penduline — matrices d'Eisenhower par contexte.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

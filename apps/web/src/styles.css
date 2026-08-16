@@ -415,6 +415,13 @@ button { font: inherit; }
 .btn-primary:disabled { opacity: 0.5; cursor: default; }
 .btn-link { background: none; border: none; color: var(--color-accent-700); font: 600 13px var(--font-body); cursor: pointer; }
 .error { color: #a63d2a; font: 13px var(--font-body); margin: 0; }
+/* Message d'information, distinct de `.error` : le parcours de réinitialisation
+   confirme un envoi ou signale un lien périmé — ce n'est pas un échec, et le
+   rouge le ferait lire comme tel. */
+.notice {
+  color: var(--color-neutral-700); font: 13px/1.5 var(--font-body); margin: 0;
+  background: var(--color-accent-100); border-radius: 14px; padding: 10px 14px;
+}
 
 /* ── Barre du haut (déconnexion) ──────────────────────────────────────────── */
 /* Retour à gauche, déconnexion à droite. `space-between` avec un `<span/>` vide
