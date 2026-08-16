@@ -70,6 +70,29 @@ Extension : `npm run build:ext` (lit le même `.env` racine), puis charge le dos
 l'extension non empaquetée »). Le popup a sa propre connexion (session dans
 `chrome.storage`).
 
+## Qualité
+
+```bash
+npm run typecheck      # tsc --noEmit sur chaque workspace
+npm test               # Vitest, sur les workspaces qui en ont
+npm run build
+```
+
+Les deux tournent en CI et bloquent une PR qui échoue.
+
+**Ce que les tests couvrent, et pourquoi ceux-là.** Vitest est configuré sur
+`packages/shared`, où vit la logique pure — celle dont les défaillances sont
+**silencieuses** : un ordre qui dérive ou une paire cassée ne lèvent aucune erreur
+et ne se voient pas à l'écran, ils produisent juste un résultat faux. Le rendu, lui,
+se vérifie à l'œil ; il n'y a donc ni test de composant React ni E2E, délibérément.
+
+À noter, mesuré par ces tests : les positions fractionnaires supportent **53
+insertions consécutives au même interstice** avant que deux positions ne
+deviennent égales et que l'ordre ne se perde. Confortable, mais fini.
+
+La configuration commune est `vitest.base.mts`, à la racine — pour qu'`apps/web` et
+`apps/extension` puissent l'étendre sans dépendre de `packages/shared`.
+
 ## État
 
 **App web** (maquette « Matrice Maison.dc.html ») : accueil matrices, matrice 2×2 +
