@@ -3,6 +3,7 @@ import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
 import { useStore } from './data/store';
 import { Home } from './screens/Home';
+import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
 
 /**
@@ -74,7 +75,9 @@ export function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  if (!ready) return null;
+  // Le nid pendulaire plutôt qu'un écran blanc : cette attente couvre un appel
+  // réseau (récupération de session), elle peut durer.
+  if (!ready) return <Loader />;
   // Prime délibérément sur `session` : c'est tout l'objet du drapeau.
   if (recovering) return <NewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <SignIn linkError={hash.linkError} />;
@@ -85,7 +88,7 @@ function AppRoot({ userId }: { userId: string }) {
   const store = useStore(userId);
   const [boardId, setBoardId] = useState<string | null>(null);
 
-  if (!store.ready) return null;
+  if (!store.ready) return <Loader label="Chargement de vos matrices…" />;
 
   const board = store.boards.find((r) => r.id === boardId) ?? null;
 

@@ -57,6 +57,10 @@ export function MatrixScreen({
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [focusQuad, setFocusQuad] = useState<QuadrantKey | null>(null);
   const [pending, setPending] = useState<{ id: string; label: string } | null>(null);
+  /** Renommage en place : `{ id, titre en cours de saisie }`. */
+  const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
+  /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
+  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
   const timer = useRef<number>();
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -79,6 +83,39 @@ export function MatrixScreen({
     const mate = partnerOf(tasks, task);
     patchTask(task.id, { ...patch, position });
     if (mate) patchTask(mate.id, { ...patch, position: position + 0.001 });
+  }
+
+  function commitTaskRename() {
+    if (!renamingTask) return;
+    const title = renamingTask.title.trim();
+    const before = tasks.find((t) => t.id === renamingTask.id)?.title;
+    // Un titre vide ou inchangé n'écrit rien : la contrainte `tasks_title_check`
+    // refuserait le premier, et le second coûterait une requête pour rien.
+    if (title && title !== before) patchTask(renamingTask.id, { title });
+    setRenamingTask(null);
+  }
+
+  /**
+   * Change une tâche de matrice. La position est recalculée sur la CIBLE :
+   * l'ordre est scopé à `(board_id, quadrant)`, la conserver produirait un
+   * classement incohérent dans la matrice d'arrivée.
+   */
+  function moveToBoard(task: Task, target: Board) {
+    const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
+    withVT(() => movePair(task, { board_id: target.id }, pos));
+  }
+
+  /**
+   * Une paire suit sa tâche d'une matrice à l'autre — l'invariant de #51 ne
+   * souffre pas d'exception. Mais deux tâches qui partent quand on en a désigné
+   * une seule mérite d'être annoncé : d'où la confirmation, **uniquement** dans
+   * ce cas. La demander à chaque déplacement lasserait pour rien.
+   */
+  function askMoveToBoard(task: Task, target: Board) {
+    setMenuTask(null);
+    const mate = partnerOf(tasks, task);
+    if (mate) setMoveAsk({ task, mate, target });
+    else moveToBoard(task, target);
   }
 
   /** Défait le lien des deux côtés — un `pair_id` orphelin ne sert à rien. */
@@ -217,6 +254,7 @@ export function MatrixScreen({
 
   function renderCard(t: Task, q: ReturnType<typeof quadrant>, single: boolean, pinnedCard: boolean) {
     const isDrag = drag?.id === t.id;
+    const renaming = renamingTask?.id === t.id;
     const splitOk = single && !t.pinned && !t.done && !!drag && drag.id !== t.id;
     const splitActive = splitOk && hover?.type === 'card' && hover.taskId === t.id;
     const cls = [
@@ -234,7 +272,8 @@ export function MatrixScreen({
         <div
           className={cls}
           style={{ viewTransitionName: `vt-${t.id}` } as CSSProperties}
-          draggable={!t.pinned && !t.done}
+          // Pas de déplacement pendant une saisie : le glisser volerait le curseur.
+          draggable={!t.pinned && !t.done && !renaming}
           onDragStart={(e: DragEvent) => {
             e.dataTransfer.effectAllowed = 'move';
             window.setTimeout(() => {
@@ -267,13 +306,45 @@ export function MatrixScreen({
             onClick={() => onCheck(t)}
             aria-label={t.done ? 'Rétablir' : 'Terminer'}
           />
-          <span className={`task__title${t.done ? ' task__title--done' : ''}`}>{t.title}</span>
+          {renaming ? (
+            <form
+              className="task__rename"
+              onSubmit={(e) => {
+                e.preventDefault();
+                commitTaskRename();
+              }}
+            >
+              <input
+                className="task__rename-input"
+                value={renamingTask.title}
+                autoFocus
+                maxLength={500}
+                onChange={(e) => setRenamingTask({ id: t.id, title: e.target.value })}
+                // Échap annule. Pas de fermeture au blur : elle avalerait la
+                // saisie dès qu'on clique ailleurs pour valider.
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') setRenamingTask(null);
+                }}
+              />
+            </form>
+          ) : (
+            <span className={`task__title${t.done ? ' task__title--done' : ''}`}>{t.title}</span>
+          )}
           <button className="task__more" onClick={() => setMenuTask((m) => (m === t.id ? null : t.id))}>
             ⋯
           </button>
         </div>
         {menuTask === t.id && (
           <div className="task-menu">
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                setRenamingTask({ id: t.id, title: t.title });
+                setMenuTask(null);
+              }}
+            >
+              Renommer
+            </button>
             <div className="task-menu__label">Déplacer vers</div>
             <div className="task-menu__grid">
               {QUADS.map((b) => (
@@ -288,6 +359,23 @@ export function MatrixScreen({
                 </button>
               ))}
             </div>
+            {/* Les autres matrices sont listées à plat plutôt qu'en sous-menu :
+                un menu déjà flottant qui en ouvrirait un second serait pénible
+                à viser, et la liste reste courte dans l'usage réel. */}
+            {store.boards.length > 1 && (
+              <>
+                <div className="task-menu__label">Vers une autre matrice</div>
+                <div className="task-menu__boards">
+                  {store.boards
+                    .filter((b) => b.id !== board.id)
+                    .map((b) => (
+                      <button key={b.id} className="board-btn" onClick={() => askMoveToBoard(t, b)}>
+                        {b.name}
+                      </button>
+                    ))}
+                </div>
+              </>
+            )}
             {q.key !== 'parking' && (
               <button className="task-menu__action task-menu__action--pin" onClick={() => togglePin(t)}>
                 {t.pinned ? 'Désépingler' : '⚑ Épingler en haut'}
@@ -539,6 +627,20 @@ export function MatrixScreen({
             setConfirmDelete(false);
             await store.deleteBoard(board.id);
             onHome();
+          }}
+        />
+      )}
+
+      {moveAsk && (
+        <Confirm
+          title="Déplacer les deux tâches ?"
+          body={`« ${moveAsk.task.title} » est appairée à « ${moveAsk.mate.title} ». Les deux partiront dans « ${moveAsk.target.name} ».`}
+          confirmLabel="Déplacer"
+          tone="neutral"
+          onCancel={() => setMoveAsk(null)}
+          onConfirm={() => {
+            moveToBoard(moveAsk.task, moveAsk.target);
+            setMoveAsk(null);
           }}
         />
       )}

@@ -132,27 +132,41 @@ Compter quelques jours de revue.
 
 ## Version 1.1.0 — notes de publication
 
-Quatre changements, livrés ensemble parce que **chaque version repasse en revue** :
-les séparer coûtait quatre examens pour trois jours de travail.
+**Sept changements, livrés en une seule version.** Chaque soumission repasse en
+revue : les étaler aurait coûté sept examens pour une semaine de travail.
 
-- **Correction** : la case « À trier » n'apparaissait pas dans le popup. Les tâches
-  qui y étaient rangées depuis le web étaient donc invisibles dans l'extension —
-  ce qui se lisait comme une perte de données, pas comme un défaut d'affichage.
-- On peut désormais **créer une matrice depuis le popup**. Un compte neuf n'oblige
-  plus à quitter l'extension à sa toute première utilisation.
-- Le sélecteur de case se lit comme **une seule matrice** : coins extérieurs
-  arrondis, cinquième zone au centre.
+**Corrections**
+
+- La case « À trier » n'apparaissait pas dans le popup. Les tâches qui y étaient
+  rangées depuis le web y étaient donc invisibles — ce qui se lit comme une perte
+  de données, pas comme un défaut d'affichage.
+- Le popup **cassait les appairages** créés sur le web : épingler ou déplacer une
+  tâche rompait le lien en silence. Il le préserve désormais, et déplace les deux
+  tâches ensemble.
+
+**Nouveautés**
+
+- **Créer une matrice depuis le popup.** Un compte neuf n'oblige plus à quitter
+  l'extension à sa toute première utilisation.
 - **Capture depuis la page consultée** par le menu contextuel, sur une sélection,
   un lien ou la page.
+- **Renommer une tâche** et **la déplacer** — vers une autre case ou une autre
+  matrice — depuis un nouveau menu sur la carte.
+- Le sélecteur de case se lit comme **une seule matrice** : coins extérieurs
+  arrondis, cinquième zone au centre.
+- Le popup affiche un **écran de chargement** au lieu d'une fenêtre vide.
 
-Seul le dernier point touche au manifeste (`contextMenus`) et à la déclaration
-d'usage des données.
+**Ce qui touche la fiche du Store**
+
+Un seul point : la **capture contextuelle**, qui ajoute la permission
+`contextMenus` et fait cocher « contenu des sites web » dans la déclaration
+d'usage des données (voir plus haut). Les six autres changements sont internes.
 
 **Texte court pour la fiche :**
 
-> Nouveau : ajoutez une tâche depuis n'importe quelle page par un clic droit, et
-> créez vos matrices directement dans l'extension. La case « À trier » s'affiche
-> désormais correctement.
+> Nouveau : ajoutez une tâche depuis n'importe quelle page par un clic droit,
+> créez et renommez directement dans l'extension, et déplacez vos tâches d'une
+> matrice à l'autre. La case « À trier » s'affiche désormais correctement.
 
 ## Deux points à peser avant de publier
 

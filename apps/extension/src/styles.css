@@ -232,6 +232,64 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .task__pin:hover { transform: scale(1.2); opacity: 1; }
 .task__pin--on { color: var(--color-accent); opacity: 1; }
 
+/* ── Menu d'actions d'une tâche ───────────────────────────────────────────────
+   Le ⋯ ne s'affiche qu'au survol : la carte fait 376 px et porte déjà la case, le
+   titre et l'épingle — un bouton permanent rognerait le titre, seul contenu utile
+   au repos. `:focus-within` le garde atteignable au clavier, sans quoi renommer
+   deviendrait impossible sans souris. */
+.card-wrap { position: relative; }
+.task__more {
+  flex: none; background: none; border: none; cursor: pointer;
+  color: var(--color-neutral-400); font: 700 13px/1 var(--font-body);
+  padding: 2px 4px; border-radius: 999px;
+  opacity: 0; transition: opacity 0.15s, background 0.15s;
+}
+.task:hover .task__more, .task:focus-within .task__more { opacity: 1; }
+.task__more:focus-visible { opacity: 1; }
+.task__more:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+
+.task-menu {
+  position: absolute; right: 0; top: 100%; z-index: 20; width: 210px;
+  background: var(--card-warm); border-radius: 14px; box-shadow: var(--shadow-lg);
+  padding: 9px; animation: mm-in 0.16s ease both;
+}
+.task-menu__label { font: 600 10.5px var(--font-body); color: var(--color-neutral-600); margin: 8px 0 6px; }
+.task-menu__label:first-child { margin-top: 0; }
+.task-menu__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
+.move-btn {
+  border: none; border-radius: 9px; padding: 7px 5px;
+  font: 700 11px var(--font-body); text-align: center; cursor: pointer;
+  transition: transform 0.12s;
+}
+.move-btn:hover { transform: scale(1.05); }
+.move-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
+/* Une colonne pour les matrices : leur nom est libre et souvent long, une
+   demi-largeur le tronquerait — or c'est le seul repère pour choisir. */
+.task-menu__boards { display: flex; flex-direction: column; gap: 4px; }
+.board-btn {
+  border: none; background: var(--color-surface); color: var(--color-text);
+  border-radius: 9px; padding: 7px 9px; text-align: left;
+  font: 600 11.5px var(--font-body); cursor: pointer;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  transition: background 0.12s;
+}
+.board-btn:hover { background: var(--color-accent-100); }
+.task-menu__action {
+  width: 100%; font: 600 11.5px var(--font-body); text-align: center;
+  cursor: pointer; padding: 6px; border-radius: 999px;
+  background: none; border: none; color: var(--color-text);
+}
+.task-menu__action:hover { background: var(--color-accent-100); }
+
+/* Renommage en place : le champ prend la place du titre, la carte ne saute pas. */
+.task__rename { flex: 1; min-width: 0; display: flex; }
+.task__rename-input {
+  flex: 1; min-width: 0; font: inherit; color: var(--color-text);
+  background: var(--color-bg);
+  border: 1.5px solid var(--color-accent); border-radius: 7px;
+  padding: 1px 7px; outline: none;
+}
+
 .detail-foot { flex: none; border-top: 1.5px dotted var(--color-neutral-300); padding: 10px 12px 14px; display: flex; gap: 8px; align-items: center; }
 .add-input { flex: 1; min-width: 0; border: 1.5px dashed var(--color-accent); border-radius: 999px; background: transparent; padding: 9px 14px; font: 600 12px var(--font-body); color: var(--color-text); outline: none; transition: background 0.15s, border-style 0.15s; }
 .add-input:focus { background: var(--card-warm); border-style: solid; }
@@ -266,3 +324,32 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .signin-forgot { color: var(--color-neutral-600); font: 11.5px var(--font-body); text-decoration: none; text-align: center; }
 .signin-forgot:hover { color: var(--color-accent-700); }
 .signin-error { margin: 0; color: #a63d2a; font: 12px var(--font-body); }
+
+/* ── Écran de chargement ──────────────────────────────────────────────────────
+   Même mécanique que le web : col et nid oscillent à des amplitudes différentes
+   et avec un décalage de phase, ce qui fait PLIER le col au lieu de le faire
+   suivre en bloc. Amplitude réduite ici — dans 400 px, un balancier ample
+   déborderait. */
+.loader {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 12px;
+}
+.loader__svg { width: 64px; height: 64px; overflow: visible; }
+.loader__label { font: 12px var(--font-body); color: var(--color-neutral-500); }
+
+.loader__neck, .loader__nest {
+  transform-box: view-box;
+  transform-origin: 56px 6px;
+  animation: nest-swing 1.7s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+}
+.loader__neck { --swing: 4deg; animation-delay: -0.11s; }
+.loader__nest { --swing: 8deg; }
+
+@keyframes nest-swing {
+  0%, 100% { rotate: calc(var(--swing) * -1); }
+  50% { rotate: var(--swing); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loader__neck, .loader__nest { animation: none; rotate: 0deg; }
+}

@@ -35,7 +35,24 @@ export interface Task {
   updated_at: string;
 }
 
-/** Colonnes modifiables d'une tâche (le reste est géré par la base). */
+/**
+ * Colonnes modifiables d'une tâche (le reste est géré par la base).
+ *
+ * `board_id` en fait partie : une tâche peut changer de matrice. Sa `position`
+ * doit alors être recalculée sur la cible, l'ordre étant scopé à
+ * `(board_id, quadrant)`.
+ */
 export type TaskPatch = Partial<
-  Pick<Task, 'title' | 'quadrant' | 'done' | 'pinned' | 'archived' | 'deleted' | 'position' | 'pair_id'>
+  Pick<
+    Task,
+    | 'title'
+    | 'board_id'
+    | 'quadrant'
+    | 'done'
+    | 'pinned'
+    | 'archived'
+    | 'deleted'
+    | 'position'
+    | 'pair_id'
+  >
 >;
