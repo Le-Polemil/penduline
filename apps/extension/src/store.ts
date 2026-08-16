@@ -9,6 +9,8 @@ export interface ExtStore {
   ready: boolean;
   boards: Board[];
   tasks: Task[];
+  /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
+  addBoard: (name: string) => Promise<string | null>;
   addTask: (boardId: string, quadrant: QuadrantKey, title: string, position: number) => Promise<void>;
   patchTask: (id: string, patch: TaskPatch) => Promise<void>;
 }
@@ -35,6 +37,26 @@ export function useExtStore(userId: string): ExtStore {
     };
   }, [userId]);
 
+  // Miroir de `addBoard` côté web (apps/web/src/data/store.ts) : même calcul de
+  // position, même retour d'identifiant pour que l'appelant puisse enchaîner.
+  const addBoard = useCallback(
+    async (name: string) => {
+      const position = Math.max(0, ...boards.map((b) => b.position)) + 1;
+      const { data, error } = await supabase
+        .from('boards')
+        .insert({ user_id: userId, name, position })
+        .select('*')
+        .single();
+      if (error || !data) {
+        console.error('[penduline] addBoard', error?.message);
+        return null;
+      }
+      setBoards((bs) => [...bs, data]);
+      return data.id as string;
+    },
+    [boards, userId],
+  );
+
   const addTask = useCallback(
     async (boardId: string, quadrant: QuadrantKey, title: string, position: number) => {
       const { data, error } = await supabase
@@ -54,28 +76,5 @@ export function useExtStore(userId: string): ExtStore {
     if (error) console.error('[penduline] patchTask', error.message);
   }, []);
 
-  return { ready, boards, tasks, addTask, patchTask };
-}
-
-// ── Dernière matrice ouverte (reprise dans le popup, TTL 2 h) ──────────────────
-const ACTIVE_KEY = 'penduline-active-board';
-const TTL = 2 * 60 * 60 * 1000;
-
-export async function getActiveBoard(): Promise<string | null> {
-  try {
-    const res = await chrome.storage.local.get(ACTIVE_KEY);
-    const v = res[ACTIVE_KEY] as { boardId: string; ts: number } | undefined;
-    if (v && Date.now() - v.ts < TTL) return v.boardId;
-  } catch {
-    /* pas de chrome.storage (ex. preview web) */
-  }
-  return null;
-}
-
-export async function setActiveBoard(boardId: string): Promise<void> {
-  try {
-    await chrome.storage.local.set({ [ACTIVE_KEY]: { boardId, ts: Date.now() } });
-  } catch {
-    /* ignore */
-  }
+  return { ready, boards, tasks, addBoard, addTask, patchTask };
 }

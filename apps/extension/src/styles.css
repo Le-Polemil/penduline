@@ -27,6 +27,9 @@
   --color-surface: #ebddc5;
   --color-text: #201e1d;
   --color-accent: #c67139;
+  /* Fond de la case « À trier », qui n'a pas de couleur propre. Même valeur que
+     le ramp du web, pour n'avoir qu'une convention entre les deux applications. */
+  --color-neutral-200: #eee7db;
   --color-neutral-300: #dcd3c4;
   --color-neutral-400: #c0b6a5;
   --color-neutral-500: #a19786;
@@ -100,6 +103,40 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .board__chev { color: var(--color-neutral-400); }
 .calm-toggle { font: 11px var(--font-body); color: var(--color-neutral-500); padding: 4px 6px; cursor: pointer; background: none; border: none; text-align: left; }
 
+/* ── Création d'une matrice ───────────────────────────────────────────────────
+   Même geste que l'accueil web (bouton au repos → champ à la saisie), resserré
+   pour 400 px : le formulaire web place « Créer » ET « Annuler » en toutes
+   lettres à côté du champ, ce qui ne laisserait ici presque rien pour le nom.
+   L'annulation passe donc par une croix. */
+.add-board {
+  margin-top: 4px; align-self: flex-start;
+  border: 1.5px dashed var(--color-accent); background: transparent;
+  border-radius: 999px; padding: 7px 14px;
+  font: 600 12px var(--font-body); color: var(--color-accent-700);
+  cursor: pointer; transition: background 0.15s;
+}
+.add-board:hover { background: var(--color-accent-100); }
+.add-board-form { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.add-board-input {
+  flex: 1; min-width: 0;
+  font: 600 12.5px var(--font-body); color: var(--color-text);
+  background: var(--card-warm); border: 1.5px solid var(--color-accent);
+  border-radius: 999px; padding: 8px 13px; outline: none;
+}
+.add-board-submit {
+  flex: none; background: var(--color-accent); color: #fff; border: none;
+  border-radius: 999px; padding: 8px 14px;
+  font: 600 12px var(--font-body); cursor: pointer;
+}
+.add-board-submit:hover { background: var(--color-accent-600); }
+.add-board-submit:disabled { opacity: 0.45; cursor: default; }
+.add-board-cancel {
+  flex: none; width: 26px; height: 26px; border: none; background: none;
+  border-radius: 999px; color: var(--color-neutral-500);
+  font: 13px var(--font-body); cursor: pointer;
+}
+.add-board-cancel:hover { background: var(--color-neutral-200); color: var(--color-text); }
+
 .home-foot { flex: none; border-top: 1.5px dotted var(--color-neutral-300); padding: 10px 12px; display: flex; gap: 10px; align-items: center; justify-content: center; }
 .icon-btn { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1.5px solid var(--color-neutral-300); border-radius: 999px; color: var(--color-neutral-600); transition: background 0.15s, color 0.15s; }
 .icon-btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
@@ -110,8 +147,59 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .detail-head { display: flex; align-items: center; gap: 9px; padding: 14px 16px 8px; flex: none; animation: mm-in 0.25s ease backwards; }
 .back { font: 700 15px var(--font-body); color: var(--color-accent-700); cursor: pointer; padding: 2px 6px 2px 0; background: none; border: none; }
 .detail-board { font: 400 21px var(--font-heading); color: var(--color-text); }
-.squares { margin-left: auto; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
-.square { width: 16px; height: 16px; border-radius: 4px; color: #fff; font: 700 9px/16px var(--font-body); text-align: center; cursor: pointer; border: none; padding: 0; outline-offset: 1px; transition: opacity 0.15s; }
+/* ── Sélecteur de case ────────────────────────────────────────────────────────
+   Les quatre tuiles doivent se lire comme UNE matrice : coins extérieurs
+   arrondis, coin tourné vers le centre laissé carré — la règle des tuiles du
+   logo. Le disque « À trier » occupe la jonction. */
+.squares { margin-left: auto; position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
+.square { width: 16px; height: 16px; color: #fff; font: 700 9px/16px var(--font-body); text-align: center; cursor: pointer; border: none; padding: 0; outline-offset: 1px; transition: opacity 0.15s, font-size 0.18s ease; }
+.square--1 { border-radius: 4px 0 0 0; }
+.square--2 { border-radius: 0 4px 0 0; }
+.square--3 { border-radius: 0 0 0 4px; }
+.square--4 { border-radius: 0 0 4px 0; }
+
+.square--park {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  border-radius: 999px;
+  /* Le disque chevauche quatre fonds de couleurs différentes : il lui faut un
+     détourage qui tienne sur les quatre, d'où l'anneau couleur de page. */
+  box-shadow: 0 0 0 1.5px var(--color-bg);
+  /* Il garde sa boîte pleine et n'est que mis à l'échelle : la grille ne bouge
+     jamais, seule la transformation s'anime. */
+  scale: 0.72;
+  transition: scale 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s;
+  /* Décalage plus large que celui des tuiles : à pleine taille le disque les
+     touche, et un anneau collé se lirait comme LEUR bordure, pas la sienne. */
+  outline-offset: 2px;
+}
+.square--park:hover, .square--park:focus-visible, .square--park-on { scale: 1; }
+
+/* Au repos le disque n'affiche qu'un caractère (deux chiffres n'y tiennent pas
+   à 72 %) ; agrandi, il livre le compte exact. */
+.square__full { display: none; }
+.square--park:hover .square__idle,
+.square--park:focus-visible .square__idle,
+.square--park-on .square__idle { display: none; }
+.square--park:hover .square__full,
+.square--park:focus-visible .square__full,
+.square--park-on .square__full { display: inline; }
+/* Le « + » est centré sur l'axe mathématique de la fonte, pas sur la hauteur des
+   chiffres : sans correction son encre tombe 0,818 px sous le centre de la boîte,
+   contre 0,404 px pour un chiffre (mesuré dans Figtree Bold à 9 px / 16 px de
+   ligne). On le remonte de l'écart exact, 0,046 em, pour qu'il s'aligne sur les
+   chiffres — et non sur le centre géométrique, sinon il flotterait plus haut
+   qu'eux.
+   À noter : ces 0,404 px communs viennent de l'asymétrie de la fonte (ascendante
+   9, descendante 2) que `line-height` ne compense pas. C'est uniforme sur les
+   cinq zones, donc cohérent — hors périmètre de ce lot. */
+.square__idle--plus { display: inline-block; translate: 0 -0.046em; }
+
+/* Les quatre compteurs reculent d'un cran quand le centre prend la parole — et
+   c'est ce recul qui dégage la place qu'occupe le disque agrandi.
+   Pas de variation d'opacité ici : les tuiles la portent en style inline, qui
+   l'emporterait sur cette règle. */
+.squares:is(:has(.square--park:hover), :has(.square--park:focus-visible), .squares--park-on)
+  :is(.square--1, .square--2, .square--3, .square--4) { font-size: 6px; }
 
 .filter-banner { flex: none; padding: 0 16px 6px; display: flex; align-items: center; gap: 8px; font: 11px var(--font-body); color: var(--color-neutral-600); }
 .filter-clear { font: 700 11px var(--font-body); color: var(--color-accent-700); cursor: pointer; background: none; border: none; }
@@ -147,8 +235,20 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .detail-foot { flex: none; border-top: 1.5px dotted var(--color-neutral-300); padding: 10px 12px 14px; display: flex; gap: 8px; align-items: center; }
 .add-input { flex: 1; min-width: 0; border: 1.5px dashed var(--color-accent); border-radius: 999px; background: transparent; padding: 9px 14px; font: 600 12px var(--font-body); color: var(--color-text); outline: none; transition: background 0.15s, border-style 0.15s; }
 .add-input:focus { background: var(--card-warm); border-style: solid; }
-.add-squares { display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
-.add-square { width: 15px; height: 15px; border-radius: 4px; cursor: pointer; border: none; padding: 0; outline-offset: 1px; transition: transform 0.12s; }
+/* Même figure que l'en-tête, géométrie seule : ces pastilles ne portent aucun
+   compteur, donc pas de mécanique de survol — elle n'aurait rien à révéler. */
+.add-squares { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
+.add-square { width: 15px; height: 15px; cursor: pointer; border: none; padding: 0; outline-offset: 1px; transition: transform 0.12s; }
+.add-square--1 { border-radius: 4px 0 0 0; }
+.add-square--2 { border-radius: 0 4px 0 0; }
+.add-square--3 { border-radius: 0 0 0 4px; }
+.add-square--4 { border-radius: 0 0 4px 0; }
+.add-square--park {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: 13px; height: 13px; border-radius: 999px;
+  box-shadow: 0 0 0 1.5px var(--color-bg);
+  outline-offset: 2px;
+}
 .add-square:hover { transform: scale(1.15); }
 
 /* ── Connexion ────────────────────────────────────────────────────────────── */
