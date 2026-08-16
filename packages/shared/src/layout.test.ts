@@ -3,6 +3,7 @@ import {
   buildRows,
   countOpen,
   endPosition,
+  groupByUniverse,
   insertPosition,
   isVisible,
   partnerOf,
@@ -12,7 +13,7 @@ import {
   positionBefore,
   visibleTasks,
 } from './layout';
-import { makeList, makeTask } from './test-fixtures';
+import { makeBoard, makeList, makeTask, makeUniverse } from './test-fixtures';
 
 /** Une liste est-elle strictement ordonnée ? Deux positions égales = ordre perdu. */
 function strictlyOrdered(positions: number[]): boolean {
@@ -332,5 +333,63 @@ describe('placement de la partenaire', () => {
     const fantome = makeTask({ id: 'f', position: 4.5, deleted: true });
     const [, mate] = planPairMove([a, b, fantome], a, {}, 4);
     expect(mate.patch.position).toBe(5);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('regroupement par univers', () => {
+  it('respecte l’ordre des univers et place le groupe sans univers en dernier', () => {
+    const boulot = makeUniverse({ id: 'boulot', name: 'Boulot', position: 1 });
+    const perso = makeUniverse({ id: 'perso', name: 'Perso', position: 0 });
+    const groups = groupByUniverse(
+      [boulot, perso],
+      [makeBoard({ id: 'seule' }), makeBoard({ id: 'p1', universe_id: 'perso' })],
+    );
+
+    expect(groups.map((g) => g.universe?.name ?? 'sans')).toEqual(['Perso', 'Boulot', 'sans']);
+    expect(groups[0].boards.map((b) => b.id)).toEqual(['p1']);
+    expect(groups[2].boards.map((b) => b.id)).toEqual(['seule']);
+  });
+
+  it('trie les matrices par position à l’intérieur d’un groupe', () => {
+    const u = makeUniverse({ id: 'u' });
+    const groups = groupByUniverse(
+      [u],
+      [
+        makeBoard({ id: 'z', universe_id: 'u', position: 2 }),
+        makeBoard({ id: 'a', universe_id: 'u', position: 1 }),
+      ],
+    );
+    expect(groups[0].boards.map((b) => b.id)).toEqual(['a', 'z']);
+  });
+
+  it('conserve un univers vide', () => {
+    // Un univers fraîchement créé n'a aucune matrice : le faire disparaître le
+    // rendrait inatteignable, y compris comme cible de dépôt.
+    const groups = groupByUniverse([makeUniverse({ id: 'u', name: 'Neuf' })], []);
+    expect(groups[0].universe?.name).toBe('Neuf');
+    expect(groups[0].boards).toEqual([]);
+  });
+
+  it('garde le groupe sans univers même vide', () => {
+    // C'est la cible de dépôt qui permet de SORTIR une matrice de son univers.
+    const groups = groupByUniverse([makeUniverse({ id: 'u' })], [makeBoard({ universe_id: 'u' })]);
+    expect(groups[groups.length - 1].universe).toBeNull();
+  });
+
+  it('ne perd pas une matrice dont l’univers a disparu', () => {
+    // Donnée incohérente — un univers supprimé ailleurs, un identifiant erroné.
+    // Une matrice ne doit JAMAIS s'évaporer de l'écran à cause de ça.
+    const groups = groupByUniverse([], [makeBoard({ id: 'orpheline', universe_id: 'fantome' })]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].universe).toBeNull();
+    expect(groups[0].boards.map((b) => b.id)).toEqual(['orpheline']);
+  });
+
+  it('rend un seul groupe quand il n’y a aucun univers', () => {
+    // L'état de TOUS les comptes au lendemain de la migration.
+    const groups = groupByUniverse([], [makeBoard({ id: 'a' }), makeBoard({ id: 'b' })]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].boards).toHaveLength(2);
   });
 });

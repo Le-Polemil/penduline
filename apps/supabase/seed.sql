@@ -33,12 +33,21 @@ insert into auth.identities (
   'email', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
+-- ── Univers ──────────────────────────────────────────────────────────────────
+-- Deux univers seulement, et une matrice qui n'appartient à aucun : « sans
+-- univers » n'est pas un cas dégradé à corriger, c'est un état normal que le
+-- seed doit montrer.
+insert into universes (id, user_id, name, position) values
+  ('c1111111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Maison', 0),
+  ('c1111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Boulot', 1)
+on conflict (id) do nothing;
+
 -- ── Matrices + tâches ────────────────────────────────────────────────────────
-insert into boards (id, user_id, name, position) values
-  ('a1111111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Cuisine',      0),
-  ('a1111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Cette semaine', 1),
-  ('a1111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'Déménagement', 2),
-  ('a1111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Un jour peut-être', 3)
+insert into boards (id, user_id, name, universe_id, position) values
+  ('a1111111-0000-0000-0000-000000000001', '11111111-1111-1111-1111-111111111111', 'Cuisine',           'c1111111-0000-0000-0000-000000000001', 0),
+  ('a1111111-0000-0000-0000-000000000003', '11111111-1111-1111-1111-111111111111', 'Déménagement',      'c1111111-0000-0000-0000-000000000001', 1),
+  ('a1111111-0000-0000-0000-000000000002', '11111111-1111-1111-1111-111111111111', 'Cette semaine',     'c1111111-0000-0000-0000-000000000002', 0),
+  ('a1111111-0000-0000-0000-000000000004', '11111111-1111-1111-1111-111111111111', 'Un jour peut-être', null,                                   0)
 on conflict (id) do nothing;
 
 insert into tasks (user_id, board_id, title, quadrant, pinned, position) values

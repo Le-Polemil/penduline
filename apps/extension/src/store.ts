@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { QuadrantKey, Board, Task, TaskPatch } from '@penduline/shared';
+import type { QuadrantKey, Board, Task, TaskPatch, Universe } from '@penduline/shared';
 import { supabase } from './supabase';
 
 const TASK_COLS =
@@ -7,6 +7,8 @@ const TASK_COLS =
 
 export interface ExtStore {
   ready: boolean;
+  /** Lecture seule : créer et ranger des univers reste l'affaire du web. */
+  universes: Universe[];
   boards: Board[];
   tasks: Task[];
   /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
@@ -17,17 +19,20 @@ export interface ExtStore {
 
 export function useExtStore(userId: string): ExtStore {
   const [ready, setReady] = useState(false);
+  const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [boardsRes, tasksRes] = await Promise.all([
+      const [universesRes, boardsRes, tasksRes] = await Promise.all([
+        supabase.from('universes').select('*').order('position'),
         supabase.from('boards').select('*').order('position'),
         supabase.from('tasks').select(TASK_COLS).order('position'),
       ]);
       if (!alive) return;
+      setUniverses(universesRes.data ?? []);
       setBoards(boardsRes.data ?? []);
       setTasks((tasksRes.data as Task[] | null) ?? []);
       setReady(true);
@@ -76,5 +81,5 @@ export function useExtStore(userId: string): ExtStore {
     if (error) console.error('[penduline] patchTask', error.message);
   }, []);
 
-  return { ready, boards, tasks, addBoard, addTask, patchTask };
+  return { ready, universes, boards, tasks, addBoard, addTask, patchTask };
 }
