@@ -1,5 +1,30 @@
 /* Penduline — styles portés depuis la maquette Claude Design (design system « Organic »). */
 
+/*
+  Polices AUTO-HÉBERGÉES, et non chargées depuis Google Fonts — mêmes fichiers et
+  même déclaration que le popup d'extension (apps/extension/src/styles.css), pour
+  n'avoir qu'un seul sous-ensemblage dans le monorepo.
+  Le CDN Google transmettait l'IP de chaque visiteur à un tiers avant tout
+  consentement ; l'auto-hébergement supprime le sujet, et deux requêtes externes
+  au chargement avec lui.
+  Sous-ensemble « latin » : il couvre les accents français, œ compris (U+0153).
+  Figtree est une fonte variable — un seul fichier sert les graisses 400 à 700.
+*/
+@font-face {
+  font-family: 'Caprasimo';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/caprasimo-latin.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Figtree';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/figtree-latin.woff2') format('woff2');
+}
+
 :root {
   --color-bg: #f5ead8;
   --color-surface: #ebddc5;
