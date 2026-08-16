@@ -3,7 +3,7 @@ story: "Univers : regrouper les matrices"
 story_code: "univers"
 issues: [17]
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # #17 — Univers : regrouper les matrices
