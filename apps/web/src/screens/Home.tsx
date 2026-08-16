@@ -9,7 +9,15 @@ const LONG_PRESS_MS = 500;
 /** Interstice survolé : à quel groupe il appartient, et à quelle place. */
 type Gap = { universeId: string | null; index: number };
 
-export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string) => void }) {
+export function Home({
+  store,
+  onOpen,
+  onGlobal,
+}: {
+  store: Store;
+  onOpen: (boardId: string) => void;
+  onGlobal: () => void;
+}) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
   const [draft, setDraft] = useState<string | null>(null);
   const [uniDraft, setUniDraft] = useState<string | null>(null);
@@ -135,6 +143,16 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
         Urgent n'est pas important. En croisant ces deux axes, on voit d'un coup d'œil
         quoi faire tout de suite, quoi planifier, quoi déléguer — et quoi laisser tomber.
       </p>
+
+      {/* Au-dessus de la liste, parce que c'est une façon de la lire — pas une
+          matrice de plus. Masquée tant qu'aucune matrice n'existe : il n'y
+          aurait rien à voir d'ensemble. */}
+      {store.boards.length > 0 && (
+        <button className="home-global" onClick={onGlobal}>
+          Vue globale
+          <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
+        </button>
+      )}
 
       {store.boards.length === 0 && !grouped ? (
         <p className="home-empty">

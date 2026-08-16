@@ -5,6 +5,7 @@ import { useStore } from './data/store';
 import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
+import { GlobalScreen, type Scope } from './screens/Global';
 
 /**
  * Lit ce que GoTrue a déposé dans le fragment d'URL en renvoyant l'utilisateur.
@@ -84,21 +85,35 @@ export function App() {
   return <AppRoot userId={session.user.id} />;
 }
 
+/**
+ * Ce que l'application affiche.
+ *
+ * Naguère un `boardId: string | null` — un booléen déguisé, qui ne pouvait pas
+ * exprimer un troisième écran. La vue globale porte sa portée avec elle : elle
+ * survit ainsi à un aller-retour vers l'accueil.
+ */
+type View = { kind: 'home' } | { kind: 'board'; id: string } | { kind: 'global'; scope: Scope };
+
+const HOME: View = { kind: 'home' };
+
 function AppRoot({ userId }: { userId: string }) {
   const store = useStore(userId);
-  const [boardId, setBoardId] = useState<string | null>(null);
+  const [view, setView] = useState<View>(HOME);
 
   if (!store.ready) return <Loader label="Chargement de vos matrices…" />;
 
-  const board = store.boards.find((r) => r.id === boardId) ?? null;
+  // Une matrice supprimée depuis un autre appareil laisserait la vue pointer
+  // dans le vide : on retombe alors sur l'accueil.
+  const board = view.kind === 'board' ? store.boards.find((r) => r.id === view.id) ?? null : null;
+  const onHome = () => setView(HOME);
 
   return (
     <div>
       {/* Le retour vit dans la barre du haut, face à « Déconnexion » — et non
           dans l'en-tête de la matrice, où il était mêlé à son titre. */}
       <div className="userbar">
-        {board ? (
-          <button className="crumb" onClick={() => setBoardId(null)}>
+        {view.kind !== 'home' ? (
+          <button className="crumb" onClick={onHome}>
             ‹ Retour
           </button>
         ) : (
@@ -109,9 +124,25 @@ function AppRoot({ userId }: { userId: string }) {
         </button>
       </div>
       {board ? (
-        <MatrixScreen store={store} board={board} onHome={() => setBoardId(null)} onSwitch={setBoardId} />
+        <MatrixScreen
+          store={store}
+          board={board}
+          onHome={onHome}
+          onSwitch={(id) => setView({ kind: 'board', id })}
+          onGlobal={() => setView({ kind: 'global', scope: { kind: 'all' } })}
+        />
+      ) : view.kind === 'global' ? (
+        <GlobalScreen
+          store={store}
+          scope={view.scope}
+          onScope={(scope) => setView({ kind: 'global', scope })}
+        />
       ) : (
-        <Home store={store} onOpen={setBoardId} />
+        <Home
+          store={store}
+          onOpen={(id) => setView({ kind: 'board', id })}
+          onGlobal={() => setView({ kind: 'global', scope: { kind: 'all' } })}
+        />
       )}
     </div>
   );

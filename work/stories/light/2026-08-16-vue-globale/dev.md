@@ -14,10 +14,10 @@ status: "In Progress"
 |-------|--------|------|
 | 1. Logique d'agrégation dans `packages/shared` (`orderedBoards`, `groupTasksByBoard`) + tests | Terminé | 2026-08-16 |
 | 2. Refacto à comportement identique : extraire `TaskCard`, `BinModal`, `useCompletion` de `Matrix.tsx` | Terminé | 2026-08-16 |
-| 3. Maquette Claude Design du cadre par matrice (3 variantes × 5 fonds) et validation | En attente | |
-| 4. Écran `Global.tsx`, routage par vue dans `App.tsx`, deux points d'entrée | En attente | |
-| 5. Styles du cadre retenu dans `styles.css` | En attente | |
-| 6. Vérifications automatiques (`npm test`, `typecheck`, `build`) | En attente | |
+| 3. Maquette du cadre par matrice (3 variantes × 5 fonds) et validation | Terminé | 2026-08-16 |
+| 4. Écran `Global.tsx`, routage par vue dans `App.tsx`, deux points d'entrée | Terminé | 2026-08-16 |
+| 5. Styles des trois cadres dans `styles.css` | Terminé | 2026-08-16 |
+| 6. Vérifications automatiques (`npm test`, `typecheck`, `build`) | Terminé | 2026-08-16 |
 | 7. Validation manuelle (12 points du plan) | En attente | |
 | 8. Commit, push et PR ciblant `story-light/univers` | En attente | |
 
@@ -77,3 +77,99 @@ C'est le comportement d'origine ; le corriger ici aurait mêlé une correction �
 une extraction censée ne rien changer.
 
 `npm test` (52), `typecheck` et `build` passent sur les trois workspaces.
+
+### 2026-08-16 : Maquette du cadre par matrice
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Trois variantes construites avec les vraies teintes de case et les vraies
+  polices du produit, sur les cinq fonds puis à deux densités (1 et 4 matrices) :
+  **A** filet à gauche, **B** cadre complet, **C** étiquette seule.
+- Poussée dans le projet Design « Organic » (`components/board-frame.html`), puis
+  republiée en lien direct.
+
+**Fichiers modifiés** : aucun dans le dépôt (maquette hors code).
+
+**Notes** : ⚖️ **Les trois sont implémentées, B est la valeur par défaut.** Décision
+de l'utilisateur : garder les trois pour pouvoir changer d'avis, ou en faire un
+réglage plus tard. Elles vivent donc comme trois modificateurs CSS sur la grille,
+et une seule constante désigne celle en vigueur.
+
+Le projet Design n'affichait pas la carte : son index est compilé depuis un
+manifeste qui n'avait pas été reconstruit. `register_assets` la déclare
+explicitement — mais le lien direct reste le chemin fiable pour une validation.
+
+Une décision commune aux trois est sortie de la passe : **le nom porte
+l'information, jamais le trait seul**. Il s'écrit en `--q-dark` et non en
+`--q-ink` dilué, pour tenir le contraste sur les cinq fonds — « À trier », fond
+transparent sur le beige de page et gris chaud le moins saturé, est le cas
+limite. Le trait, doublé par le nom, peut alors rester décoratif.
+
+### 2026-08-16 : L'écran, le routage et les points d'entrée
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `screens/Global.tsx` : la grille des cinq zones, mais les tâches regroupées par
+  matrice. Sélecteur de portée réutilisant `.board-switch` / `.board-menu`,
+  corbeille sur la portée, total agrégé.
+- `App.tsx` : `boardId: string | null` devient une vue explicite à trois formes.
+  La portée voyage avec la vue.
+- Deux entrées : l'accueil au-dessus de la liste, et « Vue globale » en tête du
+  menu de bascule de l'écran matrice.
+- `styles.css` : `.bgroup` et les trois variantes de cadre.
+
+**Fichiers modifiés** :
+- `apps/web/src/screens/Global.tsx` *(nouveau)*
+- `apps/web/src/App.tsx`, `screens/Home.tsx`, `screens/Matrix.tsx`, `styles.css`
+
+**Notes** : deux finitions sont sorties de l'essai en navigateur, invisibles à la
+lecture du code — la pastille du premier cadre touchait le libellé de la case, et
+le `margin-top` de `.task--pinned` décentrait le haut du cadre. Les deux sont
+neutralisées **dans le contexte du groupe seulement** : l'écran matrice garde son
+comportement.
+
+Le libellé de la corbeille ne met plus la portée en minuscules : « Corbeille
+(maison) » écorchait un nom propre. Seul « toutes les matrices » se met en bas de
+casse, pour se lire dans la phrase.
+
+**Deux choix à consigner** :
+- Le menu « Vers une autre matrice » propose **toutes** les matrices du compte,
+  pas seulement celles de la portée : l'action concerne la tâche, pas la vue.
+  Déplacer hors portée la fait sortir de l'écran, et c'est la conséquence juste.
+- Le compteur d'une case agrège la portée entière, tous groupes confondus. Un
+  compteur par cadre aurait fait un deuxième niveau de chiffres à lire.
+
+### 2026-08-16 : Vérifications
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `npm test` : ✅ 52 · `npm run typecheck` : ✅ · `npm run build` : ✅ trois workspaces
+- Parcours complet en navigateur sur la base locale (console sans erreur) :
+  portée « toutes » et portée « Maison », ordre des matrices conforme à
+  l'accueil, menu `⋯` complet, déplacement de case (la tâche reste dans SA
+  matrice, en fin de liste), cocher → toast → archivage à 4 s → corbeille →
+  restauration, paire sur une ligne dans son cadre, « Dissocier ».
+- **Aucun `.row-gap` n'existe pendant un glisser** — le réordonnancement est
+  retiré, pas masqué. Vérifié en comptant les nœuds pendant le déplacement.
+- `role="group"` + `aria-label` présents sur chaque cadre, **zéro arrêt de
+  tabulation** ajouté par l'étiquette.
+- `--q-solid` résolu sur les cinq cases, `#f5ead8` (fond de page) pour « À trier ».
+- Univers vide choisi comme portée → message, pas de grille vide.
+- **Aucun univers** → le sélecteur est un `<span>` inerte, sans chevron ni menu.
+- Écran matrice **inchangé** : interstices, champ d'ajout et poignées toujours là,
+  grille sans modificateur de cadre.
+
+**Notes** : le garde-fou « univers disparu → portée toutes » n'est pas
+reproductible dans un seul onglet — il faudrait que le store se rafraîchisse
+pendant que la vue est ouverte. Vérifié par lecture uniquement.
+
+Le glisser a été exercé par événements synthétiques (`DragEvent` + `DataTransfer`),
+ce qui couvre le chemin de code mais pas le ressenti : le glisser à la souris
+reste à dérouler à la main.
+
+Environnement : ports Supabase locaux à nouveau décalés (55321-55324) pour
+cohabiter avec la stack `unaya`, puis `config.toml` rétabli — vérifié identique à
+`HEAD`.

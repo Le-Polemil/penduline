@@ -86,6 +86,19 @@ button { font: inherit; }
 .home-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-600); margin: 8px 0 28px; }
 /* `gap: 0` : l'espacement vient désormais des interstices de dépôt, qui portent
    leur propre hauteur au repos. Le cumuler avec un `gap` doublerait l'écart. */
+/* Entrée de la vue globale. Volontairement plate — pas une carte de matrice :
+   ce n'en est pas une, et la confondre avec la liste qu'elle surplombe serait
+   la première chose qu'on lui reprocherait. */
+.home-global {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  width: 100%; margin: 0 0 18px; padding: 10px 14px;
+  background: none; border: 1.5px dashed var(--color-neutral-400); border-radius: 999px;
+  font: 600 14px var(--font-body); color: var(--color-accent-700);
+  cursor: pointer; text-align: left; transition: background 0.15s, border-color 0.15s;
+}
+.home-global:hover { background: var(--color-accent-100); border-color: var(--color-accent-300); }
+.home-global__hint { font: 400 12.5px var(--font-body); color: var(--color-neutral-600); }
+
 .board-list { display: flex; flex-direction: column; }
 
 /* Interstices de réordonnancement — même mécanique que les `.row-gap` de l'écran
@@ -253,6 +266,9 @@ button { font: inherit; }
   display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
   max-width: 100%;
 }
+/* Sans univers, la portée de la vue globale ne peut pas changer : le sélecteur
+   devient une étiquette, pas un bouton qui n'ouvrirait qu'une seule entrée. */
+.board-switch__name--static { cursor: default; }
 .board-switch__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .board-switch__caret { font-size: 24px; line-height: 1; color: var(--color-neutral-500); flex: none; }
 .board-menu {
@@ -294,6 +310,54 @@ button { font: inherit; }
 .quad-sub { font: 11.5px var(--font-body); color: var(--q-dark); }
 .quad-count { margin-left: auto; background: var(--q-ink); color: #fff; border-radius: 999px; font: 700 11px/1 var(--font-body); padding: 4px 8px; }
 .quad-fill { flex: 1; min-height: 10px; }
+
+/* ── Vue globale : regroupement par matrice ───────────────────────────────────
+   Dans la vue globale, une case réunit les tâches de plusieurs matrices. Le
+   cadre doit rendre l'appartenance lisible SANS concurrencer la couleur de la
+   case, qui reste le signal dominant.
+
+   Les trois dosages maquettés sont implémentés ; `FRAME` (screens/Global.tsx)
+   désigne celui en vigueur. Un réglage utilisateur n'aurait qu'à poser une
+   autre classe sur la grille.
+
+   Commun aux trois : le NOM porte l'information, jamais le trait seul. D'où
+   `--q-dark` plutôt qu'un `--q-ink` dilué — « À trier » est le cas limite, fond
+   transparent sur le beige de page et gris chaud le moins saturé des cinq. */
+.bgroup + .bgroup { margin-top: 12px; }
+.bgroup__name {
+  font: 700 10.5px/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--q-dark);
+}
+/* Les lignes se suivaient grâce aux `.row-gap` de l'écran matrice, absents ici. */
+.bgroup__body { display: flex; flex-direction: column; gap: 6px; }
+/* `.task--pinned` s'écarte de 8 px pour se détacher de la zone ordinaire de sa
+   case. Dans un groupe, c'est le cadre qui sépare et l'espacement est déjà posé
+   par `gap` : la marge n'y ferait que décentrer le haut du cadre. */
+.bgroup__body .task--pinned { margin-top: 0; }
+
+/* A — filet à gauche : le trait groupe, le nom nomme. */
+.grid--filet .bgroup__name { padding: 0 0 5px 11px; }
+.grid--filet .bgroup__body {
+  border-left: 2px solid color-mix(in srgb, var(--q-ink) 32%, transparent); padding-left: 9px;
+}
+
+/* B — cadre complet : la pastille découpe le fond RÉEL de la case (`--q-solid`),
+   sinon la bordure barrerait le nom. */
+.grid--cadre .bgroup + .bgroup { margin-top: 15px; }
+.grid--cadre .bgroup {
+  position: relative; border-radius: 14px; padding: 13px 10px 10px;
+  border: 1px solid color-mix(in srgb, var(--q-ink) 30%, transparent);
+}
+.grid--cadre .bgroup__name {
+  position: absolute; top: -6px; left: 12px; background: var(--q-solid); padding: 0 5px;
+}
+/* La pastille du premier groupe déborde vers le haut : sans cet écart elle
+   viendrait toucher le libellé de la case. */
+.grid--cadre .bgroup:first-of-type { margin-top: 7px; }
+
+/* C — étiquette seule : le regroupement ne tient plus qu'à l'espacement. */
+.grid--etiquette .bgroup + .bgroup { margin-top: 14px; }
+.grid--etiquette .bgroup__name { padding: 0 0 5px 3px; opacity: 0.75; }
 
 /* ── Cartes de tâche ──────────────────────────────────────────────────────── */
 .row-gap { display: flex; align-items: center; transition: height 0.12s; height: 8px; }

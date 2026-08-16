@@ -44,11 +44,13 @@ export function MatrixScreen({
   board,
   onHome,
   onSwitch,
+  onGlobal,
 }: {
   store: Store;
   board: Board;
   onHome: () => void;
   onSwitch: (boardId: string) => void;
+  onGlobal: () => void;
 }) {
   const { tasks, patchTask } = store;
   const [boardMenu, setBoardMenu] = useState(false);
@@ -286,6 +288,20 @@ export function MatrixScreen({
           )}
           {boardMenu && (
             <span className="board-menu">
+              {/* La vue globale ouvre la liste : c'est le même geste — « où
+                  veux-je regarder » — et le menu est déjà l'endroit où on en
+                  décide. */}
+              <button
+                className="board-menu__item"
+                onClick={() => {
+                  setBoardMenu(false);
+                  setMenuTask(null);
+                  onGlobal();
+                }}
+              >
+                Vue globale
+              </button>
+              <span className="board-menu__sep" />
               {store.boards.map((r) => (
                 <button
                   key={r.id}
