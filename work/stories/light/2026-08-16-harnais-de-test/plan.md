@@ -3,7 +3,7 @@ story: "Harnais de test"
 story_code: "harnais-de-test"
 issues: [31]
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # #31 — Harnais de test : Vitest sur `packages/shared`
