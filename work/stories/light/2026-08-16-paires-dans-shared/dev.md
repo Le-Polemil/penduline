@@ -17,9 +17,9 @@ status: "In Progress"
 | 3 | Rebrancher les 8 appelants du web | Terminé | 2026-08-16 |
 | 4 | Rebrancher les 3 appelants de l'extension | Terminé | 2026-08-16 |
 | 5 | **Commit 1** — extraction, comportement identique | Terminé | 2026-08-16 |
-| 6 | **Commit 2** — corriger le décalage fixe de +0,001 | En attente | |
-| 7 | Documentation (`README.md`) | En attente | |
-| 8 | Vérifications qualité + test manuel | En attente | |
+| 6 | **Commit 2** — corriger le décalage fixe de +0,001 | Terminé | 2026-08-16 |
+| 7 | Documentation (`README.md`) | Terminé | 2026-08-16 |
+| 8 | Vérifications qualité + test manuel | Terminé | 2026-08-16 |
 
 ## Journal
 
@@ -64,3 +64,42 @@ changement de comportement restent relisibles séparément.
 
 **Vérifications** : 31 tests, typecheck et build au vert ; `grep "function movePair" apps/`
 ne renvoie plus rien.
+
+### 2026-08-16 — Tâches 6 à 8 : corriger le décalage fixe
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- La partenaire se place désormais **à mi-chemin de la voisine suivante** dans la
+  case d'arrivée, au lieu d'un `+0,001` aveugle.
+- 5 tests supplémentaires (36 au total).
+- `README.md` : la règle d'appairage vit dans `layout.ts`, et nulle part ailleurs.
+
+**Fichiers modifiés** :
+- `packages/shared/src/layout.ts`, `packages/shared/src/layout.test.ts`
+- `README.md`
+
+**Notes** :
+
+*Le défaut, en clair.* Un décalage constant paraît suffisant tant que les
+positions sont espacées. Mais `positionBefore` divise l'écart par deux à chaque
+insertion au même endroit : après une dizaine, l'écart entre voisines passe sous
+0,001. Entre deux voisines à `0,5` et `0,5005`, la tâche déplacée arrive à
+`0,50025` et sa partenaire à `0,50125` — **au-delà** de la voisine. La paire se
+retrouve à cheval sur une autre tâche, visuellement disloquée, sans que
+l'utilisateur ait rien fait qui l'explique.
+
+*Un détail qui aurait pu passer inaperçu* : la voisine doit être cherchée dans la
+case **d'arrivée**, pas celle de départ. Le patch dit où la paire va ; lire le
+voisinage d'origine placerait la partenaire d'après un contexte qu'elle vient de
+quitter. Un test dédié le fige.
+
+*Vérification que les nouveaux tests mordent* — un test qui passe avec l'ancien
+comportement ne prouve rien. Le décalage fixe a été temporairement rétabli :
+
+| État | Résultat |
+|---|---|
+| Ancien `+0,001` | ❌ **4 tests échouent**, dont celui du débordement |
+| Correction rétablie | ✅ 36 tests passent |
+
+**Vérifications** : 36 tests, typecheck et build au vert.

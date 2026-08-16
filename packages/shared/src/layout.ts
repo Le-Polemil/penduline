@@ -80,6 +80,13 @@ export interface TaskWrite {
  * Le même `patch` s'applique aux deux : changer de case, de matrice ou d'état
  * d'épinglage concerne la paire entière. Seule la position diffère, pour que la
  * partenaire se range juste derrière.
+ *
+ * ⚠️ La partenaire se place **à mi-chemin de la voisine suivante**, et non à un
+ * décalage fixe. Un décalage constant paraît suffisant tant que les positions
+ * sont espacées, mais `positionBefore` divise l'écart par deux à chaque
+ * insertion au même endroit : après une dizaine, l'écart entre voisines tombe
+ * sous ce décalage, et la partenaire atterrit **au-delà** de la voisine — la
+ * paire se retrouve à cheval sur une autre tâche.
  */
 export function planPairMove(
   tasks: Task[],
@@ -89,8 +96,38 @@ export function planPairMove(
 ): TaskWrite[] {
   const mate = partnerOf(tasks, task);
   const writes: TaskWrite[] = [{ id: task.id, patch: { ...patch, position } }];
-  if (mate) writes.push({ id: mate.id, patch: { ...patch, position: position + 0.001 } });
+  if (mate) writes.push({ id: mate.id, patch: { ...patch, position: matePosition(tasks, task, mate, patch, position) } });
   return writes;
+}
+
+/**
+ * Où poser la partenaire : entre la tâche déplacée et la voisine qui la suit
+ * dans la case d'arrivée. Sans voisine, `+1` suffit — on est en fin de liste.
+ *
+ * La destination se lit dans le patch : c'est là que la paire va atterrir, pas
+ * là d'où elle vient.
+ */
+function matePosition(
+  tasks: Task[],
+  task: Task,
+  mate: Task,
+  patch: TaskPatch,
+  position: number,
+): number {
+  const boardId = patch.board_id ?? task.board_id;
+  const quadrant = patch.quadrant ?? task.quadrant;
+  const next = tasks
+    .filter(
+      (t) =>
+        t.board_id === boardId &&
+        t.quadrant === quadrant &&
+        t.id !== task.id &&
+        t.id !== mate.id &&
+        !t.deleted &&
+        t.position > position,
+    )
+    .reduce<number | null>((min, t) => (min === null || t.position < min ? t.position : min), null);
+  return next === null ? position + 1 : (position + next) / 2;
 }
 
 /**

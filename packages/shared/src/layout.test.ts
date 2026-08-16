@@ -279,3 +279,58 @@ describe('préservation des paires', () => {
     ]);
   });
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('placement de la partenaire', () => {
+  const pair = 'p1';
+
+  it('se glisse entre la tâche déplacée et la voisine suivante', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const voisine = makeTask({ id: 'v', position: 10 });
+    const [, mate] = planPairMove([a, b, voisine], a, {}, 4);
+    expect(mate.patch.position).toBeGreaterThan(4);
+    expect(mate.patch.position).toBeLessThan(10);
+  });
+
+  it('se pose après quand il n’y a pas de voisine', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const [, mate] = planPairMove([a, b], a, {}, 4);
+    expect(mate.patch.position).toBe(5);
+  });
+
+  it('ne déborde pas sur la voisine, même dans un interstice minuscule', () => {
+    // LE cas que la correction règle. Un décalage fixe de 0,001 ferait atterrir
+    // la partenaire au-delà de `v` dès que l'écart passe sous ce seuil — ce qui
+    // arrive après une dizaine d'insertions au même endroit.
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const voisine = makeTask({ id: 'v', position: 0.5005 });
+    const [task, mate] = planPairMove([a, b, voisine], a, {}, 0.50025);
+
+    expect(mate.patch.position).toBeGreaterThan(task.patch.position!);
+    expect(mate.patch.position).toBeLessThan(0.5005);
+  });
+
+  it('cherche la voisine dans la case d’ARRIVÉE, pas celle de départ', () => {
+    // Le patch dit où la paire va. Lire les voisines de la case d'origine
+    // placerait la partenaire d'après un voisinage qu'elle vient de quitter.
+    const a = makeTask({ id: 'a', quadrant: 'faire', pair_id: pair });
+    const b = makeTask({ id: 'b', quadrant: 'faire', pair_id: pair });
+    const iciTresProche = makeTask({ id: 'ici', quadrant: 'faire', position: 4.0001 });
+    const laBas = makeTask({ id: 'la', quadrant: 'planifier', position: 10 });
+
+    const [, mate] = planPairMove([a, b, iciTresProche, laBas], a, { quadrant: 'planifier' }, 4);
+    // La voisine pertinente est `la` (position 10), pas `ici` (4,0001).
+    expect(mate.patch.position).toBe(7);
+  });
+
+  it('ignore les voisines supprimées', () => {
+    const a = makeTask({ id: 'a', pair_id: pair });
+    const b = makeTask({ id: 'b', pair_id: pair });
+    const fantome = makeTask({ id: 'f', position: 4.5, deleted: true });
+    const [, mate] = planPairMove([a, b, fantome], a, {}, 4);
+    expect(mate.patch.position).toBe(5);
+  });
+});
