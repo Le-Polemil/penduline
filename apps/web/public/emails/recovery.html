@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Réinitialiser votre mot de passe Penduline</title>
+  </head>
+  <!--
+    Gabarit d'e-mail servi à GoTrue via MAILER_TEMPLATES_RECOVERY, qui le
+    télécharge à cette URL et y substitue {{ .ConfirmationURL }}.
+
+    Contraintes propres à l'e-mail, différentes de celles du web :
+    - Mise en page en <table> : Outlook (moteur Word) ne gère pas flex/grid.
+    - Styles EN LIGNE : Gmail retire les <style> dans plusieurs contextes,
+      notamment en lecture sur mobile et en transfert.
+    - Aucune police distante : les clients mail ne les chargent pas de façon
+      fiable, et beaucoup bloquent les ressources externes par défaut. On
+      retombe donc sur les polices système, pas sur Caprasimo/Figtree.
+    - Le lien est répété en texte brut : les boutons sont parfois neutralisés
+      par les passerelles de sécurité qui réécrivent les URL.
+  -->
+  <body style="margin: 0; padding: 0; background: #f5ead8;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: #f5ead8;">
+      <tr>
+        <td align="center" style="padding: 40px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background: #fdf6e9; border-radius: 18px;">
+            <tr>
+              <td style="padding: 32px 32px 8px; font: 700 22px/1.25 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #201e1d;">
+                Penduline
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0 32px 20px; font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #201e1d;">
+                <p style="margin: 0 0 16px;">
+                  Vous avez demandé à réinitialiser le mot de passe de votre compte
+                  Penduline. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td align="center" style="padding: 0 32px 24px;">
+                <a
+                  href="{{ .ConfirmationURL }}"
+                  style="display: inline-block; background: #c67139; color: #ffffff; text-decoration: none; border-radius: 999px; padding: 14px 28px; font: 600 15px system-ui, -apple-system, 'Segoe UI', sans-serif;"
+                >
+                  Choisir un nouveau mot de passe
+                </a>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 0 32px 28px; font: 13px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #82796a;">
+                <p style="margin: 0 0 14px;">
+                  Si le bouton ne fonctionne pas, copiez cette adresse dans votre
+                  navigateur&nbsp;:
+                </p>
+                <p style="margin: 0 0 20px; word-break: break-all;">
+                  <a href="{{ .ConfirmationURL }}" style="color: #8c491a;">{{ .ConfirmationURL }}</a>
+                </p>
+                <p style="margin: 0; padding-top: 16px; border-top: 1px solid #eee7db;">
+                  Ce lien n'est valable qu'une heure et ne peut servir qu'une fois.
+                  <strong style="color: #201e1d;">Si vous n'êtes pas à l'origine de cette
+                  demande, ignorez ce message</strong>&nbsp;: votre mot de passe actuel
+                  reste inchangé.
+                </p>
+              </td>
+            </tr>
+          </table>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px;">
+            <tr>
+              <td align="center" style="padding: 20px 16px 0; font: 12px/1.6 system-ui, -apple-system, 'Segoe UI', sans-serif; color: #82796a;">
+                Penduline — matrices d'Eisenhower par contexte.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

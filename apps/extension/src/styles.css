@@ -161,4 +161,8 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .signin-btn:hover { background: var(--color-accent-600); }
 .signin-btn:disabled { opacity: 0.5; cursor: default; }
 .signin-link { background: none; border: none; color: var(--color-accent-700); font: 600 12px var(--font-body); cursor: pointer; }
+/* Volontairement plus discret que `.signin-link` : c'est une porte de secours,
+   pas une action de même rang que « créer un compte ». */
+.signin-forgot { color: var(--color-neutral-600); font: 11.5px var(--font-body); text-decoration: none; text-align: center; }
+.signin-forgot:hover { color: var(--color-accent-700); }
 .signin-error { margin: 0; color: #a63d2a; font: 12px var(--font-body); }

@@ -462,6 +462,17 @@ function SignIn() {
       <button type="button" className="signin-link" onClick={() => setMode(mode === 'signin' ? 'signup' : 'signin')}>
         {mode === 'signin' ? 'Pas de compte ? Créer' : 'Déjà un compte ? Se connecter'}
       </button>
+      {/*
+        Le parcours de réinitialisation n'est PAS dupliqué ici : il suppose un
+        aller-retour par e-mail, et un popup de 400×600 qui se ferme au moindre
+        clic ailleurs est le pire endroit pour ça. On renvoie vers l'app web,
+        qui porte le parcours complet.
+      */}
+      {mode === 'signin' && (
+        <a className="signin-forgot" href={WEB_APP_URL} target="_blank" rel="noreferrer">
+          Mot de passe oublié ?
+        </a>
+      )}
     </form>
   );
 }
