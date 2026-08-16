@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import type { QuadrantKey, Board, Task, TaskPatch } from '@penduline/shared';
+import { positionBefore, type QuadrantKey, type Board, type Task, type TaskPatch } from '@penduline/shared';
 import { supabase } from '../lib/supabase';
 
 /** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
@@ -13,6 +13,8 @@ export interface Store {
   /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
   addBoard: (name: string) => Promise<string | null>;
   renameBoard: (id: string, name: string) => Promise<void>;
+  /** Déplace une matrice juste avant `beforeId` ; `null` = en fin de liste. */
+  reorderBoard: (id: string, beforeId: string | null) => Promise<void>;
   /** Supprime la matrice ET ses tâches (cascade assurée par la clé étrangère). */
   deleteBoard: (id: string) => Promise<void>;
   addTask: (boardId: string, quadrant: QuadrantKey, title: string, position: number) => Promise<void>;
@@ -65,6 +67,26 @@ export function useStore(userId: string): Store {
     if (error) console.error('[penduline] renameBoard', error.message);
   }, []);
 
+  // Position fractionnaire, calculée par le helper déjà utilisé pour les tâches
+  // (packages/shared) : une seule logique d'ordre pour tout le produit.
+  const reorderBoard = useCallback(
+    async (id: string, beforeId: string | null) => {
+      if (id === beforeId) return;
+      const position = positionBefore(
+        // La matrice déplacée doit sortir de la liste de référence, sinon elle
+        // servirait de repère à son propre déplacement.
+        boards.filter((b) => b.id !== id),
+        beforeId,
+      );
+      setBoards((bs) =>
+        bs.map((b) => (b.id === id ? { ...b, position } : b)).sort((a, b) => a.position - b.position),
+      );
+      const { error } = await supabase.from('boards').update({ position }).eq('id', id);
+      if (error) console.error('[penduline] reorderBoard', error.message);
+    },
+    [boards],
+  );
+
   const deleteBoard = useCallback(async (id: string) => {
     // Les tâches partent avec la matrice : `tasks.board_id` porte un
     // `on delete cascade`. On nettoie l'état local en conséquence.
@@ -107,6 +129,7 @@ export function useStore(userId: string): Store {
     tasks,
     addBoard,
     renameBoard,
+    reorderBoard,
     deleteBoard,
     addTask,
     patchTask,

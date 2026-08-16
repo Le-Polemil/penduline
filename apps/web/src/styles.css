@@ -84,7 +84,20 @@ button { font: inherit; }
 .home { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
 .home-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
 .home-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-600); margin: 8px 0 28px; }
-.board-list { display: flex; flex-direction: column; gap: 10px; }
+/* `gap: 0` : l'espacement vient désormais des interstices de dépôt, qui portent
+   leur propre hauteur au repos. Le cumuler avec un `gap` doublerait l'écart. */
+.board-list { display: flex; flex-direction: column; }
+
+/* Interstices de réordonnancement — même mécanique que les `.row-gap` de l'écran
+   matrice, pour que les deux listes se manipulent de la même façon. */
+.board-gap { display: flex; align-items: center; height: 10px; transition: height 0.12s; }
+.board-gap--active { height: 24px; }
+.board-gap__line { flex: 1; border-top: 3px dotted transparent; }
+.board-gap--active .board-gap__line { border-top-color: var(--color-accent); }
+.board-row--dragging {
+  opacity: 0.45; box-shadow: var(--shadow-lg);
+  transform: rotate(-1deg) scale(1.01);
+}
 .board-row {
   display: flex; align-items: center; width: 100%;
   background: var(--card-warm); border-radius: var(--radius-lg);
@@ -149,6 +162,11 @@ button { font: inherit; }
   padding: 15px 12px; border-radius: 14px; cursor: pointer;
 }
 .sheet__item:active { background: var(--color-accent-100); }
+/* « Monter » sur la première matrice, « Descendre » sur la dernière : l'entrée
+   reste visible mais inerte, plutôt que de disparaître — une feuille dont les
+   lignes bougent d'une matrice à l'autre se relit à chaque ouverture. */
+.sheet__item:disabled { opacity: 0.35; cursor: default; }
+.sheet__item:disabled:active { background: none; }
 .sheet__item--danger { color: #a63d2a; }
 .sheet__item--cancel { color: var(--color-neutral-600); font-weight: 400; }
 @media (prefers-reduced-motion: reduce) {
@@ -283,6 +301,17 @@ button { font: inherit; }
 .row-gap__line { flex: 1; border-top: 3px dotted transparent; }
 .row-gap--active .row-gap__line { border-top-color: var(--q-ink); }
 .card-row { display: flex; gap: 8px; }
+/* Une paire est un LIEN, pas deux cartes qui partagent une ligne : sans marque,
+   rien ne la distingue d'une coïncidence de mise en page — et c'est ce qui
+   rendait la fonctionnalité indevinable.
+   Le trait occupe l'espace entre les deux cartes, et le tireté ne repose pas sur
+   la seule couleur. */
+.card-row--paired { position: relative; }
+.card-row--paired::before {
+  content: ''; position: absolute; z-index: 1;
+  left: 50%; top: 50%; translate: -50% -50%;
+  width: 10px; height: 0; border-top: 2px dashed var(--q-ink); opacity: 0.55;
+}
 .card-wrap { position: relative; flex: 1; min-width: 0; }
 
 .task {

@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { countOpen, QUADS } from '@penduline/shared';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';
@@ -17,9 +17,33 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
   // Menu d'actions ouvert à l'appui long (tactile) : les actions au survol sont
   // inatteignables au doigt.
   const [sheet, setSheet] = useState<string | null>(null);
+  // Réordonnancement à la souris : matrice en cours de déplacement, et interstice
+  // survolé (index dans la liste, `boards.length` = tout en bas).
+  const [drag, setDrag] = useState<string | null>(null);
+  const [hoverGap, setHoverGap] = useState<number | null>(null);
   const pressTimer = useRef<number>();
   /** Un appui long déclenche aussi un `click` : on le neutralise. */
   const swallowClick = useRef(false);
+
+  function dropAt(index: number) {
+    if (!drag) return;
+    void store.reorderBoard(drag, store.boards[index]?.id ?? null);
+    setDrag(null);
+    setHoverGap(null);
+  }
+
+  /**
+   * Équivalent tactile du glisser-déposer, via la feuille d'appui long.
+   * Descendre passe devant le voisin SUIVANT celui du dessous : « avant le
+   * suivant » est la seule façon d'exprimer « après » avec `positionBefore`.
+   */
+  function move(id: string, dir: -1 | 1) {
+    const i = store.boards.findIndex((b) => b.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= store.boards.length) return;
+    const beforeId = dir === -1 ? store.boards[j].id : (store.boards[j + 1]?.id ?? null);
+    void store.reorderBoard(id, beforeId);
+  }
 
   function pressStart(e: ReactPointerEvent, id: string) {
     if (e.pointerType !== 'touch') return;
@@ -71,7 +95,7 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
         </p>
       ) : (
         <div className="board-list">
-          {store.boards.map((board) => {
+          {store.boards.map((board, index) => {
             const pills = QUADS.map((q) => ({ ink: q.ink, n: countOpen(store.tasks, board.id, q.key) })).filter(
               (p) => p.n > 0,
             );
@@ -80,7 +104,34 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
             const isEditing = editing?.id === board.id;
 
             return (
-              <div key={board.id} className={`board-row${board.id === fresh ? ' board-row--fresh' : ''}`}>
+              <div key={board.id}>
+                <BoardGap
+                  active={hoverGap === index}
+                  dragging={!!drag}
+                  onOver={() => setHoverGap(index)}
+                  onDrop={() => dropAt(index)}
+                />
+                <div
+                  className={[
+                    'board-row',
+                    board.id === fresh ? 'board-row--fresh' : '',
+                    drag === board.id ? 'board-row--dragging' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  // `draggable` sur le conteneur, jamais sur `.board-card` : un
+                  // <button> déplaçable se comporte mal, et le clic d'ouverture
+                  // doit continuer de fonctionner.
+                  draggable={!isEditing}
+                  onDragStart={(e: DragEvent) => {
+                    e.dataTransfer.effectAllowed = 'move';
+                    window.setTimeout(() => setDrag(board.id), 0);
+                  }}
+                  onDragEnd={() => {
+                    setDrag(null);
+                    setHoverGap(null);
+                  }}
+                >
                 {isEditing ? (
                   <form
                     className="board-row__rename"
@@ -153,9 +204,17 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
                     </span>
                   </>
                 )}
+                </div>
               </div>
             );
           })}
+          {/* Dernier interstice : déposer ici envoie la matrice en fin de liste. */}
+          <BoardGap
+            active={hoverGap === store.boards.length}
+            dragging={!!drag}
+            onOver={() => setHoverGap(store.boards.length)}
+            onDrop={() => dropAt(store.boards.length)}
+          />
         </div>
       )}
 
@@ -200,6 +259,28 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
           <div className="sheet-backdrop" onClick={() => setSheet(null)}>
             <div className="sheet" onClick={(e) => e.stopPropagation()}>
               <p className="sheet__title">{b.name}</p>
+              {/* Le glisser-déposer HTML5 ne fonctionne pas au doigt : sans ces
+                  deux entrées, réordonner serait impossible sur mobile. */}
+              <button
+                className="sheet__item"
+                disabled={store.boards[0]?.id === b.id}
+                onClick={() => {
+                  move(b.id, -1);
+                  setSheet(null);
+                }}
+              >
+                ↑ Monter
+              </button>
+              <button
+                className="sheet__item"
+                disabled={store.boards[store.boards.length - 1]?.id === b.id}
+                onClick={() => {
+                  move(b.id, 1);
+                  setSheet(null);
+                }}
+              >
+                ↓ Descendre
+              </button>
               <button
                 className="sheet__item"
                 onClick={() => {
@@ -242,6 +323,43 @@ export function Home({ store, onOpen }: { store: Store; onOpen: (boardId: string
           }}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * Interstice de dépôt entre deux matrices. Replié au repos pour ne rien coûter
+ * en hauteur, il s'ouvre pendant un déplacement — même mécanique que les
+ * `.row-gap` de l'écran matrice, pour que les deux listes se manipulent pareil.
+ */
+function BoardGap({
+  active,
+  dragging,
+  onOver,
+  onDrop,
+}: {
+  active: boolean;
+  dragging: boolean;
+  onOver: () => void;
+  onDrop: () => void;
+}) {
+  return (
+    <div
+      className={`board-gap${active ? ' board-gap--active' : ''}`}
+      onDragOver={(e: DragEvent) => {
+        if (!dragging) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onOver();
+      }}
+      onDrop={(e: DragEvent) => {
+        if (!dragging) return;
+        e.preventDefault();
+        e.stopPropagation();
+        onDrop();
+      }}
+    >
+      <div className="board-gap__line" />
     </div>
   );
 }
