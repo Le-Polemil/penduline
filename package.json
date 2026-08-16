@@ -12,9 +12,13 @@
     "dev": "npm run dev -w @penduline/web",
     "build": "npm run build -w @penduline/shared && npm run build -w @penduline/web && npm run build -w @penduline/extension",
     "build:ext": "npm run build -w @penduline/extension",
-    "typecheck": "npm run typecheck --workspaces --if-present"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.10"
   }
 }

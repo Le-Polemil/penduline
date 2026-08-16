@@ -24,6 +24,11 @@ jobs:
       - name: Typecheck
         run: npm run typecheck --workspaces --if-present
 
+      # Le typecheck ne voit pas les défaillances silencieuses : un ordre qui
+      # dérive ou une paire cassée ne lèvent aucune erreur de type.
+      - name: Test
+        run: npm test
+
       - name: Build
         run: npm run build
 
