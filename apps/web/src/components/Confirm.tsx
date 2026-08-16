@@ -1,17 +1,22 @@
 /**
- * Confirmation d'une action destructive. Partagée par l'accueil et la matrice,
- * qui proposent tous deux la suppression d'une matrice.
+ * Confirmation d'une action. Partagée par l'accueil et la matrice.
+ *
+ * `tone` existe parce que toutes les confirmations ne sont pas destructives :
+ * déplacer une paire d'une matrice à l'autre demande un avertissement, pas une
+ * mise en garde — l'afficher en rouge ferait craindre une perte.
  */
 export function Confirm({
   title,
   body,
   confirmLabel = 'Supprimer',
+  tone = 'danger',
   onConfirm,
   onCancel,
 }: {
   title: string;
   body: string;
   confirmLabel?: string;
+  tone?: 'danger' | 'neutral';
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -24,7 +29,7 @@ export function Confirm({
           <button className="confirm-cancel" onClick={onCancel}>
             Annuler
           </button>
-          <button className="confirm-danger" onClick={onConfirm}>
+          <button className={tone === 'danger' ? 'confirm-danger' : 'confirm-go'} onClick={onConfirm}>
             {confirmLabel}
           </button>
         </div>

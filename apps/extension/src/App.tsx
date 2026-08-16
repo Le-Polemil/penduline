@@ -6,15 +6,18 @@ import {
   countOpen,
   endPosition,
   PARK,
+  partnerOf,
   positionBefore,
   QUADS,
   type Quadrant,
   type QuadrantKey,
   type Board,
   type Task,
+  type TaskPatch,
 } from '@penduline/shared';
 import { isConfigured, supabase } from './supabase';
 import { getActiveBoard, setActiveBoard } from './active-board';
+import { Loader } from './Loader';
 import { useExtStore, type ExtStore } from './store';
 
 /**
@@ -103,7 +106,9 @@ export function App() {
     <div className="popup">
       {!isConfigured ? (
         <ConfigNeeded />
-      ) : !ready ? null : !session ? (
+      ) : !ready ? (
+        <Loader />
+      ) : !session ? (
         <SignIn />
       ) : (
         <PopupApp userId={session.user.id} />
@@ -169,7 +174,7 @@ function PopupApp({ userId }: { userId: string }) {
     withVT(() => setScreen('detail'));
   }
 
-  if (!store.ready) return null;
+  if (!store.ready) return <Loader label="Chargement des matrices…" />;
 
   const board = store.boards.find((r) => r.id === boardId) ?? null;
   if (screen === 'detail' && board) {
@@ -349,6 +354,8 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
   const [drag, setDrag] = useState<string | null>(null);
   const [dragOverQuad, setDragOverQuad] = useState<QuadrantKey | null>(null);
   const [hoverGap, setHoverGap] = useState<{ quad: QuadrantKey; before: string } | null>(null);
+  const [menuTask, setMenuTask] = useState<string | null>(null);
+  const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
 
@@ -358,16 +365,69 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
       .sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.position - b.position);
   }
 
+  /**
+   * Déplace une tâche ET sa partenaire, en les gardant adjacentes.
+   *
+   * Le popup n'affiche pas les paires côte à côte — c'est une mise en page du
+   * web. Mais il ne doit pas pour autant **casser** un lien que le web garantit :
+   * jusqu'ici il remettait `pair_id` à `null` à chaque déplacement, détruisant
+   * en silence des appairages créés ailleurs.
+   */
+  function movePair(task: Task, patch: TaskPatch, position: number) {
+    const mate = partnerOf(tasks, task);
+    patchTask(task.id, { ...patch, position });
+    if (mate) patchTask(mate.id, { ...patch, position: position + 0.001 });
+  }
+
   function dropAt(quad: QuadrantKey, beforeId: string | null) {
     if (!drag || drag === beforeId) return;
+    const task = tasks.find((t) => t.id === drag);
+    if (!task) return;
+    const mate = partnerOf(tasks, task);
     const rest = boardTasks
-      .filter((t) => t.quadrant === quad && !t.done && !t.deleted && !t.archived && t.id !== drag)
+      .filter(
+        (t) =>
+          t.quadrant === quad &&
+          !t.done &&
+          !t.deleted &&
+          !t.archived &&
+          t.id !== drag &&
+          t.id !== mate?.id,
+      )
       .sort((a, b) => a.position - b.position);
     const pos = positionBefore(rest, beforeId);
-    withVT(() => patchTask(drag, { quadrant: quad, pair_id: null, position: pos }));
+    withVT(() => movePair(task, { quadrant: quad }, pos));
     setDrag(null);
     setDragOverQuad(null);
     setHoverGap(null);
+  }
+
+  function commitRename() {
+    if (!renamingTask) return;
+    const title = renamingTask.title.trim();
+    const before = tasks.find((t) => t.id === renamingTask.id)?.title;
+    if (title && title !== before) patchTask(renamingTask.id, { title });
+    setRenamingTask(null);
+  }
+
+  function menuMove(task: Task, quad: QuadrantKey) {
+    const pos = endPosition(listFor(quad));
+    withVT(() => movePair(task, { quadrant: quad }, pos));
+    setMenuTask(null);
+  }
+
+  /**
+   * Change une tâche de matrice. Pas de confirmation ici, contrairement au web :
+   * un popup de 400 px ne peut pas empiler une boîte modale sans se couvrir
+   * lui-même. La partenaire suit tout de même — l'invariant prime, et le web
+   * reste l'endroit où l'on fait du rangement en connaissance de cause.
+   */
+  function moveToBoard(task: Task, targetId: string) {
+    const rest = tasks.filter(
+      (t) => t.board_id === targetId && t.quadrant === task.quadrant && !t.done && !t.deleted && !t.archived,
+    );
+    withVT(() => movePair(task, { board_id: targetId }, endPosition(rest)));
+    setMenuTask(null);
   }
 
   function addTask() {
@@ -472,7 +532,8 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                   const gapActive = !!drag && hoverGap?.quad === q.key && hoverGap.before === t.id;
                   const isDrag = drag === t.id;
                   return (
-                    <div key={t.id}>
+                    // `position: relative` : le menu ⋯ s'ancre dessus.
+                    <div className="card-wrap" key={t.id}>
                       <div
                         className={`gap${gapActive ? ' gap--active' : ''}`}
                         onDragOver={(e: DragEvent) => {
@@ -512,15 +573,90 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                           aria-label="Terminer"
                           onClick={() => patchTask(t.id, { done: true, archived: true })}
                         />
-                        <span className="task__title">{t.title}</span>
+                        {renamingTask?.id === t.id ? (
+                          <form
+                            className="task__rename"
+                            onSubmit={(e) => {
+                              e.preventDefault();
+                              commitRename();
+                            }}
+                          >
+                            <input
+                              className="task__rename-input"
+                              value={renamingTask.title}
+                              autoFocus
+                              maxLength={500}
+                              onChange={(e) => setRenamingTask({ id: t.id, title: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') setRenamingTask(null);
+                              }}
+                            />
+                          </form>
+                        ) : (
+                          <span className="task__title">{t.title}</span>
+                        )}
                         <button
                           className={`task__pin${t.pinned ? ' task__pin--on' : ''}`}
                           title={t.pinned ? 'Désépingler' : 'Épingler en haut'}
-                          onClick={() => withVT(() => patchTask(t.id, { pinned: !t.pinned, pair_id: null }))}
+                          // Plus de `pair_id: null` : épingler ne doit pas
+                          // détruire un lien créé sur le web.
+                          onClick={() => withVT(() => patchTask(t.id, { pinned: !t.pinned }))}
                         >
                           ⚑
                         </button>
+                        <button
+                          className="task__more"
+                          aria-label="Actions"
+                          onClick={() => setMenuTask((m) => (m === t.id ? null : t.id))}
+                        >
+                          ⋯
+                        </button>
                       </div>
+                      {menuTask === t.id && (
+                        <div className="task-menu">
+                          <button
+                            className="task-menu__action"
+                            onClick={() => {
+                              setRenamingTask({ id: t.id, title: t.title });
+                              setMenuTask(null);
+                            }}
+                          >
+                            Renommer
+                          </button>
+                          <div className="task-menu__label">Déplacer vers</div>
+                          <div className="task-menu__grid">
+                            {ALL.map((b) => (
+                              <button
+                                key={b.key}
+                                className="move-btn"
+                                style={{ background: quadBg(b), color: b.dark }}
+                                disabled={b.key === q.key}
+                                onClick={() => menuMove(t, b.key)}
+                              >
+                                {b.label}
+                              </button>
+                            ))}
+                          </div>
+                          {store.boards.length > 1 && (
+                            <>
+                              <div className="task-menu__label">Vers une autre matrice</div>
+                              <div className="task-menu__boards">
+                                {store.boards
+                                  .filter((b) => b.id !== board.id)
+                                  .map((b) => (
+                                    <button
+                                      key={b.id}
+                                      className="board-btn"
+                                      onClick={() => moveToBoard(t, b.id)}
+                                    >
+                                      {b.name}
+                                    </button>
+                                  ))}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
