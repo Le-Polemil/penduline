@@ -3,7 +3,7 @@ story: "Finitions web Vague 1"
 story_code: "finitions-web-vague-1"
 issues: [14, 51]
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Finitions web Vague 1 — #14 réordonner les matrices, #51 appairage
