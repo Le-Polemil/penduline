@@ -324,6 +324,11 @@ button { font: inherit; }
    `--q-dark` plutôt qu'un `--q-ink` dilué — « À trier » est le cas limite, fond
    transparent sur le beige de page et gris chaud le moins saturé des cinq. */
 .bgroup + .bgroup { margin-top: 12px; }
+/* Le libellé de la case doit respirer avant la première matrice : sans cet
+   écart, l'étiquette se lit comme son sous-titre.
+   Ciblé via `.quad-head +` et NON `:first-of-type` — l'en-tête est un `div` lui
+   aussi, c'est donc lui le premier de son type, et le sélecteur ne matchait rien. */
+.quad-head + .bgroup { margin-top: 10px; }
 .bgroup__name {
   font: 700 10.5px/1 var(--font-body); letter-spacing: 0.1em; text-transform: uppercase;
   color: var(--q-dark);
@@ -351,9 +356,9 @@ button { font: inherit; }
 .grid--cadre .bgroup__name {
   position: absolute; top: -6px; left: 12px; background: var(--q-solid); padding: 0 5px;
 }
-/* La pastille du premier groupe déborde vers le haut : sans cet écart elle
-   viendrait toucher le libellé de la case. */
-.grid--cadre .bgroup:first-of-type { margin-top: 7px; }
+/* La pastille remonte de 6 px au-dessus du cadre : il en faut d'autant plus ici
+   pour obtenir le même écart apparent que dans les deux autres variantes. */
+.grid--cadre .quad-head + .bgroup { margin-top: 18px; }
 
 /* C — étiquette seule : le regroupement ne tient plus qu'à l'espacement. */
 .grid--etiquette .bgroup + .bgroup { margin-top: 14px; }

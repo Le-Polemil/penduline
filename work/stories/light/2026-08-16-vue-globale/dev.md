@@ -190,3 +190,24 @@ La stack Supabase locale reste debout sur les ports décalés, avec un `.env.loc
 (ignoré par git) pour la validation manuelle. `config.toml` est déjà rétabli :
 un `npm run start -w @penduline/supabase` rejouerait donc le conflit de ports
 avec `unaya`.
+
+### 2026-08-16 : Espace sous le libellé de case (retour de validation)
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Écart porté à 18 px pour la variante « cadre », 10 px pour les deux autres —
+  17 px et 14 px d'écart apparent entre le libellé de case et l'étiquette de la
+  première matrice.
+
+**Fichiers modifiés** : `apps/web/src/styles.css`
+
+**Notes** : 🐛 le sélecteur d'origine, `.bgroup:first-of-type`, **ne matchait
+rien** : `.quad-head` est un `div` lui aussi, c'est donc *lui* le premier de son
+type dans la case. Le réglage posé plus tôt n'avait jamais pris — ce que le
+navigateur montrait alors venait uniquement de la neutralisation du `margin-top`
+des épinglées. Corrigé en `.quad-head + .bgroup`.
+
+Le genre d'erreur qu'aucun typecheck n'attrape et qu'une relecture laisse passer :
+la règle est valide, elle ne s'applique simplement jamais. C'est l'œil qui l'a
+trouvée.
