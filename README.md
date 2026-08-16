@@ -26,9 +26,17 @@ penduline/
   `parking`=neutre.
 - Tâches : `pinned` (épinglage), `done`+`archived` (corbeille « Terminées »),
   `deleted` (corbeille « Supprimées »), `position` (ordre fractionnaire),
-  `pair_id` (appairage côte à côte). Modèle + layout partagés dans
-  `packages/shared` (`quadrants.ts`, `types.ts`, `layout.ts`), réutilisés par le
-  web ET l'extension.
+  `pair_id` (appairage). Modèle + layout partagés dans `packages/shared`
+  (`quadrants.ts`, `types.ts`, `layout.ts`), réutilisés par le web ET
+  l'extension.
+- **L'appairage est un lien, pas une mise en page.** Deux tâches qui partagent un
+  `pair_id` s'affichent côte à côte, mais surtout elles **restent ensemble** :
+  elles changent de case, s'épinglent et se déplacent d'un bloc. Le lien ne se
+  défait que volontairement (« Dissocier »), ou quand il perd son sens — l'une des
+  deux supprimée ou terminée. `partnerOf()` est le point unique où l'on retrouve
+  l'autre moitié.
+- L'ordre des matrices (`boards.position`) et celui des tâches partagent la même
+  logique de position fractionnaire : `positionBefore()`, dans `layout.ts`.
 
 ## Démarrage
 
