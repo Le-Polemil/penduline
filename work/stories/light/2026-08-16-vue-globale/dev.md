@@ -19,7 +19,7 @@ status: "In Progress"
 | 5. Styles des trois cadres dans `styles.css` | Terminé | 2026-08-16 |
 | 6. Vérifications automatiques (`npm test`, `typecheck`, `build`) | Terminé | 2026-08-16 |
 | 7. Validation manuelle (12 points du plan) | En attente | |
-| 8. Commit, push et PR ciblant `story-light/univers` | En attente | |
+| 8. Commit, push et PR ciblant `story-light/univers` | Terminé | 2026-08-16 |
 
 ## Journal
 
@@ -173,3 +173,20 @@ reste à dérouler à la main.
 Environnement : ports Supabase locaux à nouveau décalés (55321-55324) pour
 cohabiter avec la stack `unaya`, puis `config.toml` rétabli — vérifié identique à
 `HEAD`.
+
+### 2026-08-16 : Livraison
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Deux commits — la refacto d'abord, la fonctionnalité ensuite.
+- **PR #63**, base `story-light/univers` (pas `main`), assignée, `Closes #18`. CI verte.
+
+**Notes** : GitHub ne fermera pas #18 au merge — la fermeture automatique ne
+s'applique qu'à la branche par défaut. À fermer à la main, ou quand la pile
+atteindra `main`.
+
+La stack Supabase locale reste debout sur les ports décalés, avec un `.env.local`
+(ignoré par git) pour la validation manuelle. `config.toml` est déjà rétabli :
+un `npm run start -w @penduline/supabase` rejouerait donc le conflit de ports
+avec `unaya`.
