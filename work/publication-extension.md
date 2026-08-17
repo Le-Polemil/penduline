@@ -168,14 +168,35 @@ d'usage des données (voir plus haut). Les six autres changements sont internes.
 > créez et renommez directement dans l'extension, et déplacez vos tâches d'une
 > matrice à l'autre. La case « À trier » s'affiche désormais correctement.
 
-## Deux points à peser avant de publier
+## Le point à peser avant de publier
 
 **L'inscription est ouverte.** `DISABLE_SIGNUP` vaut toujours `false` sur l'API.
 Une extension publique signifie que n'importe quel installateur peut créer un
 compte sur ton serveur — sur une machine à 4 Go déjà juste. À basculer à `true`
 avant publication si l'extension n'est pas destinée à d'autres que toi.
 
-**Le service worker ne fait rien** (un `console.log` sur `onInstalled`). Ce n'est
-pas rédhibitoire, mais un `background` sans usage réel peut appeler une question
-en revue. Il est prévu pour la synchro de session et les rappels ; à défaut, on
-peut le retirer du manifest.
+> **Caduc depuis la 1.1.0** — laissé pour mémoire, parce que le conseil est
+> devenu dangereux. La 1.0.0 notait que « le service worker ne fait rien » et
+> qu'on pouvait donc *retirer `background` du manifest*. Il porte désormais les
+> menus contextuels, le retour par pastille et le client Supabase :
+> le retirer casserait la capture depuis la page consultée, qui est la
+> nouveauté visible de cette version.
+
+## Empaqueter
+
+```bash
+npm run build:ext
+cd apps/extension/dist && zip -qr ../penduline-extension-v<version>.zip . -x '.*'
+```
+
+Le zip contient le **contenu** de `dist/`, pas le dossier lui-même — le Store
+refuse une archive dont le `manifest.json` n'est pas à la racine. Le `-x '.*'`
+écarte les fichiers cachés qu'un système peut y déposer.
+
+Vérifier avant de soumettre : la version lue **dans le zip**, l'absence de
+`.map` et de sources, et la liste des permissions.
+
+```bash
+unzip -p apps/extension/penduline-extension-v<version>.zip manifest.json \
+  | python3 -c "import json,sys; m=json.load(sys.stdin); print(m['version'], m.get('permissions'))"
+```
