@@ -1,5 +1,6 @@
 import { useState, type CSSProperties } from 'react';
 import { quadrant, type Task } from '@penduline/shared';
+import { useDialog } from '../a11y/useDialog';
 
 /**
  * La corbeille — terminées et supprimées, restauration et purge définitive.
@@ -24,6 +25,7 @@ export function BinModal({
   onRestore: (id: string) => void;
   onPurge: (ids: string[]) => void;
 }) {
+  const dialog = useDialog(onClose);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [confirmAll, setConfirmAll] = useState(false);
   /** Dernier item cliqué sans Maj : point d'ancrage des sélections par plage. */
@@ -93,10 +95,18 @@ export function BinModal({
 
   return (
     <div className="bin-backdrop" onClick={onClose}>
-      <div className="bin-panel" style={{ viewTransitionName: 'bin' } as CSSProperties} onClick={(e) => e.stopPropagation()}>
+      <div
+        className="bin-panel"
+        {...dialog.surface}
+        aria-label={`Corbeille (${scope})`}
+        ref={dialog.ref}
+        onKeyDown={dialog.onKeyDown}
+        style={{ viewTransitionName: 'bin' } as CSSProperties}
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="bin-head">
           <span className="bin-title">Corbeille ({scope})</span>
-          <button className="bin-close" onClick={onClose}>
+          <button className="bin-close" aria-label="Fermer la corbeille" onClick={onClose}>
             ✕
           </button>
         </div>

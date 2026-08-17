@@ -10,8 +10,10 @@ import {
   orderedBoards,
   partnerOf,
   pinnedTasks,
+  planBoardReorder,
   planPairDetach,
   planPairMove,
+  planReorder,
   positionBefore,
   visibleTasks,
 } from './layout';
@@ -98,14 +100,25 @@ describe('positions fractionnaires', () => {
     expect(insertPosition(rows, 2)).toBeGreaterThan(1);
   });
 
-  it('insertPosition prend la position la plus basse d’une ligne appairée', () => {
-    // Une ligne de deux cartes a deux positions : c'est la plus basse qui situe
-    // la ligne, sinon insérer « avant » tomberait entre les deux moitiés.
-    const rows = [
-      [makeTask({ id: 'a', position: 0 }), makeTask({ id: 'a2', position: 0.001 })],
-      [makeTask({ id: 'b', position: 1 })],
-    ];
-    expect(insertPosition(rows, 1)).toBe(0.5);
+  it('insertPosition n’atterrit jamais entre les deux moitiés d’une paire', () => {
+    // Une ligne appairée occupe DEUX positions. L'insertion doit tomber en dehors
+    // de cet intervalle, des deux côtés — la propriété compte, pas la valeur.
+    //
+    // L'écart est ici volontairement large (0 et 2) : avec une paire serrée, les
+    // deux bornes se confondent et le test passe même quand le calcul est faux.
+    const paire = [makeTask({ id: 'a', position: 0 }), makeTask({ id: 'a2', position: 2 })];
+    const apres = makeTask({ id: 'b', position: 3 });
+
+    // Avant la paire : sous sa carte la plus basse.
+    expect(insertPosition([paire, [apres]], 0)).toBeLessThan(0);
+    // Après la paire : au-dessus de sa carte la plus haute. C'est le cas que
+    // l'ancrage sur le minimum se trompait — il rendait 1,5, soit pile entre les
+    // deux moitiés.
+    const entre = insertPosition([paire, [apres]], 1);
+    expect(entre).toBeGreaterThan(2);
+    expect(entre).toBeLessThan(3);
+    // En fin de liste, même règle : au-dessus du maximum de la dernière ligne.
+    expect(insertPosition([[apres], paire], 2)).toBeGreaterThan(2);
   });
 });
 
@@ -522,5 +535,134 @@ describe('vue globale — regroupement des tâches par matrice', () => {
   it('rend une liste vide quand la portée ne contient aucune matrice', () => {
     // Un univers vide choisi comme portée : l'écran doit pouvoir le dire.
     expect(groupTasksByBoard([makeTask()], [], 'faire')).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('réordonnancement au clavier — tâches', () => {
+  it('monte une tâche d’un cran', () => {
+    const list = makeList(['a', 'b', 'c']);
+    const plan = planReorder(list, list[1], -1)!;
+    expect(plan.writes).toHaveLength(1);
+    expect(plan.writes[0].id).toBe('b');
+    // Entre `a` (0) et rien avant : `insertPosition` ouvre l'espace en dessous de 0.
+    expect(plan.writes[0].patch.position).toBeLessThan(0);
+    expect([plan.index, plan.total]).toEqual([1, 3]);
+  });
+
+  it('descend une tâche d’un cran', () => {
+    const list = makeList(['a', 'b', 'c']);
+    const plan = planReorder(list, list[0], 1)!;
+    expect(plan.writes[0].patch.position).toBeGreaterThan(1);
+    expect(plan.writes[0].patch.position).toBeLessThan(2);
+    expect([plan.index, plan.total]).toEqual([2, 3]);
+  });
+
+  it('rend `null` aux deux extrémités', () => {
+    // C'est ce qui permet à l'appelant de griser ses boutons sans rien savoir de
+    // la structure des lignes.
+    const list = makeList(['a', 'b']);
+    expect(planReorder(list, list[0], -1)).toBeNull();
+    expect(planReorder(list, list[1], 1)).toBeNull();
+  });
+
+  it('rend `null` dans une case à une seule ligne', () => {
+    const only = makeTask({ id: 'seule' });
+    expect(planReorder([only], only, -1)).toBeNull();
+    expect(planReorder([only], only, 1)).toBeNull();
+  });
+
+  it('fait franchir une paire d’un seul saut, sans la traverser', () => {
+    // LE test de cette fonction. Une paire est UNE ligne : descendre `a` d'un cran
+    // doit la faire passer sous les DEUX cartes appairées, pas se glisser entre.
+    const a = makeTask({ id: 'a', position: 0 });
+    const p1 = makeTask({ id: 'p1', position: 1, pair_id: 'p' });
+    const p2 = makeTask({ id: 'p2', position: 2, pair_id: 'p' });
+    const plan = planReorder([a, p1, p2], a, 1)!;
+    expect(plan.writes[0].patch.position).toBeGreaterThan(2);
+    expect([plan.index, plan.total]).toEqual([2, 2]);
+  });
+
+  it('emmène la partenaire quand c’est la paire qu’on déplace', () => {
+    const p1 = makeTask({ id: 'p1', position: 0, pair_id: 'p' });
+    const p2 = makeTask({ id: 'p2', position: 1, pair_id: 'p' });
+    const c = makeTask({ id: 'c', position: 2 });
+    const plan = planReorder([p1, p2, c], p1, 1)!;
+    // Deux écritures : l'invariant d'appairage passe par `planPairMove`.
+    expect(plan.writes.map((w) => w.id).sort()).toEqual(['p1', 'p2']);
+    expect(plan.writes[0].patch.position).toBeGreaterThan(2);
+  });
+
+  it('réordonne une épinglée parmi les épinglées, jamais parmi les autres', () => {
+    // Les deux zones sont distinctes à l'écran : mélanger les listes ferait
+    // sauter la tâche d'une zone à l'autre sans qu'on l'ait demandé.
+    const pin1 = makeTask({ id: 'pin1', position: 0, pinned: true });
+    const pin2 = makeTask({ id: 'pin2', position: 1, pinned: true });
+    const libre = makeTask({ id: 'libre', position: 2 });
+    const tasks = [pin1, pin2, libre];
+
+    const plan = planReorder(tasks, pin2, -1)!;
+    expect(plan.writes[0].id).toBe('pin2');
+    expect([plan.index, plan.total]).toEqual([1, 2]); // 2 lignes : les épinglées seules
+
+    // Et une épinglée seule dans sa zone ne bouge pas, même s'il reste des
+    // ordinaires en dessous.
+    expect(planReorder([pin1, libre], pin1, 1)).toBeNull();
+  });
+
+  it('ignore les tâches d’une autre case et les supprimées', () => {
+    const ici = makeTask({ id: 'ici', position: 0 });
+    const ailleurs = makeTask({ id: 'ailleurs', position: 1, quadrant: 'planifier' });
+    const morte = makeTask({ id: 'morte', position: 2, deleted: true });
+    expect(planReorder([ici, ailleurs, morte], ici, 1)).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('réordonnancement au clavier — matrices', () => {
+  const groupe = () => [
+    makeBoard({ id: 'a', position: 0 }),
+    makeBoard({ id: 'b', position: 1 }),
+    makeBoard({ id: 'c', position: 2 }),
+  ];
+
+  it('monte une matrice : elle se place avant sa voisine du dessus', () => {
+    const list = groupe();
+    expect(planBoardReorder(list, list[1], -1)).toEqual({ beforeId: 'a', index: 1, total: 3 });
+  });
+
+  it('descend une matrice : AVANT LE SUIVANT DU SUIVANT', () => {
+    // La subtilité qui n'avait aucun test. `positionBefore` ne sait qu'insérer
+    // AVANT une cible : viser `c` ferait revenir la matrice où elle était.
+    const list = groupe();
+    expect(planBoardReorder(list, list[0], 1)).toEqual({ beforeId: 'c', index: 2, total: 3 });
+  });
+
+  it('descendre l’avant-dernière vise la fin de liste', () => {
+    const list = groupe();
+    expect(planBoardReorder(list, list[1], 1)).toEqual({ beforeId: null, index: 3, total: 3 });
+  });
+
+  it('rend `null` aux extrémités', () => {
+    const list = groupe();
+    expect(planBoardReorder(list, list[0], -1)).toBeNull();
+    expect(planBoardReorder(list, list[2], 1)).toBeNull();
+  });
+
+  it('ne compte que les matrices du même univers', () => {
+    // La position d'une matrice est scopée à son univers (#17) : une matrice
+    // d'ailleurs ne doit ni servir de repère ni gonfler le total.
+    const rangee = makeBoard({ id: 'r1', universe_id: 'u', position: 0 });
+    const autre = makeBoard({ id: 'r2', universe_id: 'u', position: 1 });
+    const libre = makeBoard({ id: 'libre', position: 0 });
+    const all = [rangee, autre, libre];
+    expect(planBoardReorder(all, rangee, 1)).toEqual({ beforeId: null, index: 2, total: 2 });
+    expect(planBoardReorder(all, libre, 1)).toBeNull();
+  });
+
+  it('trie par position, pas par ordre de chargement', () => {
+    const z = makeBoard({ id: 'z', position: 2 });
+    const a = makeBoard({ id: 'a', position: 0 });
+    expect(planBoardReorder([z, a], a, 1)).toEqual({ beforeId: null, index: 2, total: 2 });
   });
 });

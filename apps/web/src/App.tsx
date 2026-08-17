@@ -6,6 +6,7 @@ import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
 import { GlobalScreen, type Scope } from './screens/Global';
+import { AnnounceProvider } from './a11y/announce';
 
 /**
  * Lit ce que GoTrue a déposé dans le fragment d'URL en renvoyant l'utilisateur.
@@ -108,7 +109,9 @@ function AppRoot({ userId }: { userId: string }) {
   const onHome = () => setView(HOME);
 
   return (
-    <div>
+    // Une seule région d'annonce pour toute l'application : plusieurs zones
+    // `aria-live` concurrentes sont mal restituées par les lecteurs d'écran.
+    <AnnounceProvider>
       {/* Le retour vit dans la barre du haut, face à « Déconnexion » — et non
           dans l'en-tête de la matrice, où il était mêlé à son titre. */}
       <div className="userbar">
@@ -144,7 +147,7 @@ function AppRoot({ userId }: { userId: string }) {
           onGlobal={() => setView({ kind: 'global', scope: { kind: 'all' } })}
         />
       )}
-    </div>
+    </AnnounceProvider>
   );
 }
 
@@ -229,7 +232,14 @@ function SignIn({ linkError }: { linkError: string | null }) {
         <p className="muted">{TITLES[mode]}</p>
         <label>
           Email
-          <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          <input
+            type="email"
+            name="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
         </label>
         {/* En mode « oublié », seule l'adresse est demandée. */}
         {mode !== 'forgot' && (
@@ -237,6 +247,10 @@ function SignIn({ linkError }: { linkError: string | null }) {
             Mot de passe
             <input
               type="password"
+              name="password"
+              // `new-password` en inscription, sinon le gestionnaire propose un mot
+              // de passe existant là où il faut en créer un.
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
@@ -314,6 +328,8 @@ function NewPassword({ onDone }: { onDone: () => void }) {
           Nouveau mot de passe
           <input
             type="password"
+            name="new-password"
+            autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
@@ -325,6 +341,8 @@ function NewPassword({ onDone }: { onDone: () => void }) {
           Confirmation
           <input
             type="password"
+            name="confirm-password"
+            autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             required
