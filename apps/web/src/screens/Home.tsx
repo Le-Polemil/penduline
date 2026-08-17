@@ -1,7 +1,14 @@
-import { useRef, useState, type DragEvent, type PointerEvent as ReactPointerEvent } from 'react';
-import { countOpen, groupByUniverse, QUADS } from '@penduline/shared';
+import {
+  useEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
+import { countOpen, groupByUniverse, planBoardReorder, QUADS } from '@penduline/shared';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';
+import { ordinal, useAnnounce } from '../a11y/announce';
 
 /** Durée d'un appui long, alignée sur la convention des OS mobiles. */
 const LONG_PRESS_MS = 500;
@@ -32,11 +39,22 @@ export function Home({
   // Menu d'actions ouvert à l'appui long (tactile) : les actions au survol sont
   // inatteignables au doigt.
   const [sheet, setSheet] = useState<string | null>(null);
+  /** Ce qui a ouvert la feuille — pour lui rendre le focus à la fermeture. */
+  const sheetOrigin = useRef<HTMLElement | null>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<string | null>(null);
   const [hoverGap, setHoverGap] = useState<Gap | null>(null);
   const pressTimer = useRef<number>();
   /** Un appui long déclenche aussi un `click` : on le neutralise. */
   const swallowClick = useRef(false);
+
+  const announce = useAnnounce();
+
+  // Un dialogue qui s'ouvre sans donner le focus laisse le clavier derrière lui :
+  // la feuille resterait invisible à qui ne la voit pas apparaître.
+  useEffect(() => {
+    if (sheet) sheetRef.current?.focus();
+  }, [sheet]);
 
   const groups = groupByUniverse(store.universes, store.boards);
   /**
@@ -59,19 +77,33 @@ export function Home({
   }
 
   /**
-   * Équivalent tactile du glisser-déposer, dans le groupe de la matrice.
-   * Descendre passe devant le voisin SUIVANT celui du dessous : « avant le
-   * suivant » est la seule façon d'exprimer « après » avec `positionBefore`.
+   * Monter / descendre une matrice dans son groupe.
+   *
+   * La règle vit désormais dans `packages/shared` : le tactile (feuille d'appui
+   * long) et le clavier (boutons ↑ ↓) s'en servent tous les deux, et ses bornes
+   * y sont enfin testées.
    */
   function move(id: string, dir: -1 | 1) {
     const board = store.boards.find((b) => b.id === id);
     if (!board) return;
-    const list = boardsOf(board.universe_id);
-    const i = list.findIndex((b) => b.id === id);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= list.length) return;
-    const beforeId = dir === -1 ? list[j].id : (list[j + 1]?.id ?? null);
-    void store.moveBoard(id, board.universe_id, beforeId);
+    const plan = planBoardReorder(store.boards, board, dir);
+    if (!plan) return;
+    void store.moveBoard(id, board.universe_id, plan.beforeId);
+    announce(`« ${board.name} » déplacée en ${ordinal(plan.index)} position sur ${plan.total}.`);
+  }
+
+  /** Ouvre la feuille en retenant d'où l'on vient (clavier), ou de rien (doigt). */
+  function openSheet(id: string, trigger: HTMLElement | null) {
+    sheetOrigin.current = trigger;
+    setSheet(id);
+  }
+
+  function closeSheet() {
+    setSheet(null);
+    // Fermer un dialogue sans rendre le focus laisse le clavier au début du
+    // document : on repart de la ligne qu'on venait de manipuler.
+    sheetOrigin.current?.focus();
+    sheetOrigin.current = null;
   }
 
   function pressStart(e: ReactPointerEvent, id: string) {
@@ -79,7 +111,7 @@ export function Home({
     swallowClick.current = false;
     pressTimer.current = window.setTimeout(() => {
       swallowClick.current = true;
-      setSheet(id);
+      openSheet(id, null);
     }, LONG_PRESS_MS);
   }
   function pressEnd() {
@@ -129,6 +161,7 @@ export function Home({
     const j = i + dir;
     if (i < 0 || j < 0 || j >= list.length) return;
     void store.reorderUniverse(id, dir === -1 ? list[j].id : (list[j + 1]?.id ?? null));
+    announce(`Univers « ${list[i].name} » déplacé en ${ordinal(j + 1)} position sur ${list.length}.`);
   }
 
   const doomed = store.boards.find((b) => b.id === toDelete) ?? null;
@@ -334,6 +367,37 @@ export function Home({
                               </span>
                             </button>
                             <span className="board-row__actions">
+                              {/* Même motif que `.uni-head__actions`, qui avait
+                                  déjà ses flèches : réordonner une MATRICE, lui,
+                                  n'existait qu'au glisser et à l'appui long —
+                                  donc pas au clavier. */}
+                              <button
+                                className="board-act"
+                                aria-label={`Monter « ${board.name} »`}
+                                disabled={!planBoardReorder(store.boards, board, -1)}
+                                onClick={() => move(board.id, -1)}
+                              >
+                                ↑
+                              </button>
+                              <button
+                                className="board-act"
+                                aria-label={`Descendre « ${board.name} »`}
+                                disabled={!planBoardReorder(store.boards, board, 1)}
+                                onClick={() => move(board.id, 1)}
+                              >
+                                ↓
+                              </button>
+                              {/* La porte clavier d'un chemin déjà écrit : la
+                                  feuille contient « Déplacer vers un univers »,
+                                  et n'était atteignable qu'au doigt. */}
+                              <button
+                                className="board-act"
+                                aria-label={`Autres actions pour « ${board.name} »`}
+                                aria-haspopup="dialog"
+                                onClick={(e) => openSheet(board.id, e.currentTarget)}
+                              >
+                                ⋯
+                              </button>
                               <button
                                 className="board-act"
                                 title="Renommer"
@@ -445,8 +509,19 @@ export function Home({
         if (!b) return null;
         const list = boardsOf(b.universe_id);
         return (
-          <div className="sheet-backdrop" onClick={() => setSheet(null)}>
-            <div className="sheet" onClick={(e) => e.stopPropagation()}>
+          <div className="sheet-backdrop" onClick={closeSheet}>
+            <div
+              className="sheet"
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Actions pour « ${b.name} »`}
+              tabIndex={-1}
+              ref={sheetRef}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') closeSheet();
+              }}
+            >
               <p className="sheet__title">{b.name}</p>
               {/* Le glisser-déposer HTML5 ne fonctionne pas au doigt : sans ces
                   entrées, réordonner ET ranger seraient impossibles sur mobile. */}
@@ -455,7 +530,7 @@ export function Home({
                 disabled={list[0]?.id === b.id}
                 onClick={() => {
                   move(b.id, -1);
-                  setSheet(null);
+                  closeSheet();
                 }}
               >
                 ↑ Monter
@@ -465,7 +540,7 @@ export function Home({
                 disabled={list[list.length - 1]?.id === b.id}
                 onClick={() => {
                   move(b.id, 1);
-                  setSheet(null);
+                  closeSheet();
                 }}
               >
                 ↓ Descendre
@@ -480,7 +555,7 @@ export function Home({
                       disabled={b.universe_id === u.id}
                       onClick={() => {
                         void store.moveBoard(b.id, u.id, null);
-                        setSheet(null);
+                        closeSheet();
                       }}
                     >
                       {u.name}
@@ -491,7 +566,7 @@ export function Home({
                     disabled={b.universe_id === null}
                     onClick={() => {
                       void store.moveBoard(b.id, null, null);
-                      setSheet(null);
+                      closeSheet();
                     }}
                   >
                     Sans univers
@@ -502,7 +577,7 @@ export function Home({
                 className="sheet__item"
                 onClick={() => {
                   setEditing({ id: b.id, name: b.name });
-                  setSheet(null);
+                  closeSheet();
                 }}
               >
                 Renommer
@@ -511,12 +586,12 @@ export function Home({
                 className="sheet__item sheet__item--danger"
                 onClick={() => {
                   setToDelete(b.id);
-                  setSheet(null);
+                  closeSheet();
                 }}
               >
                 Supprimer
               </button>
-              <button className="sheet__item sheet__item--cancel" onClick={() => setSheet(null)}>
+              <button className="sheet__item sheet__item--cancel" onClick={closeSheet}>
                 Annuler
               </button>
             </div>

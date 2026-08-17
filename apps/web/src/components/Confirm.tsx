@@ -5,6 +5,8 @@
  * déplacer une paire d'une matrice à l'autre demande un avertissement, pas une
  * mise en garde — l'afficher en rouge ferait craindre une perte.
  */
+import { useDialog } from '../a11y/useDialog';
+
 export function Confirm({
   title,
   body,
@@ -20,9 +22,18 @@ export function Confirm({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const dialog = useDialog(onCancel);
+
   return (
     <div className="bin-backdrop" onClick={onCancel}>
-      <div className="confirm-panel" onClick={(e) => e.stopPropagation()}>
+      <div
+        className="confirm-panel"
+        {...dialog.surface}
+        aria-label={title}
+        ref={dialog.ref}
+        onKeyDown={dialog.onKeyDown}
+        onClick={(e) => e.stopPropagation()}
+      >
         <p className="confirm-title">{title}</p>
         <p className="confirm-body">{body}</p>
         <div className="confirm-actions">

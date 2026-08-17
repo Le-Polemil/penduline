@@ -13,14 +13,14 @@ status: "In Progress"
 | Tâche | Statut | Date |
 |-------|--------|------|
 | 1. `planReorder` et `planBoardReorder` dans `packages/shared` + tests | Terminé | 2026-08-17 |
-| 2. Clavier sur les tâches : entrées de menu (prop `reorder`) et `Alt`+↑/↓ | En attente | |
-| 3. Clavier sur les matrices : ↑ ↓ et `⋯` dans les actions de ligne, feuille au clavier | En attente | |
-| 4. Région `aria-live` et annonces des déplacements | En attente | |
-| 5. Noms accessibles (`⋯`, corbeille, `✕`) | En attente | |
-| 6. Focus visible : règle globale, retrait des `outline: none` | En attente | |
-| 7. Contraste : texte secondaire en `neutral-700` | En attente | |
+| 2. Clavier sur les tâches : entrées de menu (prop `reorder`) et `Alt`+↑/↓ | Terminé | 2026-08-17 |
+| 3. Clavier sur les matrices : ↑ ↓ et `⋯` dans les actions de ligne, feuille au clavier | Terminé | 2026-08-17 |
+| 4. Région `aria-live` et annonces des déplacements | Terminé | 2026-08-17 |
+| 5. Noms accessibles (`⋯`, corbeille, `✕`) | Terminé | 2026-08-17 |
+| 6. Focus visible : règle globale, retrait des `outline: none` | Terminé | 2026-08-17 |
+| 7. Contraste : texte secondaire en `neutral-700` | Terminé | 2026-08-17 |
 | 7bis. Test verrou du contraste des cases | Terminé | 2026-08-17 |
-| 8. Formulaires : `name` et `autocomplete` | En attente | |
+| 8. Formulaires : `name` et `autocomplete` | Terminé | 2026-08-17 |
 | 9. Vérifications automatiques et arbre d'accessibilité | En attente | |
 | 10. Validation manuelle (10 points du plan) | En attente | |
 | 11. Commit, push et PR fermant #38 | En attente | |
@@ -74,3 +74,50 @@ appairée », encodait l'ancien comportement par une valeur exacte (`0.5`) sur u
 paire serrée (0 et 0,001) — un écart si petit que les deux bornes se confondaient
 et que le calcul faux passait quand même. Réécrit pour affirmer la **propriété**
 sur une paire large, des deux côtés.
+
+### 2026-08-17 : Le clavier, le focus et le contraste
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `a11y/announce.tsx` : une région `aria-live` unique au niveau de l'application,
+  un hook pour l'alimenter, et `ordinal()` (« 1ʳᵉ », « 2ᵉ »…).
+- `TaskCard` : prop **facultative** `reorder`, entrées « ↑ Monter » / « ↓ Descendre »
+  portant leur raccourci en clair, et `Alt`+↑/↓ capté sur `.card-wrap`.
+- `Matrix` : `reorderTask` câblé sur `planReorder`, annonce comprise. `Global`
+  n'y touche pas — il omet la prop, les entrées n'existent pas dans son arbre.
+- `Home` : ↑ ↓ et `⋯` dans les actions de ligne ; `move` passe par
+  `planBoardReorder` ; la feuille devient un vrai dialogue.
+- `a11y/useDialog.ts` : focus à l'ouverture, `Échap`, focus rendu — appliqué à
+  `Confirm` et `BinModal`, qui n'en avaient aucun non plus.
+- Noms accessibles : `⋯` d'une tâche, bouton corbeille, `✕`. Le drapeau `⚑` devient
+  `role="img"` nommé « Épinglée » ; la poignée `⠿` passe en `aria-hidden`.
+- Focus : règle `:focus-visible` **globale** en `--color-accent-600`, six anneaux
+  invisibles remplacés, et `.add-row:focus-within` pour le champ d'ajout.
+- Contraste : **26 usages** de `--color-neutral-500/600` en texte passés en `-700`.
+- Formulaires : `name` et `autoComplete` sur les quatre champs.
+
+**Fichiers modifiés** :
+- `apps/web/src/a11y/announce.tsx`, `useDialog.ts` *(nouveaux)*
+- `apps/web/src/components/TaskCard.tsx`, `BinModal.tsx`, `Confirm.tsx`
+- `apps/web/src/screens/Matrix.tsx`, `Home.tsx`, `Global.tsx`
+- `apps/web/src/App.tsx`, `styles.css`
+
+**Notes** :
+
+**Le drapeau et la poignée sont traités à l'inverse l'un de l'autre**, et c'est
+voulu : `⚑` porte une information — épinglée — donc il est nommé ; `⠿` n'est qu'un
+rappel décoratif du glisser, donc masqué. Un lecteur d'écran énonçait sinon les
+points braille de « ⠿ » sur chaque carte.
+
+**🐛 `@media (hover: none)` retirait les actions de ligne par `display: none`.**
+Or une tablette munie d'un clavier rapporte elle aussi `hover: none` : le seul
+chemin clavier qu'on venait d'ouvrir aurait disparu de l'arbre d'accessibilité sur
+ces appareils. Remplacé par un repli à `max-width: 0` que le focus déplie — les
+actions restent dans le document, le survol ne les révèle toujours pas.
+
+`Alt`+flèche est consommé **même en bout de liste** : le geste nous est destiné,
+et le laisser passer déclencherait la navigation d'historique du navigateur.
+
+`Confirm` et `BinModal` n'étaient pas au plan. Ils avaient le même défaut que la
+feuille, et le corriger séparément aurait fait trois copies d'un même contrat.

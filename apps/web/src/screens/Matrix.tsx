@@ -11,6 +11,7 @@ import {
   planPairDetach,
   planPairMove,
   planPairPatch,
+  planReorder,
   visibleTasks,
   type QuadrantKey,
   type Board,
@@ -23,6 +24,7 @@ import { Confirm } from '../components/Confirm';
 import { BinModal } from '../components/BinModal';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
+import { ordinal, useAnnounce } from '../a11y/announce';
 
 type Hover =
   | { type: 'end'; quad: QuadrantKey }
@@ -69,6 +71,7 @@ export function MatrixScreen({
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
 
   const { pending, onCheck, undo } = useCompletion(tasks, patchTask);
+  const announce = useAnnounce();
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
   const totalOpen = boardTasks.filter((t) => !t.done && !t.deleted).length;
@@ -121,6 +124,21 @@ export function MatrixScreen({
   /** Défait le lien des deux côtés — un `pair_id` orphelin ne sert à rien. */
   function unpair(task: Task) {
     withVT(() => apply(planPairDetach(tasks, task)));
+    setMenuTask(null);
+  }
+
+  /**
+   * L'alternative clavier au glisser-déposer (#38), servie par les entrées de menu
+   * ET par `Alt`+↑/↓ — un seul chemin de code pour les deux gestes.
+   *
+   * L'annonce dit la position ATTEINTE, pas le geste : « montée » obligerait à
+   * relire la case entière pour savoir où l'on en est.
+   */
+  function reorderTask(t: Task, dir: -1 | 1) {
+    const plan = planReorder(tasks, t, dir);
+    if (!plan) return;
+    withVT(() => apply(plan.writes));
+    announce(`« ${t.title} » déplacée en ${ordinal(plan.index)} position sur ${plan.total}.`);
     setMenuTask(null);
   }
 
@@ -206,10 +224,21 @@ export function MatrixScreen({
   /**
    * Une carte, câblée sur l'état local de l'écran.
    *
-   * `drag` et `split` sont fournis ici parce que la matrice les autorise tous
-   * les deux — la vue globale, elle, les omet.
+   * `drag`, `split` et `reorder` sont fournis ici parce que la matrice les
+   * autorise tous les trois — la vue globale, elle, omet les deux derniers.
+   *
+   * `row` et `rowCount` situent la LIGNE de la carte dans sa zone (épinglées ou
+   * ordinaires). Les bornes s'en déduisent sans recalcul : le rendu vient de
+   * construire ces lignes, autant s'en servir.
    */
-  function card(t: Task, q: Quadrant, single: boolean, pinnedCard: boolean) {
+  function card(
+    t: Task,
+    q: Quadrant,
+    single: boolean,
+    pinnedCard: boolean,
+    row: number,
+    rowCount: number,
+  ) {
     const splitOk = single && !t.pinned && !t.done && !!drag && drag.id !== t.id;
     return (
       <TaskCard
@@ -241,6 +270,10 @@ export function MatrixScreen({
             setDrag(null);
             setHover(null);
           },
+        }}
+        reorder={{
+          up: row > 0 ? () => reorderTask(t, -1) : null,
+          down: row < rowCount - 1 ? () => reorderTask(t, 1) : null,
         }}
         split={{
           ok: splitOk,
@@ -342,6 +375,9 @@ export function MatrixScreen({
         </span>
         <button
           className="bin-btn"
+          // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
+          // propre compteur lui tenait lieu d'intitulé.
+          aria-label={`Corbeille, ${doneList.length + delList.length} élément${doneList.length + delList.length > 1 ? 's' : ''}`}
           style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
           onClick={() => {
             withVT(() => setBinOpen(true));
@@ -360,7 +396,7 @@ export function MatrixScreen({
 
       <div className="grid">
         {ALL.map((q) => {
-          const pinned = pinnedTasks(tasks, board.id, q.key);
+          const pinnedRows = buildRows(pinnedTasks(tasks, board.id, q.key));
           const rows = buildRows(visibleTasks(tasks, board.id, q.key));
           const focused = focusQuad === q.key;
           const draft = drafts[q.key] ?? '';
@@ -396,9 +432,9 @@ export function MatrixScreen({
               {/* Les épinglées passent aussi par `buildRows` : sans ça, une paire
                   épinglée s'afficherait sur deux lignes — cassée, alors qu'on
                   vient justement de garantir qu'une paire reste ensemble. */}
-              {buildRows(pinned).map((cards, i) => (
+              {pinnedRows.map((cards, i) => (
                 <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`pin-${i}`}>
-                  {cards.map((t) => card(t, q, cards.length === 1, true))}
+                  {cards.map((t) => card(t, q, cards.length === 1, true, i, pinnedRows.length))}
                 </div>
               ))}
 
@@ -426,7 +462,7 @@ export function MatrixScreen({
                       <div className="row-gap__line" />
                     </div>
                     <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`}>
-                      {cards.map((t) => card(t, q, cards.length === 1, false))}
+                      {cards.map((t) => card(t, q, cards.length === 1, false, i, rows.length))}
                     </div>
                   </div>
                 );

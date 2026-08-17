@@ -257,6 +257,9 @@ export function GlobalScreen({
         </span>
         <button
           className="bin-btn"
+          // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
+          // propre compteur lui tenait lieu d'intitulé.
+          aria-label={`Corbeille, ${doneList.length + delList.length} élément${doneList.length + delList.length > 1 ? 's' : ''}`}
           style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
           onClick={() => {
             withVT(() => setBinOpen(true));
