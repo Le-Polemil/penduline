@@ -75,9 +75,22 @@ build : les tests ne lisent que le JSON. Vérifiées ici sur les quatre fichiers
   `application/manifest+json`, `sw.js` servi, les quatre PNG en `image/png` avec
   des **dimensions réelles conformes** aux `sizes` déclarées, icône `maskable`
   opaque et dans la zone de sécurité
-- **Panneau Application de DevTools** : ⛔ Chrome refuse de s'attacher au profil
-  du serveur MCP. L'enregistrement du service worker et le parsing du manifeste
-  par Chrome restent à confirmer à la main.
+- **Dans Chrome**, sur le build réel : service worker **enregistré, activé et
+  contrôlant la page dès le premier chargement**, scope `/`, handler `fetch`
+  présent ; **aucune erreur de manifeste ni d'icône** en console — c'était le
+  symptôme du bug SVG, il se serait vu ici.
+- `beforeinstallprompt` non capté en 5 s. **Non concluant** : Chrome le
+  conditionne à une heuristique d'engagement. Les critères mécaniques, eux, sont
+  tous vérifiés.
+
+## Un faux positif qui vaut d'être connu
+
+Le premier contrôle navigateur a rendu « zéro service worker enregistré ». La
+cause n'était pas le code : le build venait du **worktree, qui n'a pas de `.env`**
+— fichier ignoré par git, donc absent de toute copie secondaire. `lib/supabase.ts`
+lève au chargement du module, et comme c'est un `import`, la levée précède la
+première ligne de `main.tsx`. Un build fait en worktree ne reflète pas
+l'application, mais une application privée de sa configuration.
 
 ## Avant de déployer
 

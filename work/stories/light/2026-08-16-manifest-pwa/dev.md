@@ -273,12 +273,38 @@ elle produit une erreur.
 le coup : un `sizes` qui ment sur le contenu du fichier fait échouer l'installation
 sans que rien ne le signale au build, et les tests ne lisent que le JSON.
 
-**Toujours pas vérifié** : le panneau Application de DevTools. Chrome refuse de
-s'attacher au profil du serveur MCP — le même blocage qu'à la rédaction initiale.
-Il reste donc à confirmer à la main que le service worker s'enregistre et contrôle
-la page, et que Chrome parse le manifeste sans erreur.
+**Contrôle navigateur : fait.** Chrome a fini par s'attacher. Sur le build réel
+servi en prévisualisation :
+
+- service worker **enregistré, activé, et contrôlant la page dès le premier
+  chargement** — la paire `skipWaiting` / `clients.claim` fait son travail
+- scope `/`, script `/sw.js`, handler `fetch` présent avec `respondWith` sur les
+  navigations
+- **aucune erreur de manifeste ni d'icône** en console (c'était le symptôme du
+  bug SVG : il se serait vu ici)
+- contexte sécurisé, mode d'affichage `browser` hors installation
+
+`beforeinstallprompt` n'a pas été capté en 5 s. **Ce résultat ne prouve rien** :
+Chrome conditionne cet événement à une heuristique d'engagement avec le site, et
+l'écouteur a pu être posé après le tir. Il n'est compté ni pour ni contre.
 
 **Tâche 10 reportée.** Le plan la donnait déjà « hors calibre » : les `screenshots`
 débloquent la richer install UI d'Android et demandent des captures produit
 dédiées. Retenir une fonctionnalité finie pour une amélioration facultative sur
 une seule plateforme n'avait pas de sens — un ticket dédié la porte.
+
+### 2026-08-17 : Faux positif à consigner
+
+En vérifiant dans Chrome, le premier verdict a été « **zéro service worker
+enregistré** » — de quoi croire la fonctionnalité cassée.
+
+La cause n'était pas le code : le build avait été fait **dans le worktree, qui n'a
+pas de `.env`**. Le fichier étant ignoré par git, il n'existe que dans la copie
+principale. `lib/supabase.ts` lève alors au chargement du module, et comme c'est
+un `import`, la levée précède la première ligne exécutable de `main.tsx` :
+l'enregistrement du service worker n'est jamais atteint.
+
+Sans conséquence en soi — une application qui ne peut pas joindre son API n'a que
+faire d'être installable. Mais **à savoir avant de conclure quoi que ce soit d'un
+build fait en worktree** : il ne reflète pas l'application, il reflète une
+application privée de sa configuration.
