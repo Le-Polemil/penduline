@@ -3,7 +3,7 @@ story: "Manifest PWA : rendre l'app installable"
 story_code: "manifest-pwa"
 issues: [41]
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -21,7 +21,7 @@ status: "In Progress"
 | 7. Test de non-régression du manifeste (Vitest sur `apps/web`) | Terminé | 2026-08-16 |
 | 8. Vérifications qualité (typecheck / test / build) et contrôle DevTools | Terminé | 2026-08-16 |
 | 9. Retirer l'icône SVG du manifeste (remontée par la validation manuelle) | Terminé | 2026-08-16 |
-| 10. Captures `screenshots` pour la richer install UI | En attente | |
+| 10. Captures `screenshots` pour la richer install UI | Reporté → ticket dédié | 2026-08-17 |
 
 ## Journal
 
@@ -252,3 +252,33 @@ concerné et reste en place : c'est un autre chemin de code, qui lui gère le SV
 Leçon pour la suite : déclarer le SVG « en plus, ça ne coûte rien » était faux. Dans un
 manifeste, une icône que le navigateur ne sait pas décoder n'est pas ignorée poliment,
 elle produit une erreur.
+
+### 2026-08-17 : Rebase, vérifications et clôture
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Rebase sur `main`, qui avait pris cinq commits depuis (univers #62, vue globale
+  #63, procédure de migration #64, bump 0.0.4). Aucun conflit.
+- `npm test` : ✅ **60** (52 partagés + 8 web) · typecheck ✅ · build ✅
+- Contrôles servis par `vite preview`, sur le build réel :
+  - `manifest.webmanifest` → `200`, `Content-Type: application/manifest+json`
+  - `sw.js` → `200`
+  - les **quatre PNG** → `200`, `image/png`, et **dimensions réelles conformes aux
+    `sizes` déclarées** (192×192 et 512×512)
+  - icône `maskable` : fond opaque sur tout le carré, motif dans la zone de
+    sécurité — vérifié à l'œil sur le fichier
+
+**Notes** : la vérification des dimensions réelles n'était pas au plan. Elle vaut
+le coup : un `sizes` qui ment sur le contenu du fichier fait échouer l'installation
+sans que rien ne le signale au build, et les tests ne lisent que le JSON.
+
+**Toujours pas vérifié** : le panneau Application de DevTools. Chrome refuse de
+s'attacher au profil du serveur MCP — le même blocage qu'à la rédaction initiale.
+Il reste donc à confirmer à la main que le service worker s'enregistre et contrôle
+la page, et que Chrome parse le manifeste sans erreur.
+
+**Tâche 10 reportée.** Le plan la donnait déjà « hors calibre » : les `screenshots`
+débloquent la richer install UI d'Android et demandent des captures produit
+dédiées. Retenir une fonctionnalité finie pour une amélioration facultative sur
+une seule plateforme n'avait pas de sens — un ticket dédié la porte.

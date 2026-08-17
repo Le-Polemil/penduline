@@ -4,7 +4,7 @@ story_code: "manifest-pwa"
 issue: 41
 milestone: "Vague 3 — Le temps"
 created: 2026-08-16
-status: "In Progress"
+status: "Done"
 ---
 
 # #41 — Manifest PWA : rendre l'app installable
