@@ -49,23 +49,79 @@ Pense à rétablir le fichier ensuite : il est versionné.
 > `push` du CLI, qui visent un `--project-ref` supabase.com, **ne s'appliquent
 > pas ici.**
 
-Appliquer une migration se fait donc à la main, sur le Postgres de l'instance :
+Appliquer une migration se fait donc à la main, sur le Postgres de l'instance.
+
+### Les deux règles à ne pas contourner
+
+**Se connecter en `supabase_admin`, pas en `postgres`.** Les tables du schéma
+`public` appartiennent à `supabase_admin`, et `postgres` n'est **pas** membre de
+ce rôle : un `alter table` échoue sur `must be owner of table`. Pire, un
+`create table` en `postgres` réussit — mais la table appartient alors au mauvais
+rôle, et les droits accordés à `anon` / `authenticated` découlent des *default
+privileges* du rôle créateur. Elle existe, elle a son RLS et sa policy, et elle
+reste **invisible à PostgREST**. La panne ne se voit qu'à l'exécution.
+
+**Passer `-1`.** Le DDL est transactionnel sous Postgres : sans `-1`, `psql`
+valide chaque instruction séparément et une erreur au milieu laisse le schéma à
+moitié appliqué. `ON_ERROR_STOP=1` arrête l'exécution mais ne défait rien.
+
+### La procédure
 
 ```bash
-# 1. Vérifier ce qui est déjà appliqué
+# 0. Le nom du conteneur, sur l'hôte
+docker ps --format '{{.Names}}' | grep supabase-db
+
+# 1. Ce qui est déjà là (voir la note plus bas : la table de suivi peut manquer)
 docker exec -i <conteneur-db> psql -U postgres -d postgres \
   -c "select version from supabase_migrations.schema_migrations order by version"
 
-# 2. Appliquer le fichier
-docker exec -i <conteneur-db> psql -U postgres -d postgres \
+# 2. Appliquer — depuis le dépôt, sans copier le fichier sur le serveur
+ssh <hôte> 'docker exec -i <conteneur-db> psql -U supabase_admin -d postgres -1 -v ON_ERROR_STOP=1' \
   < apps/supabase/migrations/<fichier>.sql
 
 # 3. Enregistrer la version, sinon un futur `db diff` la croira manquante
-docker exec -i <conteneur-db> psql -U postgres -d postgres \
-  -c "insert into supabase_migrations.schema_migrations (version) values ('<horodatage>')"
+docker exec -i <conteneur-db> psql -U supabase_admin -d postgres \
+  -c "insert into supabase_migrations.schema_migrations (version, name)
+      values ('<horodatage>', '<nom>')"
 ```
 
-Le SQL Editor de Studio fait aussi l'affaire s'il est déployé.
+Le SQL Editor de Studio fait aussi l'affaire s'il est déployé — et il montre
+l'erreur en entier, ce qu'un enchaînement de `-c` peut tronquer.
+
+### Vérifier — les quatre contrôles
+
+```bash
+docker exec -i <conteneur-db> psql -U postgres -d postgres \
+  -c "select tablename, tableowner from pg_tables where schemaname='public' order by 1" \
+  -c "select relname, relrowsecurity from pg_class where relname='<table>'" \
+  -c "select policyname from pg_policies where tablename='<table>'" \
+  -c "select table_name, grantee, string_agg(privilege_type, ',' order by privilege_type)
+      from information_schema.role_table_grants
+      where table_schema='public' and grantee in ('anon','authenticated','service_role')
+      group by 1,2 order by 1,2"
+```
+
+Propriétaire = `supabase_admin` · `relrowsecurity` = `t` · la policy présente ·
+et **les droits de la nouvelle table identiques à ceux des anciennes**. Ce dernier
+point est le seul qui prouve que l'application pourra lire la table ; les trois
+autres ne la rendent correcte que sur le papier.
+
+Le contrôle de bout en bout, qui vaut mieux que tous les précédents — PostgREST
+met le schéma en cache, et un `200` prouve qu'il l'a rechargé :
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' -H "apikey: $VITE_SUPABASE_ANON_KEY" \
+  "$VITE_SUPABASE_URL/rest/v1/<table>?select=id&limit=1"
+```
+
+Un `404` signifie que le cache n'a pas suivi : `notify pgrst, 'reload schema';`,
+ou redémarrer le conteneur `supabase-rest`.
+
+> **La table de suivi peut ne pas exister.** Cette instance n'a pas été créée par
+> le CLI : `supabase_migrations.schema_migrations` était absente jusqu'à ce qu'on
+> la pose à la main. Son absence n'empêche rien — `psql` se moque de ce que
+> Supabase croit appliqué — mais tant qu'elle manque, `db diff` voit une base
+> vierge et propose de tout rejouer.
 
 **Ordre de déploiement :** la migration **avant** le front. Une colonne que le
 front lit et qui n'existe pas encore fait échouer la lecture ; l'inverse est sans
