@@ -251,6 +251,93 @@ export function planPairDetach(tasks: Task[], task: Task, patch: TaskPatch = {})
   return writes;
 }
 
+/**
+ * Un déplacement d'un cran : ce qu'il faut écrire, et où la tâche atterrit.
+ *
+ * Le rang et le total ne sont pas décoratifs — ils servent l'annonce au lecteur
+ * d'écran. Sans eux, l'appelant refabriquerait `buildRows` pour les retrouver,
+ * soit exactement la duplication que cette fonction existe pour éviter.
+ */
+export interface ReorderPlan {
+  writes: TaskWrite[];
+  /** Rang de la ligne atteinte, à partir de 1. */
+  index: number;
+  /** Nombre de lignes dans la case. */
+  total: number;
+}
+
+/**
+ * Déplace une tâche d'une **ligne** vers le haut ou vers le bas, dans sa case.
+ *
+ * L'alternative clavier au glisser-déposer (#38) — et la seule autorité sur ce
+ * que « d'un cran » veut dire. Deux gestes (menu et `Alt`+flèches) sur deux
+ * écrans en dépendent : les laisser calculer chacun leur position rejouerait la
+ * dispersion qui a cassé l'appairage en #60.
+ *
+ * ⚠️ Raisonne en LIGNES, pas en tâches. Une paire occupe une ligne : la franchir
+ * doit emmener ses deux cartes d'un seul saut, pas les traverser une par une.
+ * C'est `buildRows` qui donne ce découpage, et `planPairMove` qui fait suivre la
+ * partenaire.
+ *
+ * Les épinglées vivent dans leur propre zone : une tâche épinglée se réordonne
+ * parmi les épinglées, une ordinaire parmi les ordinaires. Mélanger les deux
+ * listes ferait sauter la tâche d'une zone à l'autre sans qu'on l'ait demandé.
+ *
+ * Rend `null` aux extrémités — l'appelant en dérive l'état désactivé de ses
+ * boutons sans avoir à connaître la structure.
+ */
+export function planReorder(tasks: Task[], task: Task, dir: -1 | 1): ReorderPlan | null {
+  const siblings = task.pinned
+    ? pinnedTasks(tasks, task.board_id, task.quadrant)
+    : visibleTasks(tasks, task.board_id, task.quadrant);
+  const rows = buildRows(siblings);
+  const from = rows.findIndex((r) => r.some((t) => t.id === task.id));
+  const to = from + dir;
+  if (from === -1 || to < 0 || to >= rows.length) return null;
+
+  // La paire déplacée sort de la liste de référence — les DEUX tâches, sinon la
+  // partenaire servirait de repère à son propre déplacement.
+  const mate = partnerOf(tasks, task);
+  const rest = siblings.filter((t) => t.id !== task.id && t.id !== mate?.id);
+  const position = insertPosition(buildRows(rest), to);
+
+  return { writes: planPairMove(tasks, task, {}, position), index: to + 1, total: rows.length };
+}
+
+/** Même chose pour une matrice, dans son univers. */
+export interface BoardReorderPlan {
+  /** À passer à `moveBoard` : la matrice se place juste avant celle-là (`null` = fin). */
+  beforeId: string | null;
+  index: number;
+  total: number;
+}
+
+/**
+ * Déplace une matrice d'un cran dans son univers.
+ *
+ * Cette règle vivait en clair dans l'accueil, servie au seul geste tactile. Le
+ * clavier en a besoin aussi (#38) : la sortir ici évite deux copies, et donne
+ * enfin des tests à sa subtilité.
+ *
+ * ⚠️ « Descendre » se dit **avant le suivant du suivant** : `positionBefore` ne
+ * sait qu'insérer AVANT une cible, jamais après. Passer `group[to]` ferait
+ * revenir la matrice exactement où elle était.
+ */
+export function planBoardReorder(boards: Board[], board: Board, dir: -1 | 1): BoardReorderPlan | null {
+  const group = boards
+    .filter((b) => b.universe_id === board.universe_id)
+    .sort((a, b) => a.position - b.position);
+  const from = group.findIndex((b) => b.id === board.id);
+  const to = from + dir;
+  if (from === -1 || to < 0 || to >= group.length) return null;
+
+  return {
+    beforeId: dir === -1 ? group[to].id : (group[to + 1]?.id ?? null),
+    index: to + 1,
+    total: group.length,
+  };
+}
+
 /** Groupe les tâches visibles en lignes de 1 ou 2 (appairage via `pair_id`). */
 export function buildRows(visible: Task[]): Task[][] {
   const rows: Task[][] = [];
@@ -276,12 +363,27 @@ export function endPosition(visible: Positioned[]): number {
   return visible.length ? Math.max(...visible.map((t) => t.position)) + 1 : 0;
 }
 
-/** Position pour insérer une ligne à l'index donné (entre deux lignes existantes). */
+/**
+ * Position pour insérer une ligne à l'index donné (entre deux lignes existantes).
+ *
+ * ⚠️ Une ligne peut être une PAIRE, donc occuper deux positions. D'où les deux
+ * bornes : on entre au-dessus du **minimum** de la ligne visée, et on sort
+ * au-dessus du **maximum** de celle qu'on laisse derrière.
+ *
+ * Ne pas confondre les deux a un effet précis : ancrer la fin de liste sur le
+ * minimum de la dernière ligne donne `min + 1`, soit exactement la position de la
+ * seconde carte d'une paire — la nouvelle venue atterrissait dessus. Le cas était
+ * inatteignable tant que seul le glisser appelait cette fonction (ses interstices
+ * s'arrêtent à l'avant-dernière ligne) ; le réordonnancement au clavier (#38) l'a
+ * rendu accessible, et un test l'a attrapé.
+ */
 export function insertPosition(rows: Task[][], index: number): number {
-  const rowPos = rows.map((r) => Math.min(...r.map((t) => t.position)));
   if (rows.length === 0) return 0;
-  const after = index < rows.length ? rowPos[index] : rowPos[rows.length - 1] + 2;
-  const before = index > 0 ? rowPos[index - 1] : rowPos[0] - 1;
+  const low = rows.map((r) => Math.min(...r.map((t) => t.position)));
+  const high = rows.map((r) => Math.max(...r.map((t) => t.position)));
+  const last = rows.length - 1;
+  const after = index < rows.length ? low[index] : high[last] + 2;
+  const before = index > 0 ? high[index - 1] : low[0] - 1;
   return (before + after) / 2;
 }
 
