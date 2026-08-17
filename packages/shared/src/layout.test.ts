@@ -4,8 +4,10 @@ import {
   countOpen,
   endPosition,
   groupByUniverse,
+  groupTasksByBoard,
   insertPosition,
   isVisible,
+  orderedBoards,
   partnerOf,
   pinnedTasks,
   planPairDetach,
@@ -391,5 +393,134 @@ describe('regroupement par univers', () => {
     const groups = groupByUniverse([], [makeBoard({ id: 'a' }), makeBoard({ id: 'b' })]);
     expect(groups).toHaveLength(1);
     expect(groups[0].boards).toHaveLength(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('vue globale — matrices à plat', () => {
+  it('suit l’ordre de l’accueil : univers, puis position, non rangées en dernier', () => {
+    const perso = makeUniverse({ id: 'perso', position: 0 });
+    const boulot = makeUniverse({ id: 'boulot', position: 1 });
+    const flat = orderedBoards(
+      [boulot, perso],
+      [
+        makeBoard({ id: 'libre' }),
+        makeBoard({ id: 'b2', universe_id: 'boulot', position: 1 }),
+        makeBoard({ id: 'p1', universe_id: 'perso' }),
+        makeBoard({ id: 'b1', universe_id: 'boulot', position: 0 }),
+      ],
+    );
+    expect(flat.map((b) => b.id)).toEqual(['p1', 'b1', 'b2', 'libre']);
+  });
+
+  it('place en fin une matrice dont l’univers a disparu, sans la perdre', () => {
+    const flat = orderedBoards(
+      [makeUniverse({ id: 'u' })],
+      [makeBoard({ id: 'orpheline', universe_id: 'fantome' }), makeBoard({ id: 'rangee', universe_id: 'u' })],
+    );
+    expect(flat.map((b) => b.id)).toEqual(['rangee', 'orpheline']);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('vue globale — regroupement des tâches par matrice', () => {
+  const maison = makeBoard({ id: 'maison', name: 'Maison' });
+  const boulot = makeBoard({ id: 'boulot', name: 'Boulot' });
+
+  it('rend un groupe par matrice, dans l’ordre reçu', () => {
+    const groups = groupTasksByBoard(
+      [makeTask({ board_id: 'boulot' }), makeTask({ board_id: 'maison' })],
+      [maison, boulot],
+      'faire',
+    );
+    expect(groups.map((g) => g.board.name)).toEqual(['Maison', 'Boulot']);
+  });
+
+  it('n’ouvre AUCUN groupe pour une matrice sans rien à montrer dans la case', () => {
+    // Sinon : 5 cases × N matrices de cadres vides, dont la quasi-totalité inutiles.
+    const groups = groupTasksByBoard([makeTask({ board_id: 'maison' })], [maison, boulot], 'faire');
+    expect(groups).toHaveLength(1);
+    expect(groups[0].board.id).toBe('maison');
+  });
+
+  it('ignore les tâches d’une autre case et celles d’une matrice hors portée', () => {
+    const groups = groupTasksByBoard(
+      [
+        makeTask({ id: 'ici', board_id: 'maison', quadrant: 'faire' }),
+        makeTask({ id: 'ailleurs', board_id: 'maison', quadrant: 'planifier' }),
+        makeTask({ id: 'hors-portee', board_id: 'boulot', quadrant: 'faire' }),
+      ],
+      [maison],
+      'faire',
+    );
+    expect(groups).toHaveLength(1);
+    expect(groups[0].rows.flat().map((t) => t.id)).toEqual(['ici']);
+  });
+
+  it('sépare les épinglées des ordinaires, dans le bon groupe', () => {
+    const groups = groupTasksByBoard(
+      [
+        makeTask({ id: 'p', board_id: 'maison', pinned: true }),
+        makeTask({ id: 'o', board_id: 'maison' }),
+        makeTask({ id: 'autre', board_id: 'boulot', pinned: true }),
+      ],
+      [maison, boulot],
+      'faire',
+    );
+    expect(groups[0].pinned.flat().map((t) => t.id)).toEqual(['p']);
+    expect(groups[0].rows.flat().map((t) => t.id)).toEqual(['o']);
+    expect(groups[1].pinned.flat().map((t) => t.id)).toEqual(['autre']);
+    expect(groups[1].rows).toEqual([]);
+  });
+
+  it('conserve l’ordre manuel propre à chaque matrice', () => {
+    // Deux matrices peuvent porter les MÊMES positions : c'est précisément
+    // pourquoi la vue regroupe au lieu de trier à plat.
+    const groups = groupTasksByBoard(
+      [
+        makeTask({ id: 'm2', board_id: 'maison', position: 1 }),
+        makeTask({ id: 'm1', board_id: 'maison', position: 0 }),
+        makeTask({ id: 'b2', board_id: 'boulot', position: 1 }),
+        makeTask({ id: 'b1', board_id: 'boulot', position: 0 }),
+      ],
+      [maison, boulot],
+      'faire',
+    );
+    expect(groups[0].rows.flat().map((t) => t.id)).toEqual(['m1', 'm2']);
+    expect(groups[1].rows.flat().map((t) => t.id)).toEqual(['b1', 'b2']);
+  });
+
+  it('garde une paire sur une seule ligne, dans le cadre de sa matrice', () => {
+    const groups = groupTasksByBoard(
+      [
+        makeTask({ id: 'a', board_id: 'maison', pair_id: 'p', position: 0 }),
+        makeTask({ id: 'b', board_id: 'maison', pair_id: 'p', position: 0.5 }),
+      ],
+      [maison],
+      'faire',
+    );
+    expect(groups[0].rows).toHaveLength(1);
+    expect(groups[0].rows[0].map((t) => t.id)).toEqual(['a', 'b']);
+  });
+
+  it('dégrade une paire à cheval sur deux matrices en deux cartes simples', () => {
+    // Inatteignable par l'interface — `planPairMove` emmène toujours la
+    // partenaire — mais d'anciennes données peuvent le porter. Deux cartes
+    // valent mieux qu'une ligne fausse, et infiniment mieux qu'un plantage.
+    const groups = groupTasksByBoard(
+      [
+        makeTask({ id: 'a', board_id: 'maison', pair_id: 'p' }),
+        makeTask({ id: 'b', board_id: 'boulot', pair_id: 'p' }),
+      ],
+      [maison, boulot],
+      'faire',
+    );
+    expect(groups[0].rows).toEqual([[expect.objectContaining({ id: 'a' })]]);
+    expect(groups[1].rows).toEqual([[expect.objectContaining({ id: 'b' })]]);
+  });
+
+  it('rend une liste vide quand la portée ne contient aucune matrice', () => {
+    // Un univers vide choisi comme portée : l'écran doit pouvoir le dire.
+    expect(groupTasksByBoard([makeTask()], [], 'faire')).toEqual([]);
   });
 });

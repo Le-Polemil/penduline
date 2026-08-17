@@ -95,6 +95,59 @@ export function groupByUniverse(universes: Universe[], boards: Board[]): Univers
 }
 
 /**
+ * Les matrices à plat, dans l'ordre où l'accueil les présente : univers par
+ * univers, les non rangées en dernier.
+ *
+ * La vue globale en a besoin pour parcourir les matrices dans un ordre que
+ * l'utilisateur reconnaît — celui qu'il a lui-même posé — plutôt que dans
+ * l'ordre de chargement.
+ */
+export function orderedBoards(universes: Universe[], boards: Board[]): Board[] {
+  return groupByUniverse(universes, boards).flatMap((g) => g.boards);
+}
+
+/** Les tâches d'une case appartenant à une même matrice, en lignes prêtes à rendre. */
+export interface BoardGroup {
+  board: Board;
+  /** Lignes épinglées, à rendre en tête du groupe. */
+  pinned: Task[][];
+  rows: Task[][];
+}
+
+/**
+ * Regroupe par matrice les tâches d'une case — le cœur de la vue globale.
+ *
+ * `tasks.position` est scopé à `(board_id, quadrant)` : deux tâches de matrices
+ * différentes peuvent porter la MÊME position. Une vue agrégée n'a donc aucun
+ * ordre global cohérent, et le regroupement est la seule agrégation honnête :
+ * l'ordre manuel de chaque matrice est conservé tel quel, à l'intérieur de son
+ * groupe.
+ *
+ * `boards` arrive déjà filtré et ordonné (cf. `orderedBoards`) : la portée —
+ * toutes les matrices, ou celles d'un univers — est une décision d'écran, pas
+ * de cette fonction.
+ *
+ * Une matrice qui n'a rien à montrer dans cette case ne produit PAS de groupe :
+ * un cadre vide serait du bruit, et il y en aurait par dizaines dès qu'un compte
+ * porte quelques matrices.
+ *
+ * L'invariant d'appairage tient sans une ligne de code : `buildRows` tournant
+ * matrice par matrice, une paire — toujours intra-matrice, puisque
+ * `planPairMove` emmène la partenaire jusque dans la matrice d'arrivée — retombe
+ * dans un seul groupe. Un `pair_id` à cheval sur deux matrices, donnée
+ * incohérente inatteignable par l'interface, dégrade en deux cartes simples.
+ */
+export function groupTasksByBoard(tasks: Task[], boards: Board[], quad: QuadrantKey): BoardGroup[] {
+  const groups: BoardGroup[] = [];
+  for (const board of boards) {
+    const pinned = buildRows(pinnedTasks(tasks, board.id, quad));
+    const rows = buildRows(visibleTasks(tasks, board.id, quad));
+    if (pinned.length || rows.length) groups.push({ board, pinned, rows });
+  }
+  return groups;
+}
+
+/**
  * Une écriture à appliquer : l'identifiant d'une tâche et le patch à lui poser.
  *
  * Les fonctions `plan…` ci-dessous rendent des `TaskWrite` au lieu d'écrire
