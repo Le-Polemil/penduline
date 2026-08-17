@@ -2,8 +2,9 @@
 story: "Accessibilité : alternative clavier au glisser-déposer"
 story_code: "accessibilite-clavier"
 issues: [38]
+pr: 69
 created: 2026-08-17
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -22,8 +23,8 @@ status: "In Progress"
 | 7bis. Test verrou du contraste des cases | Terminé | 2026-08-17 |
 | 8. Formulaires : `name` et `autocomplete` | Terminé | 2026-08-17 |
 | 9. Vérifications automatiques et arbre d'accessibilité | Terminé | 2026-08-17 |
-| 10. Validation manuelle (10 points du plan) | En attente | |
-| 11. Commit, push et PR fermant #38 | En attente | |
+| 10. Validation manuelle (10 points du plan) | Terminé | 2026-08-17 |
+| 11. Commit, push et PR fermant #38 | Terminé | 2026-08-17 |
 
 ## Journal
 

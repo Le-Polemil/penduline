@@ -2,8 +2,9 @@
 story: "Accessibilité : alternative clavier au glisser-déposer"
 story_code: "accessibilite-clavier"
 issues: [38]
+pr: 69
 created: 2026-08-17
-status: "In Progress"
+status: "Done"
 ---
 
 # #38 — Accessibilité : alternative clavier au glisser-déposer
