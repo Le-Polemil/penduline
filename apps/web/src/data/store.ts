@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
-import { positionBefore, type QuadrantKey, type Board, type Task, type TaskPatch } from '@penduline/shared';
+import {
+  positionBefore,
+  type QuadrantKey,
+  type Board,
+  type Task,
+  type TaskPatch,
+  type Universe,
+} from '@penduline/shared';
 import { supabase } from '../lib/supabase';
 
 /** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
@@ -8,13 +15,25 @@ const TASK_COLS =
 
 export interface Store {
   ready: boolean;
+  universes: Universe[];
   boards: Board[];
   tasks: Task[];
   /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
   addBoard: (name: string) => Promise<string | null>;
   renameBoard: (id: string, name: string) => Promise<void>;
-  /** Déplace une matrice juste avant `beforeId` ; `null` = en fin de liste. */
-  reorderBoard: (id: string, beforeId: string | null) => Promise<void>;
+  /**
+   * Range une matrice dans un univers (`null` = aucun) et la place juste avant
+   * `beforeId` de ce groupe ; `beforeId` null = en fin de groupe.
+   *
+   * Un seul appel pour les deux, parce que c'est un seul geste : déposer une
+   * matrice dans un groupe l'y range ET l'y positionne.
+   */
+  moveBoard: (id: string, universeId: string | null, beforeId: string | null) => Promise<void>;
+  addUniverse: (name: string) => Promise<string | null>;
+  renameUniverse: (id: string, name: string) => Promise<void>;
+  reorderUniverse: (id: string, beforeId: string | null) => Promise<void>;
+  /** Les matrices de l'univers SURVIVENT : `on delete set null` les délie. */
+  deleteUniverse: (id: string) => Promise<void>;
   /** Supprime la matrice ET ses tâches (cascade assurée par la clé étrangère). */
   deleteBoard: (id: string) => Promise<void>;
   addTask: (boardId: string, quadrant: QuadrantKey, title: string, position: number) => Promise<void>;
@@ -26,17 +45,22 @@ export interface Store {
 
 export function useStore(userId: string): Store {
   const [ready, setReady] = useState(false);
+  const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const load = useCallback(async () => {
-    const [boardsRes, tasksRes] = await Promise.all([
+    const [universesRes, boardsRes, tasksRes] = await Promise.all([
+      supabase.from('universes').select('*').order('position'),
       supabase.from('boards').select('*').order('position'),
       supabase.from('tasks').select(TASK_COLS).order('position'),
     ]);
 
     // Compte vide → on laisse vide. Le découpage appartient à l'utilisateur :
     // semer des exemples imposerait une lecture (naguère : les pièces d'une maison).
+    // Aucun univers n'est créé non plus : c'est l'état de tous les comptes au
+    // lendemain de la migration, et il doit rester parfaitement utilisable.
+    setUniverses(universesRes.data ?? []);
     setBoards(boardsRes.data ?? []);
     setTasks((tasksRes.data as Task[] | null) ?? []);
     setReady(true);
@@ -67,22 +91,108 @@ export function useStore(userId: string): Store {
     if (error) console.error('[penduline] renameBoard', error.message);
   }, []);
 
-  // Position fractionnaire, calculée par le helper déjà utilisé pour les tâches
-  // (packages/shared) : une seule logique d'ordre pour tout le produit.
-  const reorderBoard = useCallback(
-    async (id: string, beforeId: string | null) => {
+  /**
+   * Position fractionnaire, calculée par le helper déjà utilisé pour les tâches
+   * (`packages/shared`) : une seule logique d'ordre pour tout le produit.
+   *
+   * La position d'une matrice est scopée à son univers, exactement comme celle
+   * d'une tâche l'est à `(board, quadrant)` — on ne compare donc qu'aux matrices
+   * du groupe d'arrivée.
+   */
+  const moveBoard = useCallback(
+    async (id: string, universeId: string | null, beforeId: string | null) => {
       if (id === beforeId) return;
       const position = positionBefore(
-        // La matrice déplacée doit sortir de la liste de référence, sinon elle
-        // servirait de repère à son propre déplacement.
-        boards.filter((b) => b.id !== id),
+        // Le groupe cible, la matrice déplacée exclue : elle ne peut pas servir
+        // de repère à son propre déplacement.
+        boards.filter((b) => b.universe_id === universeId && b.id !== id),
         beforeId,
       );
       setBoards((bs) =>
-        bs.map((b) => (b.id === id ? { ...b, position } : b)).sort((a, b) => a.position - b.position),
+        bs
+          .map((b) => (b.id === id ? { ...b, universe_id: universeId, position } : b))
+          .sort((a, b) => a.position - b.position),
       );
-      const { error } = await supabase.from('boards').update({ position }).eq('id', id);
-      if (error) console.error('[penduline] reorderBoard', error.message);
+      const { error } = await supabase
+        .from('boards')
+        .update({ universe_id: universeId, position })
+        .eq('id', id);
+      if (error) console.error('[penduline] moveBoard', error.message);
+    },
+    [boards],
+  );
+
+  // ── Univers ────────────────────────────────────────────────────────────────
+  // Mêmes formes que les fonctions `*Board` : mise à jour optimiste, puis
+  // persistance, et une trace en console si l'écriture échoue.
+  const addUniverse = useCallback(
+    async (name: string) => {
+      const position = Math.max(0, ...universes.map((u) => u.position)) + 1;
+      const { data, error } = await supabase
+        .from('universes')
+        .insert({ user_id: userId, name, position })
+        .select('*')
+        .single();
+      if (error || !data) {
+        console.error('[penduline] addUniverse', error?.message);
+        return null;
+      }
+      setUniverses((us) => [...us, data]);
+      return data.id as string;
+    },
+    [universes, userId],
+  );
+
+  const renameUniverse = useCallback(async (id: string, name: string) => {
+    setUniverses((us) => us.map((u) => (u.id === id ? { ...u, name } : u)));
+    const { error } = await supabase.from('universes').update({ name }).eq('id', id);
+    if (error) console.error('[penduline] renameUniverse', error.message);
+  }, []);
+
+  const reorderUniverse = useCallback(
+    async (id: string, beforeId: string | null) => {
+      if (id === beforeId) return;
+      const position = positionBefore(universes.filter((u) => u.id !== id), beforeId);
+      setUniverses((us) =>
+        us.map((u) => (u.id === id ? { ...u, position } : u)).sort((a, b) => a.position - b.position),
+      );
+      const { error } = await supabase.from('universes').update({ position }).eq('id', id);
+      if (error) console.error('[penduline] reorderUniverse', error.message);
+    },
+    [universes],
+  );
+
+  const deleteUniverse = useCallback(
+    async (id: string) => {
+      // `on delete set null` suffirait à faire survivre les matrices — mais pas
+      // à les ranger. Les positions étant scopées par univers, les libérées
+      // arriveraient avec des positions qui COLLISIONNENT avec celles déjà sans
+      // univers, et s'intercalleraient dans un ordre arbitraire.
+      // On les renumérote donc explicitement à la suite, avant de supprimer.
+      const freed = boards.filter((b) => b.universe_id === id).sort((a, b) => a.position - b.position);
+      const loose = boards.filter((b) => b.universe_id === null);
+      let next = loose.length ? Math.max(...loose.map((b) => b.position)) + 1 : 0;
+      const moved = freed.map((b) => ({ id: b.id, position: next++ }));
+
+      setUniverses((us) => us.filter((u) => u.id !== id));
+      setBoards((bs) =>
+        bs
+          .map((b) => {
+            const m = moved.find((x) => x.id === b.id);
+            return m ? { ...b, universe_id: null, position: m.position } : b;
+          })
+          .sort((a, b) => a.position - b.position),
+      );
+
+      for (const m of moved) {
+        const { error } = await supabase
+          .from('boards')
+          .update({ universe_id: null, position: m.position })
+          .eq('id', m.id);
+        if (error) console.error('[penduline] deleteUniverse/board', error.message);
+      }
+      const { error } = await supabase.from('universes').delete().eq('id', id);
+      if (error) console.error('[penduline] deleteUniverse', error.message);
     },
     [boards],
   );
@@ -127,10 +237,15 @@ export function useStore(userId: string): Store {
     ready,
     boards,
     tasks,
+    universes,
     addBoard,
     renameBoard,
-    reorderBoard,
+    moveBoard,
     deleteBoard,
+    addUniverse,
+    renameUniverse,
+    reorderUniverse,
+    deleteUniverse,
     addTask,
     patchTask,
     purgeTasks,

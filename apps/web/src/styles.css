@@ -195,7 +195,7 @@ button { font: inherit; }
 .pill { color: #fff; border-radius: 999px; font: 700 11.5px/1 var(--font-body); padding: 5px 8px; }
 .board-card__chev { color: var(--color-neutral-400); font-size: 18px; }
 .add-board {
-  display: inline-block; margin-top: 18px; border: 1.5px dashed var(--color-accent);
+  display: inline-block; border: 1.5px dashed var(--color-accent);
   background: transparent; border-radius: 999px; padding: 9px 18px;
   font: 600 13px var(--font-body); color: var(--color-accent-700); cursor: pointer; transition: background 0.15s;
 }
@@ -586,4 +586,56 @@ button { font: inherit; }
 @media (prefers-reduced-motion: reduce) {
   /* L'information « ça charge » reste, le mouvement disparaît. */
   .loader__neck, .loader__nest { animation: none; rotate: 0deg; }
+}
+
+/* ── Univers ──────────────────────────────────────────────────────────────────
+   Un en-tête par groupe, discret : le nom d'un univers situe, il ne doit pas
+   concurrencer celui des matrices qu'il contient. Sans aucun univers, aucun
+   en-tête n'est rendu et l'accueil se lit exactement comme avant. */
+.uni { display: flex; flex-direction: column; }
+.uni-head {
+  display: flex; align-items: center; gap: 8px;
+  padding: 14px 20px 2px; min-height: 34px;
+}
+.uni-head__name {
+  font: 600 12px var(--font-body); color: var(--color-neutral-600);
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+/* Mêmes règles que `.board-row__actions` : discrètes au repos, dépliées au
+   survol ET au focus clavier — sans quoi renommer un univers serait impossible
+   sans souris. */
+.uni-head__actions {
+  display: flex; align-items: center; gap: 2px; margin-left: auto;
+  max-width: 0; overflow: hidden;
+  transition: max-width 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.uni-head:hover .uni-head__actions,
+.uni-head:focus-within .uni-head__actions { max-width: 320px; }
+.uni-head__actions .board-act { opacity: 0; transition: opacity 0.18s; }
+.uni-head:hover .board-act,
+.uni-head:focus-within .board-act { opacity: 1; }
+.uni-head__actions .board-act:disabled { opacity: 0.3 !important; cursor: default; }
+@media (hover: none) {
+  /* Au doigt, ces actions sont inatteignables : l'appui long prend le relais. */
+  .uni-head__actions { display: none; }
+}
+.uni-head__rename { display: flex; align-items: center; gap: 8px; flex: 1; }
+.uni-head__input {
+  flex: 1; min-width: 0; font: 600 13px var(--font-body); color: var(--color-text);
+  background: var(--color-neutral-100); border: 1.5px solid var(--color-accent);
+  border-radius: 10px; padding: 5px 10px;
+}
+.uni-head__input:focus-visible { outline: 2px solid var(--color-accent-300); outline-offset: 1px; }
+
+/* Les deux boutons de création vivent côte à côte : créer une matrice reste le
+   geste principal, créer un univers n'est qu'un rangement. */
+.home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+.add-board--uni { border-style: dotted; color: var(--color-neutral-600); border-color: var(--color-neutral-400); }
+.add-board--uni:hover { background: var(--color-neutral-200); }
+
+/* Intitulé de section dans la feuille tactile. */
+.sheet__label {
+  font: 600 11px var(--font-body); color: var(--color-neutral-500);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  margin: 12px 12px 4px;
 }

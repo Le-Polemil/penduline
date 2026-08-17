@@ -12,7 +12,9 @@ Projet Supabase de Penduline : schéma, policies RLS et seed local.
 apps/supabase/
 ├── config.toml                       # config du projet local
 ├── migrations/
-│   └── 20260724090000_init.sql       # tables rooms/tasks + enum + RLS
+│   ├── 20260724090000_init.sql       # tables rooms/tasks + enum + RLS
+│   ├── 20260810100000_rooms_to_boards.sql
+│   └── 20260816120000_universes.sql  # regroupement des matrices
 └── seed.sql                          # compte + données de démo (LOCAL uniquement)
 ```
 
@@ -30,18 +32,47 @@ npm run stop  -w @penduline/supabase
 Studio : http://127.0.0.1:54323 · emails locaux : http://127.0.0.1:54324
 
 **Compte de démo** (créé par `seed.sql`) : `demo@penduline.test` / `password123`,
-avec les pièces d'exemple. Si l'insertion dans `auth.users` échoue sur ta version
-du CLI, commente le bloc « Compte de démo » — l'inscription normale marche quand même.
+avec des matrices d'exemple réparties en deux univers, et une laissée **sans
+univers** — c'est un état normal, pas un oubli. Si l'insertion dans `auth.users`
+échoue sur ta version du CLI, commente le bloc « Compte de démo » — l'inscription
+normale marche quand même.
 
-## Distant (projet supabase.com)
+**Si les ports sont déjà pris** (un autre projet Supabase tourne), décale-les
+dans `config.toml` (`54321`→`55321`, etc.) plutôt que d'arrêter l'autre stack.
+Pense à rétablir le fichier ensuite : il est versionné.
+
+## Production — Supabase AUTO-HÉBERGÉ
+
+> ⚠️ La production **n'est pas** un projet supabase.com. C'est une instance
+> auto-hébergée sur Coolify (`https://api.penduline.polemil.dev`), dégraissée à
+> PostgREST + GoTrue — voir `work/coolify-deploy.md`. Les commandes `link` et
+> `push` du CLI, qui visent un `--project-ref` supabase.com, **ne s'appliquent
+> pas ici.**
+
+Appliquer une migration se fait donc à la main, sur le Postgres de l'instance :
 
 ```bash
-npm run link -w @penduline/supabase    # supabase link --project-ref <ref>
-npm run push -w @penduline/supabase    # applique les migrations (PAS le seed)
+# 1. Vérifier ce qui est déjà appliqué
+docker exec -i <conteneur-db> psql -U postgres -d postgres \
+  -c "select version from supabase_migrations.schema_migrations order by version"
+
+# 2. Appliquer le fichier
+docker exec -i <conteneur-db> psql -U postgres -d postgres \
+  < apps/supabase/migrations/<fichier>.sql
+
+# 3. Enregistrer la version, sinon un futur `db diff` la croira manquante
+docker exec -i <conteneur-db> psql -U postgres -d postgres \
+  -c "insert into supabase_migrations.schema_migrations (version) values ('<horodatage>')"
 ```
 
-Alternative sans CLI : colle `migrations/20260724090000_init.sql` dans le SQL
-Editor du dashboard.
+Le SQL Editor de Studio fait aussi l'affaire s'il est déployé.
+
+**Ordre de déploiement :** la migration **avant** le front. Une colonne que le
+front lit et qui n'existe pas encore fait échouer la lecture ; l'inverse est sans
+conséquence, une colonne inutilisée ne gêne personne.
+
+**Ce que `seed.sql` ne fait jamais** : il n'est joué que par `db reset`, en local.
+Aucune donnée de démo ne part en production.
 
 ## Sécurité
 

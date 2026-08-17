@@ -20,7 +20,12 @@ penduline/
 ## Modèle
 
 - **Une matrice = un contexte, au choix de l'utilisateur** (un lieu, un moment,
-  un projet). `boards` → `tasks` directement, pas de niveau intermédiaire.
+  un projet). `boards` → `tasks` directement.
+- **Les matrices peuvent être regroupées en univers** (Perso, Boulot, Maison…),
+  et ce niveau est **facultatif de bout en bout** : on peut n'en créer aucun, et
+  une matrice peut n'appartenir à aucun. Supprimer un univers ne supprime pas ses
+  matrices — `on delete set null` les délie, il ne les emporte pas. Le
+  regroupement est une vue sur les matrices, pas leur propriétaire.
 - **4 cases + « À trier »**, 1 couleur par case (palette de la maquette Claude
   Design) : `faire`=vert, `planifier`=bleu, `deleguer`=doré, `eliminer`=rouge,
   `parking`=neutre.

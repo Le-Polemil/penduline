@@ -1,5 +1,5 @@
 import type { QuadrantKey } from './quadrants';
-import type { Task, TaskPatch } from './types';
+import type { Board, Task, TaskPatch, Universe } from './types';
 
 /**
  * Tout ce qui s'ordonne par position fractionnaire. `Task` et `Board` la
@@ -53,6 +53,45 @@ export function countOpen(tasks: Task[], boardId: string, quad: QuadrantKey): nu
 export function partnerOf(tasks: Task[], task: Task): Task | null {
   if (!task.pair_id) return null;
   return tasks.find((o) => o.id !== task.id && o.pair_id === task.pair_id && !o.deleted) ?? null;
+}
+
+/** Un univers et les matrices qu'il contient. */
+export interface UniverseGroup {
+  /** `null` = les matrices non rangées. Ce groupe est toujours le dernier. */
+  universe: Universe | null;
+  boards: Board[];
+}
+
+/**
+ * Groupe les matrices par univers, dans l'ordre des univers.
+ *
+ * Le groupe sans univers **ferme** la liste, par cohérence avec « À trier » qui
+ * ferme la grille (`ALL = [...QUADS, PARK]`) : le non-classé se lit en bas, pas
+ * en tête.
+ *
+ * Il est toujours présent, **même vide** — c'est la cible de dépôt qui permet de
+ * sortir une matrice de son univers. Un affichage qui n'en a pas besoin (le
+ * popup, par exemple) peut filtrer les groupes vides lui-même.
+ *
+ * Une matrice dont l'`universe_id` pointe vers un univers absent y retombe
+ * aussi : une donnée incohérente ne doit jamais faire disparaître une matrice de
+ * l'écran.
+ */
+export function groupByUniverse(universes: Universe[], boards: Board[]): UniverseGroup[] {
+  const byPosition = <T extends Positioned>(a: T, b: T) => a.position - b.position;
+  const ordered = [...universes].sort(byPosition);
+  const known = new Set(ordered.map((u) => u.id));
+
+  const groups: UniverseGroup[] = ordered.map((universe) => ({
+    universe,
+    boards: boards.filter((b) => b.universe_id === universe.id).sort(byPosition),
+  }));
+
+  groups.push({
+    universe: null,
+    boards: boards.filter((b) => !b.universe_id || !known.has(b.universe_id)).sort(byPosition),
+  });
+  return groups;
 }
 
 /**

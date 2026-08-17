@@ -5,6 +5,7 @@ import {
   ALL,
   countOpen,
   endPosition,
+  groupByUniverse,
   PARK,
   partnerOf,
   planPairMove,
@@ -194,16 +195,19 @@ function Home({
   activeBoard: string | null;
   onOpen: (id: string) => void;
 }) {
-  const [calmOpen, setCalmOpen] = useState(false);
   // `null` = bouton au repos ; une chaîne (même vide) = champ ouvert. Même
   // convention que l'accueil web, pour que les deux se lisent pareil.
   const [draft, setDraft] = useState<string | null>(null);
 
   const openCount = (r: Board) =>
     store.tasks.filter((t) => t.board_id === r.id && !t.done && !t.deleted).length;
-  const active = store.boards.filter((r) => openCount(r) > 0);
-  const calm = store.boards.filter((r) => openCount(r) === 0);
   const empty = store.boards.length === 0;
+
+  // Le regroupement par univers REMPLACE celui par « actives / calmes ». Deux
+  // dimensions de regroupement dans 400 px seraient illisibles — et une matrice
+  // au repos n'a plus besoin d'être masquée puisque son univers la situe déjà.
+  const groups = groupByUniverse(store.universes, store.boards).filter((g) => g.boards.length > 0);
+  const grouped = store.universes.length > 0;
 
   async function create() {
     const name = (draft ?? '').trim();
@@ -237,42 +241,44 @@ function Home({
           </p>
         )}
 
-        {active.map((r) => (
-          <button
-            key={r.id}
-            className="board"
-            style={{ borderColor: activeBoard === r.id ? 'var(--color-accent)' : 'transparent' }}
-            onClick={() => onOpen(r.id)}
-          >
-            <span className="board__name">{r.name}</span>
-            <span className="board__pills">
-              {QUADS.map((q) => ({ ink: q.ink, n: countOpen(store.tasks, r.id, q.key) }))
-                .filter((p) => p.n > 0)
-                .map((p, i) => (
-                  <span key={i} className="pill" style={{ background: p.ink }}>
-                    {p.n}
-                  </span>
-                ))}
-            </span>
-            <span className="board__chev">›</span>
-          </button>
-        ))}
-
-        {calm.length > 0 && (
-          <>
-            <button className="calm-toggle" onClick={() => setCalmOpen((o) => !o)}>
-              {(calmOpen ? '▾' : '▸') + ` ${calm.length} ${calm.length > 1 ? 'matrices calmes' : 'matrice calme'}`}
-            </button>
-            {calmOpen &&
-              calm.map((r) => (
-                <button key={r.id} className="board board--calm" onClick={() => onOpen(r.id)}>
+        {groups.map((group) => (
+          <div className="uni" key={group.universe?.id ?? 'sans-univers'}>
+            {/* Sans aucun univers, pas d'en-tête : la liste se lit comme avant. */}
+            {grouped && (
+              <p className="uni-head">{group.universe?.name ?? 'Sans univers'}</p>
+            )}
+            {group.boards.map((r) => {
+              const n = openCount(r);
+              return (
+                <button
+                  key={r.id}
+                  // Une matrice sans rien à faire reste À SA PLACE, atténuée.
+                  // Repliée derrière un « N matrices calmes », elle était
+                  // introuvable ; atténuée, elle est simplement au repos.
+                  className={`board${n === 0 ? ' board--calm' : ''}`}
+                  style={{ borderColor: activeBoard === r.id ? 'var(--color-accent)' : 'transparent' }}
+                  onClick={() => onOpen(r.id)}
+                >
                   <span className="board__name">{r.name}</span>
-                  <span className="board__meta">Rien à faire</span>
+                  {n === 0 ? (
+                    <span className="board__meta">Rien à faire</span>
+                  ) : (
+                    <span className="board__pills">
+                      {QUADS.map((q) => ({ ink: q.ink, n: countOpen(store.tasks, r.id, q.key) }))
+                        .filter((p) => p.n > 0)
+                        .map((p, i) => (
+                          <span key={i} className="pill" style={{ background: p.ink }}>
+                            {p.n}
+                          </span>
+                        ))}
+                    </span>
+                  )}
                   <span className="board__chev">›</span>
                 </button>
-              ))}
-          </>
-        )}
+              );
+            })}
+          </div>
+        ))}
 
         {draft === null ? (
           <button className="add-board" onClick={() => setDraft('')}>

@@ -1,4 +1,4 @@
-import type { Task } from './types';
+import type { Board, Task, Universe } from './types';
 
 /**
  * Fabrique de tâches pour les tests.
@@ -36,4 +36,30 @@ export function makeTask(partial: Partial<Task> = {}): Task {
 /** Une liste de tâches aux positions 0, 1, 2… et aux identifiants donnés. */
 export function makeList(ids: string[], partial: Partial<Task> = {}): Task[] {
   return ids.map((id, i) => makeTask({ id, position: i, ...partial }));
+}
+
+/** Une matrice, non rangée par défaut — c'est l'état le plus courant. */
+export function makeBoard(partial: Partial<Board> = {}): Board {
+  seq += 1;
+  return {
+    id: `b${seq}`,
+    user_id: 'u1',
+    name: `Matrice ${seq}`,
+    universe_id: null,
+    position: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    ...partial,
+  };
+}
+
+export function makeUniverse(partial: Partial<Universe> = {}): Universe {
+  seq += 1;
+  return {
+    id: `u${seq}`,
+    user_id: 'u1',
+    name: `Univers ${seq}`,
+    position: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    ...partial,
+  };
 }

@@ -1,13 +1,32 @@
 import type { QuadrantKey } from './quadrants';
 
 /**
+ * Un regroupement de matrices — Perso, Boulot, Maison…
+ *
+ * Facultatif de bout en bout : on peut n'en créer aucun, et une matrice peut
+ * n'appartenir à aucun univers. C'est un état normal, pas un oubli à corriger.
+ */
+export interface Universe {
+  id: string;
+  user_id: string;
+  name: string;
+  position: number;
+  created_at: string;
+}
+
+/**
  * Une matrice. Le découpage est libre : un lieu, un moment de la journée, un
- * projet… Pas de niveau intermédiaire — chaque matrice porte ses tâches.
+ * projet… Chaque matrice porte ses tâches directement.
+ *
+ * Elle peut être rangée dans un univers, ou non. Supprimer un univers ne
+ * supprime pas ses matrices : elles repassent simplement à `null`.
  */
 export interface Board {
   id: string;
   user_id: string;
   name: string;
+  /** `null` = pas rangée dans un univers. Un état normal. */
+  universe_id: string | null;
   position: number;
   created_at: string;
 }
