@@ -1,0 +1,106 @@
+name: Deploy
+
+# Déclenchement **manuel uniquement**, et c'est délibéré : un déploiement Coolify
+# recrée les conteneurs sur une machine à 4 Go qui s'est déjà effondrée deux fois
+# pendant un build (voir work/coolify-deploy.md). On déploie à froid, quand on
+# regarde — pas automatiquement à chaque merge sur `main`.
+on:
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Rebuild sans cache Docker côté serveur"
+        type: boolean
+        default: false
+
+# Deux déploiements simultanés sur la même machine, c'est l'incident assuré.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+env:
+  COOLIFY_URL: https://coolify.polemil.dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://penduline.polemil.dev
+    steps:
+      # Coolify déploie ce que sa ressource pointe (la branche `main` du dépôt),
+      # pas ce runner. On refuse donc de lancer depuis autre chose que `main` :
+      # sinon le workflow ment sur ce qu'il déploie.
+      - name: Vérifier qu'on déclenche depuis main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Ce workflow déploie la branche suivie par Coolify (main). Lance-le depuis main."
+          exit 1
+
+      - name: Vérifier la configuration Coolify
+        env:
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          UUID: ${{ vars.COOLIFY_RESOURCE_UUID }}
+        run: |
+          [ -n "$TOKEN" ] || { echo "::error::Secret COOLIFY_TOKEN absent (Settings › Secrets and variables › Actions › Secrets)"; exit 1; }
+          [ -n "$UUID" ] || { echo "::error::Variable COOLIFY_RESOURCE_UUID absente (idem, onglet Variables)"; exit 1; }
+
+      - name: Déclencher le déploiement
+        id: trigger
+        env:
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          UUID: ${{ vars.COOLIFY_RESOURCE_UUID }}
+          FORCE: ${{ inputs.force }}
+        run: |
+          set -euo pipefail
+          # L'endpoint de déploiement Coolify est un GET (API v1).
+          response=$(curl -sS --fail-with-body \
+            -H "Authorization: Bearer $TOKEN" \
+            "$COOLIFY_URL/api/v1/deploy?uuid=$UUID&force=$FORCE")
+          echo "$response"
+
+          # La réponse encapsule les déploiements dans `deployments[]`. On tolère
+          # une forme aplatie : l'API a bougé entre versions mineures de Coolify.
+          deployment=$(echo "$response" | jq -r '(.deployments[0].deployment_uuid // .deployment_uuid // empty)')
+          if [ -z "$deployment" ]; then
+            echo "::warning::Déploiement lancé mais aucun identifiant renvoyé — suivi impossible, vérifie dans l'UI Coolify."
+          fi
+          echo "deployment=$deployment" >> "$GITHUB_OUTPUT"
+
+      # Sans ce suivi, le workflow serait vert dès que la requête part, y compris
+      # quand le build meurt sur le serveur. C'est précisément le cas qu'on veut voir.
+      - name: Suivre le déploiement
+        if: steps.trigger.outputs.deployment != ''
+        env:
+          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+          DEPLOYMENT: ${{ steps.trigger.outputs.deployment }}
+        # 60 × 20 s = 20 min. Un build web prend ~2 min à froid ; au-delà, la
+        # machine est en train de ramer, et on préfère le savoir.
+        timeout-minutes: 22
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 60); do
+            status=$(curl -sS -H "Authorization: Bearer $TOKEN" \
+              "$COOLIFY_URL/api/v1/deployments/$DEPLOYMENT" | jq -r '.status // "unknown"')
+            echo "statut : $status"
+            case "$status" in
+              finished|success) echo "Déploiement terminé."; exit 0 ;;
+              failed|error|cancelled-by-user) echo "::error::Déploiement en échec ($status) — logs dans l'UI Coolify."; exit 1 ;;
+            esac
+            sleep 20
+          done
+          echo "::error::Toujours pas terminé après 20 min — la machine est probablement à genoux."
+          exit 1
+
+      # Le déploiement peut « réussir » et servir l'ancien bundle si le conteneur
+      # n'a pas basculé. On vérifie donc l'app elle-même, pas l'API Coolify.
+      - name: Vérifier que l'app répond
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://penduline.polemil.dev/ || true)
+            [ "$code" = "200" ] && { echo "penduline.polemil.dev répond 200."; exit 0; }
+            echo "statut HTTP $code, nouvelle tentative…"
+            sleep 10
+          done
+          echo "::error::L'app ne répond pas 200 après le déploiement."
+          exit 1

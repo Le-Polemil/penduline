@@ -163,3 +163,37 @@ existante n'est pas convertible. Il faudrait en créer une nouvelle, lui
 transférer `penduline.polemil.dev` (après l'avoir retiré de l'actuelle, sinon
 Traefik voit deux fois le même domaine), puis supprimer l'ancienne. À faire à
 froid. En attendant, l'image publiée sert de filet.
+
+## Déclencher un déploiement
+
+`.github/workflows/deploy.yml` appelle l'API Coolify. Il remplace le clic dans
+l'UI, pas le jugement : il est en **`workflow_dispatch` seul**, jamais sur push.
+
+**Pourquoi manuel.** Un déploiement recrée les conteneurs sur une machine à 4 Go
+qui s'est effondrée deux fois pendant un build. Déployer automatiquement à chaque
+merge, ce serait tirer à l'aveugle sur le serveur plusieurs fois par jour. La
+règle « à froid, avec de la marge » ne se délègue pas à un `on: push`.
+
+**Prérequis, à créer une fois** dans Settings › Secrets and variables › Actions :
+
+| Nom | Onglet | Valeur |
+|---|---|---|
+| `COOLIFY_TOKEN` | Secrets | jeton API Coolify (Keys & Tokens › API tokens) |
+| `COOLIFY_RESOURCE_UUID` | Variables | UUID de la ressource web, lisible dans son URL Coolify |
+
+**Le workflow doit être sur `main` pour apparaître dans l'onglet Actions.**
+`workflow_dispatch` n'expose que les workflows présents sur la branche par
+défaut : tant que ce fichier vit dans une PR, aucun bouton n'existe.
+
+**Il ne déploie pas le commit du runner.** Coolify redéploie ce que *sa* ressource
+suit, c'est-à-dire `main`. Le workflow refuse donc de se lancer depuis une autre
+branche, pour ne pas laisser croire qu'il déploierait celle-ci.
+
+**Le suivi va jusqu'à l'app.** Le job attend la fin réelle du déploiement (statut
+Coolify), puis vérifie que `penduline.polemil.dev` répond `200` : un déploiement
+peut se terminer « avec succès » et continuer à servir l'ancien conteneur.
+
+⚠️ La forme exacte des réponses de l'API Coolify (`deployments[].deployment_uuid`,
+statut `finished`) varie selon les versions mineures. Le workflow tolère les deux
+formes connues et se contente d'un avertissement s'il ne sait pas suivre — le
+déclenchement, lui, reste effectif. À revalider au premier vrai run.
