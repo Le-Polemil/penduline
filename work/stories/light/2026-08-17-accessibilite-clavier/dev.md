@@ -21,7 +21,7 @@ status: "In Progress"
 | 7. Contraste : texte secondaire en `neutral-700` | Terminé | 2026-08-17 |
 | 7bis. Test verrou du contraste des cases | Terminé | 2026-08-17 |
 | 8. Formulaires : `name` et `autocomplete` | Terminé | 2026-08-17 |
-| 9. Vérifications automatiques et arbre d'accessibilité | En attente | |
+| 9. Vérifications automatiques et arbre d'accessibilité | Terminé | 2026-08-17 |
 | 10. Validation manuelle (10 points du plan) | En attente | |
 | 11. Commit, push et PR fermant #38 | En attente | |
 
@@ -121,3 +121,37 @@ et le laisser passer déclencherait la navigation d'historique du navigateur.
 
 `Confirm` et `BinModal` n'étaient pas au plan. Ils avaient le même défaut que la
 feuille, et le corriger séparément aurait fait trois copies d'un même contrat.
+
+### 2026-08-17 : Vérifications
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `npm test` ✅ **82** · `typecheck` ✅ · `build` ✅ trois workspaces.
+- Parcours complet dans Chrome, sur la base locale, **console sans erreur** :
+
+| Contrôle | Résultat |
+|---|---|
+| Boutons nommés par leur seul glyphe ou leur compteur | **0** |
+| Régions `aria-live` | **1**, comme voulu |
+| `Alt`+↓ depuis la case à cocher | déplace, annonce « en 2ᵉ position sur 2 » |
+| `Alt`+↑ depuis le `⋯` | déplace aussi — la remontée d'événement fonctionne |
+| Menu `⋯` en tête de case | « ↑ Monter » **grisée**, « ↓ Descendre » active |
+| Raccourci affiché dans le menu | « ↑ Monter Alt+↑ » |
+| **Vue globale** | **0 entrée** de réordonnancement, `Alt`+flèches sans effet **ni annonce** |
+| Accueil, ↑ ↓ au clavier | déplace et annonce ; ↑ grisée en tête |
+| Feuille d'actions | `role="dialog"`, `aria-modal`, nommée, prend le focus |
+| `Échap` | ferme **et rend le focus au déclencheur** |
+| « Déplacer vers un univers » | atteignable au clavier |
+| Anneau de focus | `rgb(178, 98, 45)` = `--color-accent-600` |
+| Champ d'ajout | anneau sur le contrôle composé — il n'en avait aucun |
+| **28 éléments focusables de l'accueil** | **tous** avec un anneau visible |
+
+**Notes** : le raccourci a été exercé par événements synthétiques (`KeyboardEvent`
+avec `altKey`), qui suivent le même chemin React que la frappe réelle. Restent à
+dérouler à la main : le vrai clavier, et surtout un **lecteur d'écran** — aucun
+contrôle automatique ne dit si une annonce est *compréhensible*.
+
+Le premier essai a fait croire à une panne : `Alt`+↑ sur une carte déjà en tête ne
+faisait rien. C'était le comportement correct — `up` vaut `null` en bout de liste.
+La cible du test était mauvaise, pas le code.
