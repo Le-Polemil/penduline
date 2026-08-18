@@ -1,24 +1,33 @@
 name: Deploy
 
-# Déclenchement **manuel uniquement**, et c'est délibéré : un déploiement Coolify
-# recrée les conteneurs sur une machine à 4 Go qui s'est déjà effondrée deux fois
-# pendant un build (voir work/coolify-deploy.md). On déploie à froid, quand on
-# regarde — pas automatiquement à chaque merge sur `main`.
+# Déploie en poussant la référence choisie sur la branche `production`, que la
+# ressource Coolify suit. C'est l'App GitHub déjà installée qui fait le reste :
+# elle reçoit l'événement `push` et déclenche le déploiement. Aucun jeton d'API
+# Coolify, donc aucun secret à créer — voir work/coolify-deploy.md.
+#
+# Déclenchement **manuel uniquement**, et c'est délibéré : la ressource est en
+# source git, donc Coolify recompile le Dockerfile sur une machine à 4 Go qui
+# s'est effondrée deux fois pendant un build. On déploie à froid, en regardant.
 on:
   workflow_dispatch:
     inputs:
-      force:
-        description: "Rebuild sans cache Docker côté serveur"
-        type: boolean
-        default: false
+      ref:
+        description: "Commit, tag ou branche à déployer (défaut : main)"
+        type: string
+        default: main
 
 # Deux déploiements simultanés sur la même machine, c'est l'incident assuré.
 concurrency:
   group: deploy-production
   cancel-in-progress: false
 
+# Le seul droit nécessaire : pousser la branche de déploiement.
+permissions:
+  contents: write
+
 env:
-  COOLIFY_URL: https://coolify.polemil.dev
+  DEPLOY_BRANCH: production
+  APP_URL: https://penduline.polemil.dev
 
 jobs:
   deploy:
@@ -27,78 +36,69 @@ jobs:
       name: production
       url: https://penduline.polemil.dev
     steps:
-      # Coolify déploie ce que sa ressource pointe (la branche `main` du dépôt),
-      # pas ce runner. On refuse donc de lancer depuis autre chose que `main` :
-      # sinon le workflow ment sur ce qu'il déploie.
-      - name: Vérifier qu'on déclenche depuis main
-        if: github.ref != 'refs/heads/main'
-        run: |
-          echo "::error::Ce workflow déploie la branche suivie par Coolify (main). Lance-le depuis main."
-          exit 1
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          # Historique complet : on veut pouvoir résumer l'écart déployé.
+          fetch-depth: 0
 
-      - name: Vérifier la configuration Coolify
-        env:
-          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          UUID: ${{ vars.COOLIFY_RESOURCE_UUID }}
-        run: |
-          [ -n "$TOKEN" ] || { echo "::error::Secret COOLIFY_TOKEN absent (Settings › Secrets and variables › Actions › Secrets)"; exit 1; }
-          [ -n "$UUID" ] || { echo "::error::Variable COOLIFY_RESOURCE_UUID absente (idem, onglet Variables)"; exit 1; }
-
-      - name: Déclencher le déploiement
-        id: trigger
-        env:
-          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          UUID: ${{ vars.COOLIFY_RESOURCE_UUID }}
-          FORCE: ${{ inputs.force }}
+      - name: Résumer ce qui part
         run: |
           set -euo pipefail
-          # L'endpoint de déploiement Coolify est un GET (API v1).
-          response=$(curl -sS --fail-with-body \
-            -H "Authorization: Bearer $TOKEN" \
-            "$COOLIFY_URL/api/v1/deploy?uuid=$UUID&force=$FORCE")
-          echo "$response"
-
-          # La réponse encapsule les déploiements dans `deployments[]`. On tolère
-          # une forme aplatie : l'API a bougé entre versions mineures de Coolify.
-          deployment=$(echo "$response" | jq -r '(.deployments[0].deployment_uuid // .deployment_uuid // empty)')
-          if [ -z "$deployment" ]; then
-            echo "::warning::Déploiement lancé mais aucun identifiant renvoyé — suivi impossible, vérifie dans l'UI Coolify."
+          echo "Déploiement de $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
+          git fetch origin "$DEPLOY_BRANCH" --quiet 2>/dev/null || true
+          if git rev-parse --verify --quiet "origin/$DEPLOY_BRANCH" >/dev/null; then
+            echo "### Commits déployés" >> "$GITHUB_STEP_SUMMARY"
+            git log --oneline "origin/$DEPLOY_BRANCH..HEAD" >> "$GITHUB_STEP_SUMMARY" || true
+          else
+            echo "Première publication sur \`$DEPLOY_BRANCH\`." >> "$GITHUB_STEP_SUMMARY"
           fi
-          echo "deployment=$deployment" >> "$GITHUB_OUTPUT"
 
-      # Sans ce suivi, le workflow serait vert dès que la requête part, y compris
-      # quand le build meurt sur le serveur. C'est précisément le cas qu'on veut voir.
-      - name: Suivre le déploiement
-        if: steps.trigger.outputs.deployment != ''
-        env:
-          TOKEN: ${{ secrets.COOLIFY_TOKEN }}
-          DEPLOYMENT: ${{ steps.trigger.outputs.deployment }}
-        # 60 × 20 s = 20 min. Un build web prend ~2 min à froid ; au-delà, la
-        # machine est en train de ramer, et on préfère le savoir.
-        timeout-minutes: 22
+      # Le bundle est servi sous un nom haché par Vite : si ce nom change après
+      # le déploiement, c'est la preuve qu'un nouveau conteneur sert vraiment.
+      # Sans ce repère, un « ça répond 200 » se contenterait de l'ancien.
+      - name: Relever le bundle actuellement servi
+        id: avant
         run: |
           set -euo pipefail
-          for _ in $(seq 1 60); do
-            status=$(curl -sS -H "Authorization: Bearer $TOKEN" \
-              "$COOLIFY_URL/api/v1/deployments/$DEPLOYMENT" | jq -r '.status // "unknown"')
-            echo "statut : $status"
-            case "$status" in
-              finished|success) echo "Déploiement terminé."; exit 0 ;;
-              failed|error|cancelled-by-user) echo "::error::Déploiement en échec ($status) — logs dans l'UI Coolify."; exit 1 ;;
-            esac
-            sleep 20
-          done
-          echo "::error::Toujours pas terminé après 20 min — la machine est probablement à genoux."
-          exit 1
+          bundle=$(curl -sS "$APP_URL/" | grep -o 'assets/index-[^"]*\.js' | head -1 || true)
+          echo "bundle servi avant déploiement : ${bundle:-inconnu}"
+          echo "bundle=$bundle" >> "$GITHUB_OUTPUT"
 
-      # Le déploiement peut « réussir » et servir l'ancien bundle si le conteneur
-      # n'a pas basculé. On vérifie donc l'app elle-même, pas l'API Coolify.
+      # Force delibéré : `production` est un pointeur vers ce qui tourne, jamais
+      # une branche de travail. Un rollback la fait légitimement reculer.
+      - name: Publier sur la branche de déploiement
+        run: git push --force origin "HEAD:refs/heads/$DEPLOY_BRANCH"
+
+      - name: Attendre le nouveau bundle
+        # 40 × 15 s = 10 min. Un build web prend ~2 min ; au-delà, la machine rame.
+        timeout-minutes: 12
+        env:
+          AVANT: ${{ steps.avant.outputs.bundle }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 40); do
+            sleep 15
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$APP_URL/" || true)
+            [ "$code" = "200" ] || { echo "statut HTTP $code, le conteneur redémarre sans doute…"; continue; }
+            bundle=$(curl -sS "$APP_URL/" | grep -o 'assets/index-[^"]*\.js' | head -1 || true)
+            if [ -n "$bundle" ] && [ "$bundle" != "$AVANT" ]; then
+              echo "Nouveau bundle servi : $bundle"
+              echo "Déployé : \`$bundle\`" >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+          done
+          # Un déploiement sans changement front produit un bundle identique :
+          # c'est un cas légitime, on n'échoue pas dessus.
+          echo "::warning::Le bundle servi n'a pas changé après 10 min. Normal si le déploiement ne touche pas le front — sinon, vérifie les logs dans l'UI Coolify."
+
+      # Le seul échec dur : l'app ne répond plus. Le reste est informatif.
       - name: Vérifier que l'app répond
         run: |
           set -euo pipefail
           for _ in $(seq 1 10); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' https://penduline.polemil.dev/ || true)
-            [ "$code" = "200" ] && { echo "penduline.polemil.dev répond 200."; exit 0; }
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$APP_URL/" || true)
+            [ "$code" = "200" ] && { echo "$APP_URL répond 200."; exit 0; }
             echo "statut HTTP $code, nouvelle tentative…"
             sleep 10
           done
