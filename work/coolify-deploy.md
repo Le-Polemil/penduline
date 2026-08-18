@@ -166,34 +166,46 @@ froid. En attendant, l'image publiée sert de filet.
 
 ## Déclencher un déploiement
 
-`.github/workflows/deploy.yml` appelle l'API Coolify. Il remplace le clic dans
-l'UI, pas le jugement : il est en **`workflow_dispatch` seul**, jamais sur push.
+`.github/workflows/deploy.yml` pousse la référence choisie sur la branche
+**`production`**, que la ressource Coolify suit. L'App GitHub déjà installée
+reçoit l'événement `push` et déclenche le déploiement.
 
-**Pourquoi manuel.** Un déploiement recrée les conteneurs sur une machine à 4 Go
-qui s'est effondrée deux fois pendant un build. Déployer automatiquement à chaque
-merge, ce serait tirer à l'aveugle sur le serveur plusieurs fois par jour. La
-règle « à froid, avec de la marge » ne se délègue pas à un `on: push`.
+**L'API Coolify reste désactivée, et c'est le cœur de la décision.** Un
+déploiement piloté par jeton d'API demandait d'ouvrir l'API, de créer un jeton et
+de le stocker dans le dépôt. Passer par un `push` réutilise un canal déjà en
+place et n'ajoute **aucun secret** : le `GITHUB_TOKEN` fourni par Actions suffit,
+avec `contents: write` pour seul droit. Le workflow n'utilise aussi aucune action
+tierce en dehors de `checkout` — rien qui puisse exfiltrer quoi que ce soit.
 
-**Prérequis, à créer une fois** dans Settings › Secrets and variables › Actions :
+**`production`, pas `staging`.** Cette branche n'est pas un pré-production : c'est
+un pointeur vers ce qui tourne. La nommer `staging` invite à y pousser « pour
+tester », c'est-à-dire à casser la prod. Le nom doit correspondre à la branche
+configurée sur la ressource Coolify.
 
-| Nom | Onglet | Valeur |
-|---|---|---|
-| `COOLIFY_TOKEN` | Secrets | jeton API Coolify (Keys & Tokens › API tokens) |
-| `COOLIFY_RESOURCE_UUID` | Variables | UUID de la ressource web, lisible dans son URL Coolify |
+**Pourquoi manuel.** La ressource est en source git : Coolify recompile le
+Dockerfile sur la machine à 4 Go, qui s'est effondrée deux fois pendant un build.
+Brancher l'auto-déploiement sur `main` ferait un build par merge — quatre dans la
+journée du 17 août. La règle « à froid, avec de la marge » ne se délègue pas à un
+`on: push`. Elle deviendra tenable une fois la bascule sur l'image GHCR faite,
+le déploiement se réduisant alors à un `pull`.
 
-**Le workflow doit être sur `main` pour apparaître dans l'onglet Actions.**
-`workflow_dispatch` n'expose que les workflows présents sur la branche par
-défaut : tant que ce fichier vit dans une PR, aucun bouton n'existe.
+**Le `ref` en entrée rend le rollback trivial** : déployer un SHA antérieur, c'est
+le pousser sur `production`. D'où le `--force`, assumé — la branche recule
+légitimement. Corollaire : ne jamais y committer directement, elle est écrasée.
 
-**Il ne déploie pas le commit du runner.** Coolify redéploie ce que *sa* ressource
-suit, c'est-à-dire `main`. Le workflow refuse donc de se lancer depuis une autre
-branche, pour ne pas laisser croire qu'il déploierait celle-ci.
+**`git log production..main` dit ce qui attend d'être déployé.** L'UI Coolify ne
+donne pas cette lecture ; le job la résume aussi dans son summary.
 
-**Le suivi va jusqu'à l'app.** Le job attend la fin réelle du déploiement (statut
-Coolify), puis vérifie que `penduline.polemil.dev` répond `200` : un déploiement
-peut se terminer « avec succès » et continuer à servir l'ancien conteneur.
+**La vérification porte sur le bundle, pas sur l'API.** Sans statut Coolify à
+interroger, le job relève le nom haché du bundle (`assets/index-<hash>.js`) avant
+de pousser, puis attend qu'il change : c'est la preuve qu'un nouveau conteneur
+sert vraiment. Un `200` seul se satisferait de l'ancien. Un déploiement sans
+changement front laisse le hash identique — cas légitime, simple avertissement.
 
-⚠️ La forme exacte des réponses de l'API Coolify (`deployments[].deployment_uuid`,
-statut `finished`) varie selon les versions mineures. Le workflow tolère les deux
-formes connues et se contente d'un avertissement s'il ne sait pas suivre — le
-déclenchement, lui, reste effectif. À revalider au premier vrai run.
+⚠️ **Point à confirmer au premier run :** un `push` effectué avec le `GITHUB_TOKEN`
+ne redéclenche pas d'autres *workflows* du dépôt (garde-fou anti-récursion de
+GitHub). Cette restriction vise les workflows Actions, pas les livraisons de
+webhooks aux Apps installées, donc Coolify devrait bien recevoir l'événement. Si
+le déploiement ne part pas, c'est là qu'il faut regarder : le correctif est de
+pousser avec un jeton dédié (PAT ou clé de déploiement) plutôt qu'avec celui
+d'Actions.
