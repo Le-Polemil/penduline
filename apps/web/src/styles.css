@@ -124,16 +124,21 @@ button { font: inherit; }
 .board-gap--active { height: 24px; }
 .board-gap__line { flex: 1; border-top: 3px dotted transparent; }
 .board-gap--active .board-gap__line { border-top-color: var(--color-accent); }
-.board-row--dragging {
-  opacity: 0.45; box-shadow: var(--shadow-lg);
-  transform: rotate(-1deg) scale(1.01);
-}
+.board-row--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); }
 .board-row {
   display: flex; align-items: center; width: 100%;
   background: var(--card-warm); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm); transition: box-shadow 0.18s, transform 0.18s;
 }
 .board-row:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+/* Pendant un déplacement, ce soulèvement décalerait la ligne sous le curseur au
+   moment précis où l'on vise : la cible bougerait pendant qu'on la choisit.
+   La ligne saisie, elle, garde son inclinaison — c'est le retour visuel du
+   geste. Les deux règles passent après `:hover` et le battent en spécificité :
+   le navigateur FIGE l'état de survol pendant un glisser, et la ligne saisie
+   l'était forcément au départ. */
+.board-list--dragging .board-row:hover:not(.board-row--dragging) { transform: none; }
+.board-row.board-row--dragging { transform: rotate(-1deg) scale(1.01); }
 .board-card {
   display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
   background: none; border: none; text-align: left;
