@@ -2,7 +2,7 @@
 story: "Le dépôt d'une matrice s'annule dès qu'on quitte l'interstice"
 story_code: "drop-interstice"
 created: 2026-08-18
-status: "In Progress"
+status: "Done"
 ---
 
 # #74 — Le dépôt d'une matrice s'annule dès qu'on quitte l'interstice

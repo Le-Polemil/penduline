@@ -2,7 +2,7 @@
 story: "Le dépôt d'une matrice s'annule dès qu'on quitte l'interstice"
 story_code: "drop-interstice"
 created: 2026-08-18
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -16,7 +16,7 @@ status: "In Progress"
 | 3. Stabiliser la géométrie pendant un déplacement (`styles.css`) | Terminé | 2026-08-18 |
 | 4. Écran matrice : vérifier l'écart et reporter le constat sur #74 | Terminé | 2026-08-18 |
 | 5. Qualité : `npm run typecheck` + `npm run test` | Terminé | 2026-08-18 |
-| 6. Validation manuelle (plan de test du plan.md) | En attente | |
+| 6. Validation manuelle (plan de test du plan.md) | Terminé | 2026-08-18 |
 
 ## Journal
 
@@ -121,3 +121,21 @@ restent affichées à jamais. Cause identifiée à la lecture : `useCompletion` 
 l'écran (`useCompletion.ts:24`), donc revenir à l'accueil ou recharger fige la tâche dans
 un état intermédiaire persisté. Ouvert en #75 (Vague 0), non traité ici : sans rapport
 avec le glisser-déposer, et son correctif touche l'écriture, pas la vue.
+
+### 2026-08-18 : Validation manuelle
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Serveur de développement lancé sur `http://localhost:5175/`, branche
+  `story-light/drop-interstice`.
+- Glisser-déposer d'une matrice validé par l'utilisateur : le dépôt au milieu d'une ligne
+  range à l'interstice indiqué, plus aucune annulation.
+
+**Notes** : deux frictions dans la boucle de validation, dont une de ma part.
+1. `npm run dev -- --port 5175` passe `5175` en argument **positionnel** à vite, qui le
+   prend pour la racine du projet et sert un dossier inexistant (404). Lancer
+   `npx vite --port 5175 --config apps/web/vite.config.ts apps/web`.
+2. J'ai décrit le correctif comme « sans rien de visible », ce qui contredisait mon propre
+   plan de test : aucune *commande* n'est ajoutée, mais le comportement pendant le glisser
+   change bel et bien à l'écran. Formulation corrigée.
