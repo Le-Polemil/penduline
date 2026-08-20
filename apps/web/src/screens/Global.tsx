@@ -78,7 +78,7 @@ export function GlobalScreen({
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
 
-  const { pending, onCheck, undo } = useCompletion(tasks, patchTask);
+  const { onCheck } = useCompletion(tasks, patchTask);
 
   // Garde-fou : l'univers choisi comme portée peut avoir été supprimé ailleurs
   // (autre onglet, autre appareil). On retombe sur « toutes les matrices »
@@ -372,15 +372,6 @@ export function GlobalScreen({
             setMoveAsk(null);
           }}
         />
-      )}
-
-      {pending && (
-        <div className="toast">
-          <span>« {pending.label} » terminée</span>
-          <button className="toast__undo" onClick={undo}>
-            Annuler
-          </button>
-        </div>
       )}
     </div>
   );

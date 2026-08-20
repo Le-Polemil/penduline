@@ -90,7 +90,10 @@ button { font: inherit; }
 @keyframes mm-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes mm-pop { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
 @keyframes mm-check { 0% { transform: scale(1); } 50% { transform: scale(1.35); } 100% { transform: scale(1); } }
-@keyframes mm-slideup { from { transform: translate(-50%, 22px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+/* Le centrage horizontal vit désormais sur `.toast-stack` : l'animation ne
+   translate plus que sur l'axe vertical, sinon chaque toast partirait de
+   travers d'une demi-largeur. */
+@keyframes mm-slideup { from { transform: translateY(22px); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes mm-pinpulse {
   0%, 100% { box-shadow: 0 0 0 0 rgba(198, 113, 57, 0.35); }
   50% { box-shadow: 0 0 0 5px rgba(198, 113, 57, 0); }
@@ -244,9 +247,18 @@ button { font: inherit; }
   background: var(--card-warm); border-radius: var(--radius-lg);
   padding: 22px 24px; margin: 0;
 }
-.add-board-form { display: flex; align-items: center; gap: 8px; margin-top: 18px; flex-wrap: wrap; }
+/* Pas de `margin-top` ici : les deux seuls usages vivent dans `.home-actions`,
+   qui porte déjà le sien — le cumuler creusait la ligne de 18 px et décalait le
+   formulaire sous le bouton voisin.
+   `flex: 1 1 320px` parce qu'en largeur au contenu le formulaire ne prenait que
+   317 px des 712 disponibles, et « Annuler » passait à la ligne. */
+.add-board-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; flex: 1 1 320px; min-width: 0; }
 .add-board-input {
-  flex: 1 1 220px; min-width: 0;
+  /* Base à 160 px et non 220 : c'est le seuil de retour à la ligne du formulaire,
+     pas sa largeur au repos (`flex-grow` lui fait prendre la place disponible).
+     À 220, deux formulaires ouverts côte à côte n'avaient plus la place et
+     renvoyaient « Annuler » à la ligne. */
+  flex: 1 1 160px; min-width: 0;
   border: 1.5px solid var(--color-accent); background: var(--card-warm);
   border-radius: 999px; padding: 9px 16px;
   font: 14px var(--font-body); color: var(--color-text);
@@ -549,14 +561,38 @@ button { font: inherit; }
 .bin-restore { margin-left: auto; flex: none; font: 600 12px var(--font-body); color: var(--color-accent-700); cursor: pointer; border-radius: 999px; padding: 4px 10px; background: none; border: none; }
 .bin-restore:hover { background: var(--color-accent-100); }
 
-/* ── Toast ────────────────────────────────────────────────────────────────── */
-.toast {
+/* ── Toast ──────────────────────────────────────────────────────────────────
+   L'hôte est monté en permanence (`components/Toast.tsx`), donc souvent vide :
+   `pointer-events: none` sur la pile pour qu'un conteneur sans toast ne
+   intercepte rien au bas de l'écran, `auto` rendu à chaque toast. */
+.toast-stack {
   position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); z-index: 50;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  width: max-content; max-width: min(560px, calc(100vw - 32px)); pointer-events: none;
+}
+.toast {
+  pointer-events: auto;
   background: var(--color-neutral-900); color: #fff; border-radius: 999px; box-shadow: var(--shadow-lg);
   padding: 11px 18px; display: flex; align-items: center; gap: 14px; font: 13.5px var(--font-body);
   animation: mm-slideup 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
 }
+/* Le rouge du produit (`#a63d2a`) est fait pour du texte sur fond clair ; en
+   fond de toast il ne laisse pas assez de contraste au texte blanc. Celui-ci
+   est assombri pour tenir le 4,5:1 tout en restant la même teinte. */
+.toast--error { background: #7d2a19; }
 .toast__undo { font-weight: 700; color: var(--color-accent-300); cursor: pointer; background: none; border: none; }
+/* Une croix, pas un mot : elle n'est là que pour les toasts persistants, à côté
+   d'une action qui, elle, doit se lire. */
+.toast__close {
+  background: none; border: none; color: #fff; opacity: 0.65; cursor: pointer;
+  font: 13px var(--font-body); padding: 0; line-height: 1;
+}
+.toast__close:hover { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  /* Le toast apparaît, il ne glisse plus. */
+  .toast { animation: none; }
+}
 
 /* ── Auth ─────────────────────────────────────────────────────────────────── */
 .auth { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
@@ -733,7 +769,10 @@ button { font: inherit; }
 
 /* Les deux boutons de création vivent côte à côte : créer une matrice reste le
    geste principal, créer un univers n'est qu'un rangement. */
-.home-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+/* `flex-start` et non l'étirement par défaut : dès qu'un des deux enfants est un
+   formulaire déplié, l'autre — un bouton en pilule — s'étirait à la hauteur de la
+   ligne et devenait un grand ovale. */
+.home-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 18px; }
 .add-board--uni { border-style: dotted; color: var(--color-neutral-700); border-color: var(--color-neutral-400); }
 .add-board--uni:hover { background: var(--color-neutral-200); }
 

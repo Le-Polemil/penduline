@@ -3,7 +3,7 @@ slug: "echecs-ecriture-visibles"
 title: "Les échecs d'écriture sont invisibles pour l'utilisateur"
 issue: 34
 created: 2026-08-18
-status: "In Progress"
+status: "Done"
 ---
 
 # #34 — Les échecs d'écriture sont invisibles pour l'utilisateur

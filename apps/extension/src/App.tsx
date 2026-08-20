@@ -21,6 +21,7 @@ import { isConfigured, supabase } from './supabase';
 import { getActiveBoard, setActiveBoard } from './active-board';
 import { Loader } from './Loader';
 import { useExtStore, type ExtStore } from './store';
+import { ToastProvider } from './toast';
 
 /**
  * Ouvre l'app web complète. Surchargée au build par `VITE_WEB_APP_URL` (`.env`
@@ -106,15 +107,19 @@ export function App() {
 
   return (
     <div className="popup">
-      {!isConfigured ? (
-        <ConfigNeeded />
-      ) : !ready ? (
-        <Loader />
-      ) : !session ? (
-        <SignIn />
-      ) : (
-        <PopupApp userId={session.user.id} />
-      )}
+      {/* Au-dessus de `PopupApp` : c'est `useExtStore` qui signale les échecs
+          d'écriture, il doit donc se rendre à l'intérieur de l'hôte. */}
+      <ToastProvider>
+        {!isConfigured ? (
+          <ConfigNeeded />
+        ) : !ready ? (
+          <Loader />
+        ) : !session ? (
+          <SignIn />
+        ) : (
+          <PopupApp userId={session.user.id} />
+        )}
+      </ToastProvider>
     </div>
   );
 }

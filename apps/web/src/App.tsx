@@ -7,6 +7,8 @@ import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
 import { GlobalScreen, type Scope } from './screens/Global';
 import { AnnounceProvider } from './a11y/announce';
+import { ToastProvider } from './components/Toast';
+import { clearSessionNotice, readSessionNotice } from './lib/session-notice';
 
 /**
  * Lit ce que GoTrue a déposé dans le fragment d'URL en renvoyant l'utilisateur.
@@ -97,9 +99,70 @@ type View = { kind: 'home' } | { kind: 'board'; id: string } | { kind: 'global';
 
 const HOME: View = { kind: 'home' };
 
+/**
+ * `sessionStorage` et non `localStorage` : la vue est un état d'onglet, pas une
+ * préférence. Deux onglets ouverts sur deux matrices doivent le rester.
+ */
+const VIEW_KEY = 'penduline:view';
+
+/**
+ * Relit la vue de l'onglet.
+ *
+ * Elle est persistée pour une raison précise : une session expirée renvoie à
+ * l'écran de connexion, et sans ça l'utilisateur repartait de l'accueil après
+ * s'être reconnecté — il perdait l'écran sur lequel il travaillait, en plus de
+ * son geste.
+ *
+ * Pure, comme `readAuthHash` : elle sert d'initialiseur à `useState`. Tout ce
+ * qui ne se relit pas retombe sur l'accueil, y compris un JSON valide mais de
+ * forme inconnue (une version antérieure du type `View`).
+ */
+function readView(): View {
+  try {
+    const raw = window.sessionStorage.getItem(VIEW_KEY);
+    if (!raw) return HOME;
+    const v = JSON.parse(raw) as View;
+    if (v.kind === 'board' && typeof v.id === 'string') return v;
+    if (v.kind === 'global' && (v.scope?.kind === 'all' || typeof v.scope?.id === 'string')) return v;
+    return HOME;
+  } catch {
+    // `sessionStorage` peut lever (navigation privée verrouillée), et le JSON
+    // stocké peut être corrompu. Ni l'un ni l'autre n'est une raison de ne pas
+    // afficher l'application.
+    return HOME;
+  }
+}
+
+/**
+ * Les fournisseurs transverses, et rien d'autre.
+ *
+ * Ils sont montés **au-dessus** de l'espace de travail parce que `useStore` y
+ * consomme `useToast` : c'est le store qui signale les échecs d'écriture, il
+ * doit donc se rendre à l'intérieur de l'hôte de toasts, pas à côté.
+ */
 function AppRoot({ userId }: { userId: string }) {
+  return (
+    // Une seule région d'annonce pour toute l'application : plusieurs zones
+    // `aria-live` concurrentes sont mal restituées par les lecteurs d'écran.
+    <AnnounceProvider>
+      <ToastProvider>
+        <Workspace userId={userId} />
+      </ToastProvider>
+    </AnnounceProvider>
+  );
+}
+
+function Workspace({ userId }: { userId: string }) {
   const store = useStore(userId);
-  const [view, setView] = useState<View>(HOME);
+  const [view, setView] = useState<View>(readView);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(VIEW_KEY, JSON.stringify(view));
+    } catch {
+      // Perdre la mémoire de la vue est un désagrément, pas une panne.
+    }
+  }, [view]);
 
   if (!store.ready) return <Loader label="Chargement de vos matrices…" />;
 
@@ -109,9 +172,7 @@ function AppRoot({ userId }: { userId: string }) {
   const onHome = () => setView(HOME);
 
   return (
-    // Une seule région d'annonce pour toute l'application : plusieurs zones
-    // `aria-live` concurrentes sont mal restituées par les lecteurs d'écran.
-    <AnnounceProvider>
+    <>
       {/* Le retour vit dans la barre du haut, face à « Déconnexion » — et non
           dans l'en-tête de la matrice, où il était mêlé à son titre. */}
       <div className="userbar">
@@ -147,7 +208,7 @@ function AppRoot({ userId }: { userId: string }) {
           onGlobal={() => setView({ kind: 'global', scope: { kind: 'all' } })}
         />
       )}
-    </AnnounceProvider>
+    </>
   );
 }
 
@@ -170,13 +231,21 @@ function SignIn({ linkError }: { linkError: string | null }) {
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<Mode>('signin');
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(
+  // Initialiseur paresseux : `readSessionNotice` est pure, mais l'appeler à
+  // chaque rendu pour rien n'a pas d'intérêt.
+  const [notice, setNotice] = useState<string | null>(() =>
     // On ne relaie pas le message brut de GoTrue, qui est en anglais et parle
     // de « token » : l'utilisateur a juste besoin de savoir quoi faire.
     linkError
       ? "Ce lien n'est plus valable — il a expiré ou a déjà servi. Demandez-en un nouveau."
-      : null,
+      // Une écriture a pu échouer faute de session et provoquer cette
+      // déconnexion : c'est ici que son message est repris, faute de quoi
+      // l'utilisateur arriverait devant cet écran sans explication.
+      : readSessionNotice(),
   );
+  // L'effacement est ici et non dans l'initialiseur : StrictMode invoque ce
+  // dernier deux fois, et une lecture destructive perdrait le message.
+  useEffect(() => clearSessionNotice(), []);
   const [busy, setBusy] = useState(false);
 
   function switchMode(next: Mode) {

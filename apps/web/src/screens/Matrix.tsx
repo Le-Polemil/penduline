@@ -70,7 +70,7 @@ export function MatrixScreen({
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
 
-  const { pending, onCheck, undo } = useCompletion(tasks, patchTask);
+  const { onCheck } = useCompletion(tasks, patchTask);
   const announce = useAnnounce();
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
@@ -548,15 +548,6 @@ export function MatrixScreen({
             setMoveAsk(null);
           }}
         />
-      )}
-
-      {pending && (
-        <div className="toast">
-          <span>« {pending.label} » terminée</span>
-          <button className="toast__undo" onClick={undo}>
-            Annuler
-          </button>
-        </div>
       )}
     </div>
   );
