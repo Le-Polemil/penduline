@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
+import { classifyWriteFailure } from '@penduline/shared';
 import type { QuadrantKey, Board, Task, TaskPatch, Universe } from '@penduline/shared';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { useToast } from './toast';
 
 const TASK_COLS =
   'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, created_at, updated_at';
@@ -17,11 +20,64 @@ export interface ExtStore {
   patchTask: (id: string, patch: TaskPatch) => Promise<void>;
 }
 
+/**
+ * Le déroulé commun aux écritures, version popup.
+ *
+ * Miroir réduit de `apps/web/src/data/persist.ts` : il partage la
+ * classification (`classifyWriteFailure`, dans `@penduline/shared`) mais pas le
+ * code, l'extension n'ayant ni pile de toasts ni vue à mémoriser. Les trois
+ * écritures du popup sont trop peu nombreuses pour valoir un paquet commun de
+ * plus, et une abstraction partagée aurait dû porter les deux hôtes.
+ */
+interface ExtWriteOp<T> {
+  label: string;
+  apply?: () => void;
+  revert?: () => void;
+  write: () => PromiseLike<{ data: T | null; error: PostgrestError | null; status: number }>;
+  /** Ce qui reste à faire de la ligne renvoyée. Rejoué au réessai (voir le web). */
+  commit?: (data: T) => void;
+}
+
+function usePersist() {
+  const { show } = useToast();
+
+  return useCallback(
+    async function persist<T>(op: ExtWriteOp<T>): Promise<{ ok: boolean; data: T | null }> {
+      op.apply?.();
+      const { data, error, status } = await op.write();
+
+      if (!error) {
+        if (data !== null) op.commit?.(data);
+        return { ok: true, data };
+      }
+
+      op.revert?.();
+      const failure = classifyWriteFailure(error, status, op.label);
+      console.error(`[penduline] ${op.label}`, status, error.code, error.message);
+
+      // Pas de mémorisation de contexte ici, contrairement au web : le popup
+      // n'a qu'un écran de reprise, déjà géré par `getActiveBoard`.
+      if (failure.kind === 'session') void supabase.auth.signOut({ scope: 'local' });
+
+      show({
+        message: failure.message,
+        tone: 'error',
+        action: failure.retryable
+          ? { label: 'Réessayer', onClick: () => void persist(op) }
+          : undefined,
+      });
+      return { ok: false, data: null };
+    },
+    [show],
+  );
+}
+
 export function useExtStore(userId: string): ExtStore {
   const [ready, setReady] = useState(false);
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const persist = usePersist();
 
   useEffect(() => {
     let alive = true;
@@ -47,39 +103,58 @@ export function useExtStore(userId: string): ExtStore {
   const addBoard = useCallback(
     async (name: string) => {
       const position = Math.max(0, ...boards.map((b) => b.position)) + 1;
-      const { data, error } = await supabase
-        .from('boards')
-        .insert({ user_id: userId, name, position })
-        .select('*')
-        .single();
-      if (error || !data) {
-        console.error('[penduline] addBoard', error?.message);
-        return null;
-      }
-      setBoards((bs) => [...bs, data]);
-      return data.id as string;
+      const { data: row } = await persist<Board>({
+        label: 'Créer la matrice',
+        write: () =>
+          supabase.from('boards').insert({ user_id: userId, name, position }).select('*').single(),
+        commit: (b) => setBoards((bs) => [...bs, b]),
+      });
+      return row?.id ?? null;
     },
-    [boards, userId],
+    [boards, userId, persist],
   );
 
   const addTask = useCallback(
     async (boardId: string, quadrant: QuadrantKey, title: string, position: number) => {
-      const { data, error } = await supabase
-        .from('tasks')
-        .insert({ user_id: userId, board_id: boardId, title, quadrant, position })
-        .select(TASK_COLS)
-        .single();
-      if (error || !data) return;
-      setTasks((ts) => [...ts, data as Task]);
+      await persist<Task>({
+        label: 'Créer la tâche',
+        write: () =>
+          supabase
+            .from('tasks')
+            .insert({ user_id: userId, board_id: boardId, title, quadrant, position })
+            .select(TASK_COLS)
+            .single(),
+        commit: (t) => setTasks((ts) => [...ts, t]),
+      });
     },
-    [userId],
+    [userId, persist],
   );
 
-  const patchTask = useCallback(async (id: string, patch: TaskPatch) => {
-    setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...patch } : t)));
-    const { error } = await supabase.from('tasks').update(patch).eq('id', id);
-    if (error) console.error('[penduline] patchTask', error.message);
-  }, []);
+  const patchTask = useCallback(
+    async (id: string, patch: TaskPatch) => {
+      // Même convention que le web : l'état d'avant est capturé DANS la fonction
+      // de mise à jour, et restreint aux clés du patch.
+      let before: TaskPatch | null = null;
+      await persist<null>({
+        label: 'Modifier la tâche',
+        apply: () =>
+          setTasks((ts) =>
+            ts.map((t) => {
+              if (t.id !== id) return t;
+              const keys = Object.keys(patch) as (keyof TaskPatch)[];
+              before = Object.fromEntries(keys.map((k) => [k, t[k]])) as TaskPatch;
+              return { ...t, ...patch };
+            }),
+          ),
+        revert: () => {
+          const was = before;
+          if (was) setTasks((ts) => ts.map((t) => (t.id === id ? { ...t, ...was } : t)));
+        },
+        write: () => supabase.from('tasks').update(patch).eq('id', id),
+      });
+    },
+    [persist],
+  );
 
   return { ready, universes, boards, tasks, addBoard, addTask, patchTask };
 }

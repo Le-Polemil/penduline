@@ -34,7 +34,9 @@
   --color-neutral-400: #c0b6a5;
   --color-neutral-500: #a19786;
   --color-neutral-600: #82796a;
+  --color-neutral-900: #2e2b25;
   --color-accent-100: #fff2eb;
+  --color-accent-300: #ffc6a5;
   --color-accent-600: #b2622d;
   --color-accent-700: #8c491a;
   --color-accent-800: #643312;
@@ -361,3 +363,23 @@ input::placeholder { color: inherit; opacity: 0.55; }
 @media (prefers-reduced-motion: reduce) {
   .loader__neck, .loader__nest { animation: none; rotate: 0deg; }
 }
+
+/* ── Toast ──────────────────────────────────────────────────────────────────
+   Un seul emplacement (voir `toast.tsx`), ancré en bas du popup. `fixed` suffit :
+   le popup EST le viewport, 400 × 600. Mêmes règles que côté web, sans la pile. */
+.toast {
+  position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50;
+  max-width: calc(100% - 24px);
+  background: var(--color-neutral-900); color: #fff; border-radius: 16px; box-shadow: var(--shadow-lg);
+  padding: 10px 14px; display: flex; align-items: center; gap: 12px; font: 12.5px var(--font-body);
+  animation: mm-in 0.25s ease both;
+}
+/* Assombri par rapport au rouge du produit, qui est fait pour du texte sur fond
+   clair : sur ce fond, le texte blanc a besoin de 4,5:1. */
+.toast--error { background: #7d2a19; }
+.toast__act { font-weight: 700; color: var(--color-accent-300); cursor: pointer; background: none; border: none; font-size: 12.5px; }
+.toast__close {
+  background: none; border: none; color: #fff; opacity: 0.65; cursor: pointer;
+  font: 12px var(--font-body); padding: 0; line-height: 1;
+}
+.toast__close:hover { opacity: 1; }
