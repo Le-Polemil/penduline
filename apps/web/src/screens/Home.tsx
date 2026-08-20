@@ -8,6 +8,7 @@ import {
 import { countOpen, groupByUniverse, planBoardReorder, QUADS } from '@penduline/shared';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';
+import { gapIndexAt } from '../dnd/gap';
 import { ordinal, useAnnounce } from '../a11y/announce';
 
 /** Durée d'un appui long, alignée sur la convention des OS mobiles. */
@@ -193,7 +194,17 @@ export function Home({
           un projet… le découpage vous appartient.
         </p>
       ) : (
-        <div className="board-list">
+        <div
+          className={`board-list${drag ? ' board-list--dragging' : ''}`}
+          // Quitter la liste sans déposer doit effacer l'indicateur : sinon le
+          // trait continue de désigner une destination qu'on a quittée. Le test
+          // sur `relatedTarget` écarte les passages d'un enfant à l'autre, qui
+          // déclenchent eux aussi `dragleave`.
+          onDragLeave={(e: DragEvent) => {
+            if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+            setHoverGap(null);
+          }}
+        >
           {groups.map((group) => {
             const universeId = group.universe?.id ?? null;
             // Le groupe sans univers reste un point de dépôt même vide — c'est
@@ -204,7 +215,23 @@ export function Home({
             const uniEditing = editingUni?.id === universeId;
 
             return (
-              <section className="uni" key={universeId ?? 'sans-univers'}>
+              <section
+                className="uni"
+                key={universeId ?? 'sans-univers'}
+                // Repli du groupe : tout ce qui n'est pas une ligne — l'en-tête,
+                // l'interstice de fin, un univers vide — range en fin de groupe.
+                // Sans lui, un univers fraîchement créé serait inatteignable.
+                onDragOver={(e: DragEvent) => {
+                  if (!drag) return;
+                  e.preventDefault();
+                  setHoverGap({ universeId, index: group.boards.length });
+                }}
+                onDrop={(e: DragEvent) => {
+                  if (!drag) return;
+                  e.preventDefault();
+                  dropAt(universeId, null);
+                }}
+              >
                 {grouped && (
                   <div className="uni-head">
                     {uniEditing && editingUni ? (
@@ -286,13 +313,29 @@ export function Home({
                   const isEditing = editing?.id === board.id;
 
                   return (
-                    <div key={board.id}>
-                      <BoardGap
-                        active={hoverGap?.universeId === universeId && hoverGap.index === index}
-                        dragging={!!drag}
-                        onOver={() => setHoverGap({ universeId, index })}
-                        onDrop={() => dropAt(universeId, board.id)}
-                      />
+                    <div
+                      key={board.id}
+                      // La ligne entière est la cible, et la moitié survolée
+                      // désigne l'interstice. Viser un ruban de 10 px demandait
+                      // une précision que personne n'a — et le manquer annulait
+                      // le déplacement au lieu de le ranger.
+                      onDragOver={(e: DragEvent) => {
+                        if (!drag) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoverGap({ universeId, index: gapIndexAt(e.clientY, rect, index) });
+                      }}
+                      onDrop={(e: DragEvent) => {
+                        if (!drag) return;
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const at = gapIndexAt(e.clientY, rect, index);
+                        dropAt(universeId, group.boards[at]?.id ?? null);
+                      }}
+                    >
+                      <BoardGap active={hoverGap?.universeId === universeId && hoverGap.index === index} />
                       <div
                         className={[
                           'board-row',
@@ -422,13 +465,10 @@ export function Home({
                   );
                 })}
 
-                {/* Interstice de fin. Il est le SEUL d'un groupe vide : sans lui,
-                    un univers fraîchement créé serait inatteignable au dépôt. */}
+                {/* Interstice de fin — un repère, pas une cible : c'est le
+                    groupe lui-même qui capte le dépôt de fin, y compris vide. */}
                 <BoardGap
                   active={hoverGap?.universeId === universeId && hoverGap.index === group.boards.length}
-                  dragging={!!drag}
-                  onOver={() => setHoverGap({ universeId, index: group.boards.length })}
-                  onDrop={() => dropAt(universeId, null)}
                 />
               </section>
             );
@@ -641,40 +681,20 @@ export function Home({
 }
 
 /**
- * Interstice de dépôt entre deux matrices. Replié au repos pour ne rien coûter
- * en hauteur, il s'ouvre pendant un déplacement — même mécanique que les
- * `.row-gap` de l'écran matrice, pour que les deux listes se manipulent pareil.
+ * Interstice entre deux matrices — un repère, plus une cible.
  *
- * Chaque interstice appartient à un univers : y déposer une matrice l'y range
- * autant qu'elle l'y positionne.
+ * Il portait jusqu'ici ses propres gestionnaires de dépôt, ce qui revenait à
+ * demander au curseur de viser 10 px : hors de cette bande, plus rien
+ * n'acceptait le dépôt et le navigateur annulait le déplacement. Le dépôt vit
+ * désormais sur la ligne et sur le groupe ; il ne reste ici que l'affichage.
+ *
+ * Replié au repos pour ne rien coûter en hauteur, il s'ouvre quand il est
+ * désigné — même mécanique que les `.row-gap` de l'écran matrice, pour que les
+ * deux listes se manipulent pareil.
  */
-function BoardGap({
-  active,
-  dragging,
-  onOver,
-  onDrop,
-}: {
-  active: boolean;
-  dragging: boolean;
-  onOver: () => void;
-  onDrop: () => void;
-}) {
+function BoardGap({ active }: { active: boolean }) {
   return (
-    <div
-      className={`board-gap${active ? ' board-gap--active' : ''}`}
-      onDragOver={(e: DragEvent) => {
-        if (!dragging) return;
-        e.preventDefault();
-        e.stopPropagation();
-        onOver();
-      }}
-      onDrop={(e: DragEvent) => {
-        if (!dragging) return;
-        e.preventDefault();
-        e.stopPropagation();
-        onDrop();
-      }}
-    >
+    <div className={`board-gap${active ? ' board-gap--active' : ''}`}>
       <div className="board-gap__line" />
     </div>
   );
