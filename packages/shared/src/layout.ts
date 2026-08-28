@@ -12,21 +12,67 @@ export interface Positioned {
   position: number;
 }
 
-/** Une tâche est visible dans sa case si non épinglée, non supprimée et pas déjà archivée. */
-export function isVisible(t: Task, quad: QuadrantKey): boolean {
-  return t.quadrant === quad && !t.pinned && !t.deleted && !(t.done && t.archived);
+/**
+ * Une tâche est visible dans sa case si elle n'est ni épinglée, ni supprimée, ni
+ * cochée — sauf si c'est celle dont l'annulation est encore offerte (`pending`).
+ *
+ * ⚠️ Le masquage porte sur `done` SEUL, et c'est le cœur du correctif de #75.
+ *
+ * Il exigeait auparavant `done && archived`, parce que le délai d'annulation de
+ * 4 s était encodé dans le modèle de données : cocher écrivait `done`, puis
+ * `archived` quatre secondes plus tard. Un minuteur portait cette seconde
+ * écriture — et il ne survivait pas au démontage de l'écran. Quitter la matrice
+ * dans le délai laissait donc une tâche `done` sans `archived`, que cette règle
+ * affichait **pour toujours**, sans aucun geste pour l'en faire sortir.
+ *
+ * Le délai vit désormais en mémoire, d'où `pending`. Trois bénéfices, tous
+ * gratuits : plus aucune combinaison de drapeaux ne peut afficher une tâche
+ * cochée à demeure ; les tâches déjà coincées disparaissent au premier rendu,
+ * sans migration ni écriture au chargement ; et le web rejoint l'extension, qui
+ * filtrait déjà sur `!t.done`.
+ *
+ * ⚠️ Contrepartie NON optionnelle, côté écrans : `archived` cessant d'être le
+ * critère d'affichage, il ne peut plus être celui de la récupération — la
+ * corbeille doit lister `done && !deleted`. Sans quoi une tâche coincée sortirait
+ * de la grille sans entrer dans « Terminées » : invisible ET irrécupérable.
+ */
+export function isVisible(t: Task, quad: QuadrantKey, pending?: string | null): boolean {
+  if (t.quadrant !== quad || t.pinned || t.deleted) return false;
+  return !t.done || t.id === pending;
 }
 
-export function visibleTasks(tasks: Task[], boardId: string, quad: QuadrantKey): Task[] {
+/**
+ * `pending` n'est à passer qu'aux points de RENDU. Les appels qui calculent une
+ * position d'insertion doivent l'omettre : une tâche en partance n'a pas à servir
+ * de repère à un voisin qu'elle va quitter.
+ */
+export function visibleTasks(
+  tasks: Task[],
+  boardId: string,
+  quad: QuadrantKey,
+  pending?: string | null,
+): Task[] {
   return tasks
-    .filter((t) => t.board_id === boardId && isVisible(t, quad))
+    .filter((t) => t.board_id === boardId && isVisible(t, quad, pending))
     .sort((a, b) => a.position - b.position);
 }
 
-export function pinnedTasks(tasks: Task[], boardId: string, quad: QuadrantKey): Task[] {
+export function pinnedTasks(
+  tasks: Task[],
+  boardId: string,
+  quad: QuadrantKey,
+  pending?: string | null,
+): Task[] {
   return tasks
     .filter(
-      (t) => t.board_id === boardId && t.quadrant === quad && t.pinned && !t.deleted && !(t.done && t.archived),
+      (t) =>
+        t.board_id === boardId &&
+        t.quadrant === quad &&
+        t.pinned &&
+        !t.deleted &&
+        // Cocher une épinglée doit lui laisser le même délai d'annulation
+        // qu'aux autres.
+        (!t.done || t.id === pending),
     )
     .sort((a, b) => a.position - b.position);
 }
@@ -137,11 +183,16 @@ export interface BoardGroup {
  * dans un seul groupe. Un `pair_id` à cheval sur deux matrices, donnée
  * incohérente inatteignable par l'interface, dégrade en deux cartes simples.
  */
-export function groupTasksByBoard(tasks: Task[], boards: Board[], quad: QuadrantKey): BoardGroup[] {
+export function groupTasksByBoard(
+  tasks: Task[],
+  boards: Board[],
+  quad: QuadrantKey,
+  pending?: string | null,
+): BoardGroup[] {
   const groups: BoardGroup[] = [];
   for (const board of boards) {
-    const pinned = buildRows(pinnedTasks(tasks, board.id, quad));
-    const rows = buildRows(visibleTasks(tasks, board.id, quad));
+    const pinned = buildRows(pinnedTasks(tasks, board.id, quad, pending));
+    const rows = buildRows(visibleTasks(tasks, board.id, quad, pending));
     if (pinned.length || rows.length) groups.push({ board, pinned, rows });
   }
   return groups;

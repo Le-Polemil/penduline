@@ -70,7 +70,7 @@ export function MatrixScreen({
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
 
-  const { onCheck } = useCompletion(tasks, patchTask);
+  const { onCheck, pending } = useCompletion(tasks, patchTask);
   const announce = useAnnounce();
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
@@ -218,7 +218,11 @@ export function MatrixScreen({
     setDrafts((d) => ({ ...d, [quad]: '' }));
   }
 
-  const doneList = boardTasks.filter((t) => t.done && t.archived && !t.deleted);
+  // `done && !deleted`, sans exiger `archived` : contrepartie obligatoire du
+  // masquage sur `done` seul (#75). Sans elle, une tâche héritée de l'ancien
+  // comportement — cochée, jamais archivée — sortirait de la grille sans entrer
+  // ici : invisible ET irrécupérable. « Rétablir » la normalise au passage.
+  const doneList = boardTasks.filter((t) => t.done && !t.deleted);
   const delList = boardTasks.filter((t) => t.deleted);
 
   /**
@@ -396,8 +400,8 @@ export function MatrixScreen({
 
       <div className="grid">
         {ALL.map((q) => {
-          const pinnedRows = buildRows(pinnedTasks(tasks, board.id, q.key));
-          const rows = buildRows(visibleTasks(tasks, board.id, q.key));
+          const pinnedRows = buildRows(pinnedTasks(tasks, board.id, q.key, pending));
+          const rows = buildRows(visibleTasks(tasks, board.id, q.key, pending));
           const focused = focusQuad === q.key;
           const draft = drafts[q.key] ?? '';
           return (
