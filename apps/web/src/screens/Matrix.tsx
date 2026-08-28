@@ -25,6 +25,7 @@ import { BinModal } from '../components/BinModal';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
 import { ordinal, useAnnounce } from '../a11y/announce';
+import type { Scope } from './Global';
 
 type Hover =
   | { type: 'end'; quad: QuadrantKey }
@@ -52,7 +53,7 @@ export function MatrixScreen({
   board: Board;
   onHome: () => void;
   onSwitch: (boardId: string) => void;
-  onGlobal: () => void;
+  onGlobal: (scope: Scope) => void;
 }) {
   const { tasks, patchTask } = store;
   const [boardMenu, setBoardMenu] = useState(false);
@@ -329,7 +330,10 @@ export function MatrixScreen({
                 onClick={() => {
                   setBoardMenu(false);
                   setMenuTask(null);
-                  onGlobal();
+                  // Toutes les matrices, pas l'univers de celle-ci : le menu
+                  // sert à élargir le regard, et le sélecteur de portée de la
+                  // vue globale permet ensuite de le resserrer.
+                  onGlobal({ kind: 'all' });
                 }}
               >
                 Vue globale
