@@ -16,7 +16,7 @@ status: "In Progress"
 | 2. `useCompletion` : écriture unique, `pending` rendu, `undo` restaurant l'appairage | Terminé | 2026-08-25 |
 | 3. `Matrix.tsx` / `Global.tsx` : `pending` au rendu, corbeille en `done && !deleted` | Terminé | 2026-08-25 |
 | 4. Vérifications automatiques (`test`, `typecheck`, `build`) | Terminé | 2026-08-25 |
-| 5. Validation en navigateur (8 points du plan) | En attente | |
+| 5. Validation en navigateur (8 points du plan) | Terminé | 2026-08-25 |
 | 6. Commit, push et PR fermant #75 | En attente | |
 
 ## Journal
@@ -87,3 +87,25 @@ Le `mateId` se lit dans `planPairDetach` (`writes[1]`) plutôt que par un
 `partnerOf` séparé : une seule source pour « qui est la partenaire ».
 
 `npm test` : 94 partagés + 13 web · `typecheck` ✅ · `build` ✅
+
+### 2026-08-25 : validation en navigateur
+
+**Statut** : Terminé
+
+**Actions réalisées** — base locale, console **sans erreur** :
+
+| Point | Résultat |
+|---|---|
+| Tâche coincée fabriquée à la main (`done` sans `archived`) | **absente de la grille** |
+| La même dans « Terminées » | **présente**, et « Rétablir » la remet en place |
+| Cocher puis **recharger dans les 4 s** | base à `done = t, archived = t` — **rangée, pas coincée** |
+| Pendant le délai | la tâche reste affichée, barrée, avec son toast « Annuler » |
+| **Annuler une tâche appairée** | les deux cartes reviennent **et `pair_id` est rétabli des deux côtés en base** |
+
+**Notes** : le point qui compte est le dernier. Sans la restauration du lien,
+l'annulation aurait rendu deux cartes visibles et une paire morte — rien à
+l'écran ne l'aurait signalé. C'est en interrogeant la base, pas en regardant la
+page, que la vérification a du sens.
+
+Ports Supabase locaux décalés (55321-55324) pour cohabiter avec la stack `unaya`,
+puis `config.toml` rétabli — vérifié identique à `HEAD`.
