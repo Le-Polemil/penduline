@@ -15,6 +15,7 @@ import {
   planPairMove,
   planReorder,
   positionBefore,
+  summarizeUniverse,
   visibleTasks,
 } from './layout';
 import { makeBoard, makeList, makeTask, makeUniverse } from './test-fixtures';
@@ -406,6 +407,61 @@ describe('regroupement par univers', () => {
     const groups = groupByUniverse([], [makeBoard({ id: 'a' }), makeBoard({ id: 'b' })]);
     expect(groups).toHaveLength(1);
     expect(groups[0].boards).toHaveLength(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('résumé d’un univers replié', () => {
+  it('compte les matrices et leurs tâches ouvertes', () => {
+    const a = makeBoard({ id: 'a' });
+    const b = makeBoard({ id: 'b' });
+    const tasks = [
+      makeTask({ board_id: 'a' }),
+      makeTask({ board_id: 'a' }),
+      makeTask({ board_id: 'b' }),
+    ];
+    expect(summarizeUniverse([a, b], tasks)).toEqual({ boards: 2, tasks: 3 });
+  });
+
+  it('rend un groupe vide sans lever', () => {
+    expect(summarizeUniverse([], [makeTask()])).toEqual({ boards: 0, tasks: 0 });
+  });
+
+  it('exclut les tâches cochées et les supprimées', () => {
+    // Un en-tête replié annonce ce qui RESTE à faire. Compter la corbeille et
+    // les archives ferait mentir le chiffre au premier coup d'œil.
+    const a = makeBoard({ id: 'a' });
+    const tasks = [
+      makeTask({ board_id: 'a' }),
+      makeTask({ board_id: 'a', done: true }),
+      makeTask({ board_id: 'a', done: true, archived: true }),
+      makeTask({ board_id: 'a', deleted: true }),
+    ];
+    expect(summarizeUniverse([a], tasks).tasks).toBe(1);
+  });
+
+  it('compte les tâches épinglées : elles restent à faire', () => {
+    const a = makeBoard({ id: 'a' });
+    expect(summarizeUniverse([a], [makeTask({ board_id: 'a', pinned: true })]).tasks).toBe(1);
+  });
+
+  it('ignore les tâches des matrices hors du groupe', () => {
+    // Le résumé d'un univers ne doit rien emprunter à un autre.
+    const a = makeBoard({ id: 'a' });
+    const tasks = [makeTask({ board_id: 'a' }), makeTask({ board_id: 'ailleurs' })];
+    expect(summarizeUniverse([a], tasks).tasks).toBe(1);
+  });
+
+  it('compte toutes les cases confondues', () => {
+    // Contrairement à `countOpen`, le résumé n'a pas de quadrant : un en-tête
+    // replié parle de l'univers entier.
+    const a = makeBoard({ id: 'a' });
+    const tasks = [
+      makeTask({ board_id: 'a', quadrant: 'faire' }),
+      makeTask({ board_id: 'a', quadrant: 'planifier' }),
+      makeTask({ board_id: 'a', quadrant: 'deleguer' }),
+    ];
+    expect(summarizeUniverse([a], tasks).tasks).toBe(3);
   });
 });
 

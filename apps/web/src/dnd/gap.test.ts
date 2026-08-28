@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gapIndexAt } from './gap';
+import { dropTarget, gapIndexAt } from './gap';
 
 /**
  * Le bug corrigé par cette règle était invisible au typage comme aux tests : le
@@ -36,5 +36,55 @@ describe('gapIndexAt', () => {
   // nulle. Le survol y compte comme une moitié basse — pas comme une erreur.
   it('reste défini sur une ligne de hauteur nulle', () => {
     expect(gapIndexAt(100, { top: 100, height: 0 }, 2)).toBe(3);
+  });
+});
+
+describe('dropTarget', () => {
+  /** Trois éléments : les interstices vont de 0 (avant `a`) à 3 (après `c`). */
+  const list = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+
+  it('rend l’élément devant lequel insérer', () => {
+    expect(dropTarget(list, 'a', 2)).toBe('c');
+    expect(dropTarget(list, 'c', 1)).toBe('b');
+  });
+
+  it('rend `null` pour l’interstice de fin', () => {
+    expect(dropTarget(list, 'a', 3)).toBeNull();
+  });
+
+  it('rend `false` sur les deux interstices qui bordent l’élément déplacé', () => {
+    // Le cœur de la règle : déposer un élément juste au-dessus ou juste
+    // au-dessous de lui-même le laisse où il est. Sans ce cas, chaque geste
+    // avorté produirait une écriture réseau pour un ordre inchangé.
+    expect(dropTarget(list, 'b', 1)).toBe(false);
+    expect(dropTarget(list, 'b', 2)).toBe(false);
+  });
+
+  it('rend `false` aux bornes de la liste', () => {
+    expect(dropTarget(list, 'a', 0)).toBe(false);
+    expect(dropTarget(list, 'c', 3)).toBe(false);
+  });
+
+  it('ne confond pas « à la fin » et « ne rien faire »', () => {
+    // `null` et `false` sont tous deux falsy : les distinguer est ce qui
+    // sépare « déplacer en dernier » de « geste nul ».
+    expect(dropTarget(list, 'a', 3)).toBeNull();
+    expect(dropTarget(list, 'c', 3)).toBe(false);
+  });
+
+  it('traite tous les interstices comme réels si l’élément n’est pas dans la liste', () => {
+    // Cas défensif : rien à border, donc rien à annuler.
+    expect(dropTarget(list, 'fantome', 0)).toBe('a');
+    expect(dropTarget(list, 'fantome', 3)).toBeNull();
+  });
+
+  it('gère la liste vide', () => {
+    expect(dropTarget([], 'a', 0)).toBeNull();
+  });
+
+  it('gère une liste d’un seul élément : aucun déplacement possible', () => {
+    const solo = [{ id: 'a' }];
+    expect(dropTarget(solo, 'a', 0)).toBe(false);
+    expect(dropTarget(solo, 'a', 1)).toBe(false);
   });
 });

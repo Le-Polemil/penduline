@@ -28,3 +28,34 @@ export interface RowRect {
 export function gapIndexAt(pointerY: number, rect: RowRect, index: number): number {
   return pointerY < rect.top + rect.height / 2 ? index : index + 1;
 }
+
+/**
+ * Traduit un interstice en `beforeId`, ou reconnaît un déplacement nul.
+ *
+ * `gapIndexAt` dit *où* on dépose ; les fonctions de position, elles, attendent
+ * l'élément **devant lequel** insérer (`null` = à la fin). Ce passage-là est le
+ * point où l'on se trompe : les deux interstices qui BORDENT l'élément déplacé —
+ * juste au-dessus et juste au-dessous de lui — désignent sa propre place. Les
+ * traiter comme un déplacement produirait une écriture réseau pour un ordre
+ * identique à l'écran.
+ *
+ * D'où trois retours distincts, et la nuance entre les deux derniers compte :
+ *
+ *   'x'    insérer avant `x`
+ *   null   insérer à la fin
+ *   false  ne rien faire
+ *
+ * `list` contient l'élément déplacé, à sa place actuelle : c'est la liste
+ * affichée, pas une liste déjà amputée. Un élément absent de la liste (déplacé
+ * depuis ailleurs) n'a pas de place à border — tous les interstices sont alors
+ * de vrais déplacements.
+ */
+export function dropTarget<T extends { id: string }>(
+  list: T[],
+  draggedId: string,
+  gapIndex: number,
+): string | null | false {
+  const from = list.findIndex((x) => x.id === draggedId);
+  if (from !== -1 && (gapIndex === from || gapIndex === from + 1)) return false;
+  return list[gapIndex]?.id ?? null;
+}
