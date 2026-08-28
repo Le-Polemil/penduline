@@ -2,7 +2,7 @@
 slug: "entete-univers"
 title: "En-tête d'univers : les trois gestes (#71, #72, #73)"
 created: 2026-08-25
-status: "In Progress"
+status: "Done"
 ---
 
 # En-tête d'univers : les trois gestes (#71, #72, #73)
