@@ -2,8 +2,9 @@
 slug: "tache-cochee-coincee"
 title: "La tâche cochée qui ne part jamais (#75)"
 issues: [75]
+pr: 81
 created: 2026-08-25
-status: "In Progress"
+status: "Done"
 ---
 
 # #75 — La tâche cochée qui ne part jamais

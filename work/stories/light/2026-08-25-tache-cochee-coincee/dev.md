@@ -2,8 +2,9 @@
 slug: "tache-cochee-coincee"
 title: "La tâche cochée qui ne part jamais (#75)"
 issues: [75]
+pr: 81
 created: 2026-08-25
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -17,7 +18,7 @@ status: "In Progress"
 | 3. `Matrix.tsx` / `Global.tsx` : `pending` au rendu, corbeille en `done && !deleted` | Terminé | 2026-08-25 |
 | 4. Vérifications automatiques (`test`, `typecheck`, `build`) | Terminé | 2026-08-25 |
 | 5. Validation en navigateur (8 points du plan) | Terminé | 2026-08-25 |
-| 6. Commit, push et PR fermant #75 | En attente | |
+| 6. Commit, push et PR fermant #75 | Terminé | 2026-08-25 |
 
 ## Journal
 
