@@ -8,9 +8,21 @@ import {
   type Universe,
 } from '@penduline/shared';
 import { supabase } from '../lib/supabase';
+import { useRealtime } from './useRealtime';
 import { usePersist, type WriteResult } from './persist';
 
 /** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
+/**
+ * Une tâche a-t-elle sa place dans l'état chargé au démarrage ?
+ *
+ * Une seule écriture de la règle, pour le chargement (#40) ET pour le temps réel
+ * (#39) — sans quoi un événement distant réintroduirait en mémoire les archives
+ * que le chargement en a sorties.
+ */
+export function inWorkingSet(t: Task): boolean {
+  return !t.done && !t.deleted;
+}
+
 /** Taille de page de PostgREST : au-delà, il tronque en silence. */
 const PAGE = 1000;
 
@@ -554,6 +566,17 @@ export function useStore(userId: string): Store {
     },
     [persist],
   );
+
+  // Deux onglets divergeaient en silence, et la dernière écriture écrasait
+  // l'autre (#39). Les setters sont stables ; `admits` et `reload` passent par
+  // une ref à l'intérieur du hook.
+  useRealtime(userId, {
+    setTasks,
+    setBoards,
+    setUniverses,
+    admits: inWorkingSet,
+    reload: load,
+  });
 
   return {
     ready,
