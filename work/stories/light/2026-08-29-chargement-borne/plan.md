@@ -2,8 +2,9 @@
 slug: "chargement-borne"
 title: "Ne plus charger ce qu'on n'affiche pas (#40)"
 issues: [40]
+pr: 82
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # #40 — Ne plus charger ce qu'on n'affiche pas

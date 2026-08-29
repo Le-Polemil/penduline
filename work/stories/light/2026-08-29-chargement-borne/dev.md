@@ -2,8 +2,9 @@
 slug: "chargement-borne"
 title: "Ne plus charger ce qu'on n'affiche pas (#40)"
 issues: [40]
+pr: 82
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -18,7 +19,7 @@ status: "In Progress"
 | 4. Mesure avant / après sur un jeu volumineux | Terminé | 2026-08-29 |
 | 5. Vérifications automatiques | Terminé | 2026-08-29 |
 | 6. Validation en navigateur (9 points) | Terminé | 2026-08-29 |
-| 7. Commit, push et PR fermant #40 | En attente | |
+| 7. Commit, push et PR fermant #40 | Terminé | 2026-08-29 |
 
 ## Journal
 
