@@ -2,8 +2,9 @@
 slug: "recherche"
 title: "Recherche dans toutes les matrices (#45)"
 issues: [45]
+pr: 83
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # #45 — Recherche dans toutes les matrices
