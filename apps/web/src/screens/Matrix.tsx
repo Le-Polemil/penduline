@@ -24,6 +24,7 @@ import { Confirm } from '../components/Confirm';
 import { BinModal } from '../components/BinModal';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
+import { useBinCount } from '../data/useBinCount';
 import { ordinal, useAnnounce } from '../a11y/announce';
 import type { Scope } from './Global';
 
@@ -72,6 +73,7 @@ export function MatrixScreen({
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
+  const binCount = useBinCount(store, [board.id]);
   const announce = useAnnounce();
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
@@ -385,9 +387,12 @@ export function MatrixScreen({
           className="bin-btn"
           // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
           // propre compteur lui tenait lieu d'intitulé.
-          aria-label={`Corbeille, ${doneList.length + delList.length} élément${doneList.length + delList.length > 1 ? 's' : ''}`}
+          aria-label={`Corbeille, ${binCount} élément${binCount > 1 ? 's' : ''}`}
           style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
           onClick={() => {
+            // Le contenu n'est plus en mémoire au démarrage (#40) : on le
+            // demande ici, une seule fois par session.
+            void store.loadBin([board.id]);
             withVT(() => setBinOpen(true));
             setMenuTask(null);
             setBoardMenu(false);
@@ -398,7 +403,7 @@ export function MatrixScreen({
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
             <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
-          {doneList.length + delList.length}
+          {binCount}
         </button>
       </div>
 

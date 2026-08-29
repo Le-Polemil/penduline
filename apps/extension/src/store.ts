@@ -85,7 +85,11 @@ export function useExtStore(userId: string): ExtStore {
       const [universesRes, boardsRes, tasksRes] = await Promise.all([
         supabase.from('universes').select('*').order('position'),
         supabase.from('boards').select('*').order('position'),
-        supabase.from('tasks').select(TASK_COLS).order('position'),
+        // Le popup n'a pas de corbeille : il filtre déjà `!t.done && !t.deleted`
+        // à l'affichage. Ne charger que ça est donc sans conséquence ici — et
+        // c'est là que le gain est le plus sensible, ce chargement étant le
+        // premier travail à l'ouverture du popup (#40).
+        supabase.from('tasks').select(TASK_COLS).eq('done', false).eq('deleted', false).order('position'),
       ]);
       if (!alive) return;
       setUniverses(universesRes.data ?? []);
