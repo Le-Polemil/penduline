@@ -209,3 +209,67 @@ webhooks aux Apps installées, donc Coolify devrait bien recevoir l'événement.
 le déploiement ne part pas, c'est là qu'il faut regarder : le correctif est de
 pousser avec un jeton dédié (PAT ou clé de déploiement) plutôt qu'avec celui
 d'Actions.
+
+## Les migrations dans la CI (2026-08-29)
+
+Le front partait par workflow, les migrations à la main — et l'ordre s'est
+inversé quatre fois de suite (#45, #39, #50, #78 : à chaque fois un front qui
+interroge une table absente, et PostgREST qui répond `404` sans rien dire). Le
+job `migrate` de `deploy.yml` s'exécute désormais **avant** le push sur
+`production`.
+
+### Pourquoi SSH, et pas autre chose
+
+`supabase db push` vise un `--project-ref` supabase.com : inapplicable ici.
+Exposer Postgres publiquement pour un `SUPABASE_DB_URL` n'a jamais été
+envisageable. L'API Coolify aurait demandé un jeton, alors que le déploiement
+s'en passe justement (App GitHub + branche `production`). Restait SSH, qui est
+déjà le canal de la procédure manuelle.
+
+### La commande forcée, qui est le vrai sujet
+
+Une clé SSH dans les Secrets, sans plus, **donne un shell sur la production à
+quiconque peut modifier un workflow du dépôt**. C'est un élargissement bien plus
+large que « appliquer des migrations », et il serait passé inaperçu.
+
+D'où `apps/supabase/deploy/penduline-migrate.sh`, déclaré en `command="…"` dans
+`authorized_keys` : la clé ne peut lancer que lui. Il valide la sous-commande
+**avant** de toucher à Docker, borne version et nom par expression régulière, et
+n'évalue jamais `SSH_ORIGINAL_COMMAND` comme du shell. Sans cette ligne, le reste
+du dispositif ne vaut rien — c'est la raison d'être du fichier, pas un détail
+d'installation.
+
+### Deux corrections de la procédure manuelle, au passage
+
+**L'enregistrement de la version part dans la même transaction que le DDL.** La
+procédure du README en fait deux étapes ; une migration appliquée mais non
+enregistrée se rejoue au passage suivant. Ici, ou les deux tiennent, ou rien.
+
+**`notify pgrst, 'reload schema'` est systématique**, dans la transaction — donc
+jamais émis si la migration échoue. C'est ce qui évite le `404` où la table
+existe, est correcte, et reste invisible.
+
+### Le garde-fou de la baseline
+
+Cette instance n'a pas été créée par le CLI : `schema_migrations` était absente.
+Une table de suivi **vide** ne veut pas dire « base neuve », elle veut dire
+« historique jamais suivi ». Sans garde-fou, le premier run aurait rejoué
+`init.sql` sur une base en service.
+
+Le job s'arrête donc net si la base ne déclare aucune migration alors que le
+dépôt en contient, et renvoie à la sous-commande `record` — à jouer une fois, à
+la main. C'est le seul endroit du dispositif où une erreur serait irréversible :
+déclarer à tort une migration comme appliquée la fait disparaître du radar.
+
+### Ce qui reste manuel, délibérément
+
+Le déclenchement. `deploy.yml` est en `workflow_dispatch` parce que la machine à
+4 Go s'est effondrée deux fois pendant un build ; ajouter l'application
+automatique de migrations à un déploiement non surveillé aurait aggravé ce
+choix, pas corrigé. L'entrée `migrations: ignorer` existe pour les cas où la
+migration a été passée à la main.
+
+⚠️ **À confirmer au premier run :** que les runners GitHub atteignent bien l'hôte
+en SSH. Rien ne le garantit — pare-feu, liste d'adresses autorisées. Si la
+connexion est refusée, l'alternative est un *self-hosted runner* sur la machine,
+ou le maintien de la procédure manuelle.
