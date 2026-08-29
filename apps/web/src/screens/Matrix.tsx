@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type DragEvent } from 'react';
+import { useEffect, useState, type CSSProperties, type DragEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   ALL,
@@ -49,17 +49,25 @@ export function MatrixScreen({
   onHome,
   onSwitch,
   onGlobal,
+  focusTask,
+  openBin,
 }: {
   store: Store;
   board: Board;
   onHome: () => void;
   onSwitch: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
+  /** Tâche à mettre en évidence à l'arrivée (venue de la recherche). */
+  focusTask?: string;
+  /** Ouvrir la corbeille d'emblée : la tâche visée n'est pas dans la grille. */
+  openBin?: boolean;
 }) {
   const { tasks, patchTask } = store;
   const [boardMenu, setBoardMenu] = useState(false);
   const [menuTask, setMenuTask] = useState<string | null>(null);
   const [binOpen, setBinOpen] = useState(false);
+  /** La tâche que la recherche a désignée, le temps de son clignotement. */
+  const [flash, setFlash] = useState<string | null>(null);
   /** `null` = titre affiché ; une chaîne = renommage en cours. */
   const [renaming, setRenaming] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -74,6 +82,36 @@ export function MatrixScreen({
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
   const binCount = useBinCount(store, [board.id]);
+
+  /**
+   * Arrivée depuis la recherche : on amène la tâche sous les yeux.
+   *
+   * Le défilement seul ne suffit pas — au milieu d'une case pleine, rien ne dit
+   * laquelle des cartes on était venu voir. D'où le clignotement, qui s'éteint
+   * de lui-même.
+   */
+  useEffect(() => {
+    if (!focusTask) return;
+    if (openBin) {
+      // La tâche est terminée ou supprimée : elle n'est pas dans la grille, et
+      // son contenu n'est plus chargé au démarrage depuis #40.
+      void store.loadBin([board.id]);
+      setBinOpen(true);
+      return;
+    }
+    setFlash(focusTask);
+    const t = window.setTimeout(() => setFlash((f) => (f === focusTask ? null : f)), 2000);
+    // Après peinture : l'élément peut ne pas exister au moment de l'effet.
+    const r = window.requestAnimationFrame(() => {
+      document
+        .querySelector(`[data-task="${focusTask}"]`)
+        ?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    });
+    return () => {
+      window.clearTimeout(t);
+      window.cancelAnimationFrame(r);
+    };
+   }, [focusTask, openBin, board.id, store]);
   const announce = useAnnounce();
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
@@ -255,6 +293,7 @@ export function MatrixScreen({
         tasks={tasks}
         otherBoards={otherBoards}
         pinnedCard={pinnedCard}
+        flash={flash === t.id}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}
         rename={{

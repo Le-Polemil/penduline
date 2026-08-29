@@ -8,6 +8,7 @@ import { MatrixScreen } from './screens/Matrix';
 import { GlobalScreen, type Scope } from './screens/Global';
 import { AnnounceProvider } from './a11y/announce';
 import { ToastProvider } from './components/Toast';
+import { Search, type SearchHit } from './components/Search';
 import { clearSessionNotice, readSessionNotice } from './lib/session-notice';
 
 /**
@@ -95,7 +96,15 @@ export function App() {
  * exprimer un troisième écran. La vue globale porte sa portée avec elle : elle
  * survit ainsi à un aller-retour vers l'accueil.
  */
-type View = { kind: 'home' } | { kind: 'board'; id: string } | { kind: 'global'; scope: Scope };
+type View =
+  | { kind: 'home' }
+  /**
+   * `focusTask` : la tâche à mettre en évidence à l'arrivée, venue de la
+   * recherche. `openBin` quand elle est terminée ou supprimée — ouvrir sur une
+   * grille où la tâche n'est pas serait pire que ne rien faire.
+   */
+  | { kind: 'board'; id: string; focusTask?: string; openBin?: boolean }
+  | { kind: 'global'; scope: Scope };
 
 const HOME: View = { kind: 'home' };
 
@@ -155,6 +164,12 @@ function AppRoot({ userId }: { userId: string }) {
 function Workspace({ userId }: { userId: string }) {
   const store = useStore(userId);
   const [view, setView] = useState<View>(readView);
+  const [searching, setSearching] = useState(false);
+
+  function allerA(hit: SearchHit) {
+    setSearching(false);
+    setView({ kind: 'board', id: hit.boardId, focusTask: hit.taskId, openBin: hit.inBin });
+  }
 
   useEffect(() => {
     try {
@@ -183,15 +198,31 @@ function Workspace({ userId }: { userId: string }) {
         ) : (
           <span />
         )}
-        <button className="signout" onClick={() => supabase.auth.signOut()}>
-          Déconnexion
-        </button>
+        <span className="userbar__right">
+          {/* Dans la barre plutôt que dans un écran : la recherche est ainsi
+              atteignable depuis les trois, sans qu'aucun n'ait à la porter. */}
+          <button className="searchbtn" onClick={() => setSearching(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" />
+              <path d="m20 20-3.5-3.5" />
+            </svg>
+            Rechercher
+          </button>
+          <button className="signout" onClick={() => supabase.auth.signOut()}>
+            Déconnexion
+          </button>
+        </span>
       </div>
+      {searching && (
+        <Search boards={store.boards} onClose={() => setSearching(false)} onPick={allerA} />
+      )}
       {board ? (
         <MatrixScreen
           store={store}
           board={board}
           onHome={onHome}
+          focusTask={view.kind === 'board' ? view.focusTask : undefined}
+          openBin={view.kind === 'board' ? view.openBin : undefined}
           onSwitch={(id) => setView({ kind: 'board', id })}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
         />
