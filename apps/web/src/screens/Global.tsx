@@ -78,7 +78,7 @@ export function GlobalScreen({
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
 
-  const { onCheck } = useCompletion(tasks, patchTask);
+  const { onCheck, pending } = useCompletion(tasks, patchTask);
 
   // Garde-fou : l'univers choisi comme portée peut avoir été supprimé ailleurs
   // (autre onglet, autre appareil). On retombe sur « toutes les matrices »
@@ -96,7 +96,9 @@ export function GlobalScreen({
   const inScope = new Set(boards.map((b) => b.id));
   const scopedTasks = tasks.filter((t) => inScope.has(t.board_id));
   const totalOpen = scopedTasks.filter((t) => !t.done && !t.deleted).length;
-  const doneList = scopedTasks.filter((t) => t.done && t.archived && !t.deleted);
+  // Voir `Matrix.tsx` : `archived` n'est plus le critère d'affichage, il ne peut
+  // donc plus être celui de la récupération (#75).
+  const doneList = scopedTasks.filter((t) => t.done && !t.deleted);
   const delList = scopedTasks.filter((t) => t.deleted);
 
   function apply(writes: TaskWrite[]) {
@@ -285,7 +287,7 @@ export function GlobalScreen({
       ) : (
         <div className={`grid grid--${FRAME}`}>
           {ALL.map((q) => {
-            const groups = groupTasksByBoard(tasks, boards, q.key);
+            const groups = groupTasksByBoard(tasks, boards, q.key, pending);
             const open = scopedTasks.filter((t) => t.quadrant === q.key && !t.done && !t.deleted).length;
             return (
               <div

@@ -197,15 +197,19 @@ describe('matrice d’états', () => {
   }> = [
     { quoi: 'ordinaire', task: {}, visible: true, epinglee: false, ouverte: true },
     { quoi: 'épinglée', task: { pinned: true }, visible: false, epinglee: true, ouverte: true },
-    // Décision produit : une tâche cochée reste VISIBLE tant qu'elle n'est pas
-    // archivée — c'est le délai d'annulation de 4 s. Mais elle ne compte plus
-    // comme ouverte.
-    { quoi: 'cochée, pas encore archivée', task: { done: true }, visible: true, epinglee: false, ouverte: false },
+    // ⚠️ RENVERSÉ PAR #75. Cette ligne disait auparavant `visible: true`, au nom
+    // du délai d'annulation de 4 s — le délai était donc encodé dans le MODÈLE DE
+    // DONNÉES, et une tâche dont l'archivage n'arrivait jamais restait affichée
+    // pour toujours. Le délai vit désormais en mémoire (paramètre `pending`) :
+    // `done` suffit à masquer, quel que soit `archived`.
+    { quoi: 'cochée, pas encore archivée', task: { done: true }, visible: false, epinglee: false, ouverte: false },
     { quoi: 'cochée et archivée', task: { done: true, archived: true }, visible: false, epinglee: false, ouverte: false },
+    // Une épinglée cochée quitte aussi la zone des épinglées, même règle.
+    { quoi: 'épinglée et cochée', task: { pinned: true, done: true }, visible: false, epinglee: false, ouverte: false },
     { quoi: 'supprimée', task: { deleted: true }, visible: false, epinglee: false, ouverte: false },
     { quoi: 'supprimée et épinglée', task: { deleted: true, pinned: true }, visible: false, epinglee: false, ouverte: false },
-    // `archived` sans `done` ne devrait pas exister ; le code ne l'exclut que
-    // conjointement, donc la tâche reste visible. Comportement figé tel quel.
+    // `archived` sans `done` ne devrait pas exister. Le masquage portant
+    // désormais sur `done` seul, cet état reste visible — inchangé par #75.
     { quoi: 'archivée sans être cochée', task: { archived: true }, visible: true, epinglee: false, ouverte: true },
   ];
 
@@ -218,6 +222,45 @@ describe('matrice d’états', () => {
       expect(countOpen([t], 'b1', 'faire')).toBe(c.ouverte ? 1 : 0);
     });
   }
+
+  /**
+   * L'exception qui porte le délai d'annulation depuis #75.
+   *
+   * Une tâche cochée est masquée d'emblée ; `pending` la garde à l'écran le temps
+   * qu'on puisse annuler. C'est ce qui permet d'écrire `done` ET `archived` d'un
+   * seul coup, donc de ne plus laisser d'état intermédiaire en base.
+   */
+  it('`pending` garde une tâche cochée visible, elle seule', () => {
+    const cochee = makeTask({ id: 'cochee', done: true, archived: true });
+    const autre = makeTask({ id: 'autre', done: true, archived: true });
+
+    expect(visibleTasks([cochee, autre], 'b1', 'faire')).toHaveLength(0);
+    expect(visibleTasks([cochee, autre], 'b1', 'faire', 'cochee').map((t) => t.id)).toEqual(['cochee']);
+    expect(isVisible(cochee, 'faire', 'cochee')).toBe(true);
+    expect(isVisible(autre, 'faire', 'cochee')).toBe(false);
+  });
+
+  it('`pending` vaut aussi dans la zone des épinglées', () => {
+    // Sinon cocher une épinglée la ferait disparaître sans délai d'annulation.
+    const t = makeTask({ id: 'p', pinned: true, done: true, archived: true });
+    expect(pinnedTasks([t], 'b1', 'faire')).toHaveLength(0);
+    expect(pinnedTasks([t], 'b1', 'faire', 'p')).toHaveLength(1);
+  });
+
+  it('`pending` ne ressuscite ni une supprimée ni une tâche d’une autre case', () => {
+    // Le délai d'annulation ne concerne QUE la complétion.
+    const morte = makeTask({ id: 'x', deleted: true });
+    const ailleurs = makeTask({ id: 'y', done: true, archived: true, quadrant: 'planifier' });
+    expect(visibleTasks([morte], 'b1', 'faire', 'x')).toHaveLength(0);
+    expect(visibleTasks([ailleurs], 'b1', 'faire', 'y')).toHaveLength(0);
+  });
+
+  it('`pending` ne change rien aux compteurs', () => {
+    // Les pastilles de l'accueil doivent tomber DÈS le clic : la tâche est faite,
+    // même si on peut encore revenir en arrière.
+    const t = makeTask({ done: true, archived: true });
+    expect(countOpen([t], 'b1', 'faire')).toBe(0);
+  });
 
   it('ne mélange jamais deux matrices', () => {
     const ici = makeTask({ board_id: 'b1' });
