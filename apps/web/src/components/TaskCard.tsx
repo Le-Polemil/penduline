@@ -78,6 +78,7 @@ export function TaskCard({
   drag,
   split,
   reorder,
+  flash,
 }: {
   task: Task;
   quad: Quadrant;
@@ -99,6 +100,8 @@ export function TaskCard({
   split?: CardSplit;
   /** Absent = ni entrées de menu, ni raccourci. */
   reorder?: CardReorder;
+  /** Mise en évidence passagère, à l'arrivée depuis la recherche. */
+  flash?: boolean;
 }) {
   const renaming = rename.value !== null;
   const splitActive = !!split?.ok && !!split.active;
@@ -108,6 +111,7 @@ export function TaskCard({
     drag?.dragging ? 'task--dragging' : '',
     splitActive ? 'task--split' : '',
     task.done ? 'task--done' : '',
+    flash ? 'task--flash' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -133,7 +137,7 @@ export function TaskCard({
   }
 
   return (
-    <div className="card-wrap" onKeyDown={onKeyDown}>
+    <div className="card-wrap" data-task={task.id} onKeyDown={onKeyDown}>
       <div
         className={cls}
         style={{ viewTransitionName: `vt-${task.id}` } as CSSProperties}
