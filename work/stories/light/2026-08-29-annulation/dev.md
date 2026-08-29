@@ -2,8 +2,9 @@
 slug: "annulation"
 title: "Annuler ses gestes (#46)"
 issues: [46]
+pr: 85
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -18,7 +19,7 @@ status: "In Progress"
 | 4. `data/useUndoShortcut.ts` : le raccourci et son toast | Terminé | 2026-08-29 |
 | 5. Vérifications automatiques | Terminé | 2026-08-29 |
 | 6. Validation en navigateur (10 points) | Terminé | 2026-08-29 |
-| 7. Commit, push et PR fermant #46 | En attente | |
+| 7. Commit, push et PR fermant #46 | Terminé | 2026-08-29 |
 
 ## Journal
 

@@ -2,8 +2,9 @@
 slug: "annulation"
 title: "Annuler ses gestes (#46)"
 issues: [46]
+pr: 85
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # #46 — Annuler ses gestes
