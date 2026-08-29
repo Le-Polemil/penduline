@@ -106,6 +106,35 @@ export function orderedBoards(universes: Universe[], boards: Board[]): Board[] {
   return groupByUniverse(universes, boards).flatMap((g) => g.boards);
 }
 
+/** Ce qu'un univers replié doit dire de ce qu'il cache. */
+export interface UniverseSummary {
+  boards: number;
+  /** Tâches ouvertes — celles qui restent à faire, corbeille et archives exclues. */
+  tasks: number;
+}
+
+/**
+ * Résume un groupe d'univers : combien de matrices, combien de tâches ouvertes.
+ *
+ * Replier un univers masque ses matrices (#72) ; sans ce résumé, le repli
+ * cacherait son contenu sans dire ce qu'il y a dedans, et deviendrait un trou
+ * plutôt qu'un rangement.
+ *
+ * « Ouverte » se dit ici comme dans `countOpen` — `!done && !deleted` — mais sans
+ * filtre de case : un en-tête replié parle de l'univers entier, pas d'un
+ * quadrant. Une tâche épinglée compte, elle reste à faire.
+ *
+ * Prend les matrices du groupe plutôt qu'un `universeId`, pour rester utilisable
+ * sur le groupe « Sans univers », qui n'a pas d'identifiant.
+ */
+export function summarizeUniverse(boards: Board[], tasks: Task[]): UniverseSummary {
+  const ids = new Set(boards.map((b) => b.id));
+  return {
+    boards: boards.length,
+    tasks: tasks.filter((t) => ids.has(t.board_id) && !t.done && !t.deleted).length,
+  };
+}
+
 /** Les tâches d'une case appartenant à une même matrice, en lignes prêtes à rendre. */
 export interface BoardGroup {
   board: Board;

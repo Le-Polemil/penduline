@@ -738,13 +738,80 @@ button { font: inherit; }
    concurrencer celui des matrices qu'il contient. Sans aucun univers, aucun
    en-tête n'est rendu et l'accueil se lit exactement comme avant. */
 .uni { display: flex; flex-direction: column; }
+/* Trois contrôles en tête, dans l'ordre du geste le plus rare au plus courant :
+   la poignée (déplacer), le chevron (replier), le nom (entrer).
+   L'ANCRE de l'en-tête est le chevron, posé à 20 px comme les noms de matrices :
+   la poignée, elle, se retire dans la marge (cf. `.uni-head__grip`). */
 .uni-head {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 5px;
   padding: 14px 20px 2px; min-height: 34px;
 }
+/* Une seule classe pour les deux formes : un <button> quand l'univers existe et
+   qu'il y a une vue à ouvrir, un <span> pour « Sans univers ». La remise à zéro
+   du bouton ne coûte rien au <span>, et le rembourrage aligne les deux. */
 .uni-head__name {
   font: 600 12px var(--font-body); color: var(--color-neutral-700);
   letter-spacing: 0.08em; text-transform: uppercase;
+  border: none; background: none; text-align: left;
+  padding: 4px 8px; border-radius: 999px;
+}
+/* Le nom ouvre la vue de l'univers. Fond au survol comme `.board-act` et tous
+   les autres boutons de l'application : un soulignement l'aurait fait passer
+   pour un lien, ce qu'il n'est pas. */
+button.uni-head__name { cursor: pointer; }
+button.uni-head__name:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+button.uni-head__name:focus-visible {
+  outline: 2px solid var(--color-accent-600); outline-offset: 1px;
+}
+
+/* La poignée de glisser : seule zone déplaçable de l'en-tête, pour que le nom et
+   le chevron restent des clics francs.
+   Elle se retire ENTIÈREMENT de l'alignement — `-23px`, soit sa largeur plus le
+   `gap` — et pend dans le rembourrage de `.home`. Deux effets : le chevron reste
+   l'ancre à 20 px, et la révéler au survol ne décale rien, puisqu'elle n'occupe
+   aucune place dans le flux. */
+.uni-head__grip {
+  flex: none; width: 18px; height: 18px; margin-left: -23px;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: grab; user-select: none; border-radius: 6px; line-height: 1;
+  font: 400 13px var(--font-body); color: var(--color-neutral-400);
+  opacity: 0; transition: opacity 0.18s;
+}
+.uni-head:hover .uni-head__grip,
+.uni-head:focus-within .uni-head__grip { opacity: 1; }
+.uni-head__grip:hover { color: var(--color-neutral-700); background: var(--color-neutral-200); }
+.uni-head__grip:active { cursor: grabbing; }
+/* Au doigt, le glisser HTML5 n'existe pas : la poignée y serait une cible morte,
+   et l'appui long sur le nom prend le relais. Un `display: none` est ici sans
+   conséquence — elle est déjà `aria-hidden`, hors de l'ordre de tabulation, et
+   hors de l'alignement : le chevron ne bouge pas de son absence. */
+@media (hover: none) {
+  .uni-head__grip { display: none; }
+}
+
+/* Le chevron de repli. Contrairement aux actions et à la poignée, il est TOUJOURS
+   visible, y compris sous `(hover: none)` : replier est un état de lecture, il ne
+   se cherche pas. D'où sa place hors de `.uni-head__actions`. */
+.uni-head__fold {
+  flex: none; width: 20px; height: 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer; padding: 0;
+  border-radius: 6px; color: var(--color-neutral-700);
+}
+.uni-head__fold:hover { background: var(--color-neutral-200); color: var(--color-text); }
+.uni-head__fold:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 1px; }
+/* Un seul dessin qui pivote, et non deux glyphes : « ⌄ » et « › » n'ont ni la
+   même hauteur d'œil ni le même centre optique, et l'en-tête se décalait
+   verticalement d'un état à l'autre. */
+.uni-head__chev { transition: transform 0.18s; }
+.uni-head__fold[aria-expanded='false'] .uni-head__chev { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) {
+  .uni-head__chev { transition: none; }
+}
+/* Plus petit et plus clair que le nom : le résumé renseigne, il ne titre pas. */
+.uni-head__summary {
+  font: 400 11px var(--font-body); color: var(--color-neutral-700);
+  letter-spacing: 0.03em; white-space: nowrap;
 }
 /* Mêmes règles que `.board-row__actions` : discrètes au repos, dépliées au
    survol ET au focus clavier — sans quoi renommer un univers serait impossible
@@ -756,13 +823,38 @@ button { font: inherit; }
 }
 .uni-head:hover .uni-head__actions,
 .uni-head:focus-within .uni-head__actions { max-width: 320px; }
+/* L'univers en cours de déplacement, comme `.board-row--dragging` : sans ce
+   retour, on ne sait pas ce qu'on tient. */
+.uni--dragging { opacity: 0.45; }
+
+/* Interstice entre deux univers. Hauteur NULLE au repos, là où `.board-gap` en
+   garde dix : les en-têtes portent déjà leur espacement, et en ajouter avant
+   chacun changerait l'accueil de tout le monde. Il ne s'ouvre qu'une fois
+   désigné. */
+.uni-gap { display: flex; align-items: center; height: 0; transition: height 0.12s; }
+.uni-gap--active { height: 22px; }
+.uni-gap__line { flex: 1; border-top: 3px dotted transparent; }
+.uni-gap--active .uni-gap__line { border-top-color: var(--color-accent); }
 .uni-head__actions .board-act { opacity: 0; transition: opacity 0.18s; }
 .uni-head:hover .board-act,
 .uni-head:focus-within .board-act { opacity: 1; }
 .uni-head__actions .board-act:disabled { opacity: 0.3 !important; cursor: default; }
+/* Sans survol (tactile), ces actions ne se déplient pas : on passe par l'appui
+   long sur le nom, qui ouvre `.sheet`.
+   Mais elles restent DANS le document. C'est le défaut que #38 avait corrigé
+   pour `.board-row__actions` et qui subsistait ici : un `display: none` les
+   retire de l'arbre d'accessibilité, or une tablette munie d'un clavier rapporte
+   elle aussi `hover: none` — elle perdait donc son seul chemin vers le
+   réordonnancement, le renommage et la suppression d'un univers. Le focus les
+   révèle, le survol non.
+   Règles portées par `.uni-head__actions` et non par `.uni-head` : les boutons
+   OK / Annuler du formulaire de renommage sont eux aussi des `.board-act`, et
+   n'ont rien à faire dans ce calcul. */
 @media (hover: none) {
-  /* Au doigt, ces actions sont inatteignables : l'appui long prend le relais. */
-  .uni-head__actions { display: none; }
+  .uni-head:hover .uni-head__actions { max-width: 0; }
+  .uni-head:hover .uni-head__actions .board-act { opacity: 0; }
+  .uni-head:focus-within .uni-head__actions { max-width: 320px; }
+  .uni-head:focus-within .uni-head__actions .board-act { opacity: 1; }
 }
 .uni-head__rename { display: flex; align-items: center; gap: 8px; flex: 1; }
 .uni-head__input {

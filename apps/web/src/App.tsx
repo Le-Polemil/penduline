@@ -193,7 +193,7 @@ function Workspace({ userId }: { userId: string }) {
           board={board}
           onHome={onHome}
           onSwitch={(id) => setView({ kind: 'board', id })}
-          onGlobal={() => setView({ kind: 'global', scope: { kind: 'all' } })}
+          onGlobal={(scope) => setView({ kind: 'global', scope })}
         />
       ) : view.kind === 'global' ? (
         <GlobalScreen
@@ -205,7 +205,7 @@ function Workspace({ userId }: { userId: string }) {
         <Home
           store={store}
           onOpen={(id) => setView({ kind: 'board', id })}
-          onGlobal={() => setView({ kind: 'global', scope: { kind: 'all' } })}
+          onGlobal={(scope) => setView({ kind: 'global', scope })}
         />
       )}
     </>
