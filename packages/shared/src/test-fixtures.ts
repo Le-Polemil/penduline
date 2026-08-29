@@ -1,4 +1,4 @@
-import type { Board, Task, Universe } from './types';
+import type { Attachment, Board, Task, Universe } from './types';
 
 /**
  * Fabrique de tâches pour les tests.
@@ -59,6 +59,21 @@ export function makeUniverse(partial: Partial<Universe> = {}): Universe {
     id: `u${seq}`,
     user_id: 'u1',
     name: `Univers ${seq}`,
+    position: 0,
+    created_at: '2026-01-01T00:00:00.000Z',
+    ...partial,
+  };
+}
+
+/** Un lien attaché, sans nom par défaut — le cas le plus courant à la capture. */
+export function makeAttachment(partial: Partial<Attachment> = {}): Attachment {
+  seq += 1;
+  return {
+    id: `a${seq}`,
+    task_id: 't1',
+    user_id: 'u1',
+    url: `https://exemple.test/${seq}`,
+    label: null,
     position: 0,
     created_at: '2026-01-01T00:00:00.000Z',
     ...partial,

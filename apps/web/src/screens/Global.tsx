@@ -86,6 +86,8 @@ export function GlobalScreen({
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
   /** Suppression d'une tâche à étapes, en attente de confirmation. */
   const [delAsk, setDelAsk] = useState<Task | null>(null);
+  /** La tâche dont le champ « attacher un lien » est ouvert. Une seule à la fois. */
+  const [linking, setLinking] = useState<string | null>(null);
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
 
@@ -247,6 +249,17 @@ export function GlobalScreen({
         onTogglePin={() => togglePin(t)}
         onUnpair={() => unpair(t)}
         onDelete={() => askRemoveTask(t)}
+        // Les liens suivent la tâche partout, contrairement aux étapes : un lien
+        // qualifie la tâche elle-même, une étape la décompose — et décomposer
+        // n'a pas de sens dans une vue qui agrège des matrices.
+        attachments={{
+          all: store.attachments,
+          adding: linking === t.id,
+          onStartAdd: () => setLinking(t.id),
+          onCancelAdd: () => setLinking(null),
+          onAdd: (url) => store.addAttachment(t.id, url),
+          onRemove: (a) => void store.removeAttachment(a.id),
+        }}
         drag={{
           dragging: drag === t.id,
           start: () => setDrag(t.id),

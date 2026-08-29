@@ -383,3 +383,29 @@ input::placeholder { color: inherit; opacity: 0.55; }
   font: 12px var(--font-body); padding: 0; line-height: 1;
 }
 .toast__close:hover { opacity: 1; }
+
+/* ── Formulaire de capture (#78) ──────────────────────────────────────────────
+   Le popup s'ouvre sur ce formulaire quand une capture attend. Il occupe toute
+   la largeur : c'est l'unique chose à faire à cet instant. */
+.cap { display: flex; flex-direction: column; gap: 3px; padding: 14px; }
+.cap__title { margin: 0 0 6px; font: 700 15px/1 var(--font-display, var(--font-body)); color: var(--color-text); }
+.cap__label { font: 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.5px; color: var(--color-neutral-600); margin-top: 8px; }
+.cap__area, .cap__input {
+  font: 13px var(--font-body); color: var(--color-text);
+  background: var(--color-neutral-100); border: 1.5px solid var(--color-neutral-300);
+  border-radius: 9px; padding: 6px 9px; outline: none; width: 100%; box-sizing: border-box;
+}
+.cap__area { resize: vertical; min-height: 44px; line-height: 1.4; }
+.cap__area:focus-visible, .cap__input:focus-visible { border-color: var(--color-accent); }
+.cap__input--bad { border-color: #a63d2a; }
+.cap__error { font: 11px var(--font-body); color: #a63d2a; margin-top: 3px; }
+.cap__hint { margin: 5px 0 0; font: 11.5px var(--font-body); color: var(--color-neutral-600); }
+.cap__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.cap__btn {
+  font: 600 13px var(--font-body); color: var(--color-neutral-700);
+  background: none; border: none; border-radius: 999px; padding: 7px 14px; cursor: pointer;
+}
+.cap__btn:hover { background: var(--color-neutral-200); }
+.cap__btn--go { background: var(--color-accent); color: #fff; }
+.cap__btn--go:hover { background: var(--color-accent-600); }
+.cap__btn--go:disabled { opacity: 0.45; cursor: default; background: var(--color-accent); }

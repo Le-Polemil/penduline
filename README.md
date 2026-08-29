@@ -21,6 +21,10 @@ penduline/
 
 - **Une matrice = un contexte, au choix de l'utilisateur** (un lieu, un moment,
   un projet). `boards` → `tasks` directement.
+- **Une tâche porte des liens** (`task_attachments`), plusieurs s'il le faut —
+  une issue et sa PR, un article et sa discussion. Le schéma `http(s)` est
+  contraint **en base** et pas seulement à la saisie : un `javascript:` entré par
+  l'API finirait cliquable dans l'app web.
 - **Une tâche peut avoir des étapes, sur UN SEUL niveau** (`tasks.parent_id`).
   C'était la seule entorse à la platitude du modèle, et elle est tenue par trois
   règles sans lesquelles la matrice deviendrait un gestionnaire de projet :

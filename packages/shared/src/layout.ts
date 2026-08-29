@@ -1,5 +1,5 @@
 import type { QuadrantKey } from './quadrants';
-import type { Board, Task, TaskPatch, Universe } from './types';
+import type { Attachment, Board, Task, TaskPatch, Universe } from './types';
 
 /**
  * Tout ce qui s'ordonne par position fractionnaire. `Task` et `Board` la
@@ -569,4 +569,86 @@ export function positionBefore(visible: Positioned[], beforeId: string | null): 
   const after = visible[index].position;
   const before = index > 0 ? visible[index - 1].position : after - 1;
   return (before + after) / 2;
+}
+
+// ── Pièces jointes (#78) ─────────────────────────────────────────────────────
+
+/** Les liens d'une tâche, dans l'ordre choisi. */
+export function attachmentsOf(all: Attachment[], taskId: string): Attachment[] {
+  return all.filter((a) => a.task_id === taskId).sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Ce qu'on écrit sur la pastille d'un lien : son nom, à défaut son domaine.
+ *
+ * Le domaine plutôt que l'URL entière parce qu'une URL d'article fait deux
+ * lignes et ne dit rien de plus que « lemonde.fr ». Le `www.` saute : il n'a
+ * jamais rien appris à personne.
+ */
+export function hostLabel(a: Attachment): string {
+  if (a.label?.trim()) return a.label.trim();
+  try {
+    return new URL(a.url).hostname.replace(/^www\./, '');
+  } catch {
+    // La base garantit `http(s)://…`, donc on n'arrive normalement jamais ici.
+    // Mais une pastille vide serait pire qu'une pastille laide.
+    return a.url;
+  }
+}
+
+/**
+ * L'URL est-elle acceptable ?
+ *
+ * ⚠️ Ce n'est PAS la barrière de sécurité — celle-là est le `check` en base, que
+ * rien ne contourne. Celle-ci sert à donner un message avant d'écrire, plutôt
+ * qu'une erreur SQL opaque après.
+ */
+export function isSafeUrl(raw: string): boolean {
+  const url = raw.trim();
+  if (url.length < 8 || url.length > 2048) return false;
+  try {
+    const p = new URL(url);
+    return p.protocol === 'http:' || p.protocol === 'https:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Ce qu'on retient d'une URL saisie à la main.
+ *
+ * Un utilisateur colle « github.com/x » aussi souvent que l'URL complète : sans
+ * ce complément, le premier cas est refusé par la base et il ne comprend pas
+ * pourquoi. On ne devine QUE le schéma, jamais le reste.
+ */
+export function normalizeUrl(raw: string): string {
+  const url = raw.trim();
+  if (!url) return '';
+  return /^[a-z][a-z0-9+.-]*:/i.test(url) ? url : `https://${url}`;
+}
+
+/**
+ * Au-delà de combien de temps une capture en attente est-elle périmée ? (#78)
+ *
+ * Le popup s'ouvre normalement dans la seconde qui suit le clic droit. Un
+ * brouillon plus vieux vient forcément d'une ouverture MANUELLE du popup, bien
+ * après : montrer alors un formulaire prérempli avec une page qu'on a quittée
+ * depuis longtemps serait déroutant, et pire, on pourrait le valider sans le
+ * relire.
+ */
+export const CAPTURE_TTL_MS = 5 * 60 * 1000;
+
+/**
+ * La capture en attente est-elle encore d'actualité ?
+ *
+ * La règle vit ici et pas dans l'extension parce que c'est une décision de
+ * produit, pas de la plomberie navigateur — et parce qu'elle est ainsi testable
+ * sans stub de `chrome`.
+ *
+ * Une date dans le futur (horloge remise à l'heure entre le dépôt et la lecture)
+ * est traitée comme fraîche : le brouillon vient forcément d'être écrit.
+ */
+export function isFreshCapture(at: number, now: number = Date.now()): boolean {
+  if (!Number.isFinite(at)) return false;
+  return now - at <= CAPTURE_TTL_MS;
 }

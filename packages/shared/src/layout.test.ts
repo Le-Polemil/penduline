@@ -15,7 +15,13 @@ import {
   planPairMove,
   planReorder,
   progress,
+  attachmentsOf,
+  CAPTURE_TTL_MS,
   deleteLabel,
+  hostLabel,
+  isFreshCapture,
+  isSafeUrl,
+  normalizeUrl,
   isOpenRow,
   planDelete,
   planRestore,
@@ -24,7 +30,7 @@ import {
   summarizeUniverse,
   visibleTasks,
 } from './layout';
-import { makeBoard, makeList, makeTask, makeUniverse } from './test-fixtures';
+import { makeAttachment, makeBoard, makeList, makeTask, makeUniverse } from './test-fixtures';
 
 /** Une liste est-elle strictement ordonnée ? Deux positions égales = ordre perdu. */
 function strictlyOrdered(positions: number[]): boolean {
@@ -888,5 +894,68 @@ describe('isOpenRow — le point unique où « ouverte » se décide', () => {
     // Le cas qui a fait mentir les trois compteurs : une matrice de cinq tâches
     // en annonçait six dès qu'on ajoutait une étape.
     expect(isOpenRow(makeTask({ id: 'd', parent_id: 'a' }))).toBe(false);
+  });
+});
+
+describe('pièces jointes (#78)', () => {
+  it('rend les liens d’une tâche, triés, et ignore ceux des autres', () => {
+    const all = [
+      makeAttachment({ id: 'x', task_id: 't1', position: 1 }),
+      makeAttachment({ id: 'y', task_id: 't2', position: 0 }),
+      makeAttachment({ id: 'z', task_id: 't1', position: 0 }),
+    ];
+    expect(attachmentsOf(all, 't1').map((a) => a.id)).toEqual(['z', 'x']);
+  });
+
+  it('la pastille porte le nom donné, à défaut le domaine sans « www. »', () => {
+    expect(hostLabel(makeAttachment({ label: 'Issue 78' }))).toBe('Issue 78');
+    expect(hostLabel(makeAttachment({ url: 'https://www.lemonde.fr/un/article' }))).toBe('lemonde.fr');
+    // Un nom fait d’espaces ne vaut pas un nom.
+    expect(hostLabel(makeAttachment({ label: '   ', url: 'https://github.com/a/b' }))).toBe('github.com');
+  });
+
+  it('refuse tout ce qui n’est pas http(s) — le champ AVANT la base', () => {
+    expect(isSafeUrl('https://exemple.test/a')).toBe(true);
+    expect(isSafeUrl('http://exemple.test/a')).toBe(true);
+    // Celui-là finirait cliquable dans l’app web s’il passait.
+    expect(isSafeUrl('javascript:alert(1)')).toBe(false);
+    expect(isSafeUrl('  JavaScript:alert(1)  ')).toBe(false);
+    expect(isSafeUrl('data:text/html,<script>')).toBe(false);
+    expect(isSafeUrl('ftp://exemple.test/a')).toBe(false);
+    expect(isSafeUrl('pas une url')).toBe(false);
+    expect(isSafeUrl('')).toBe(false);
+    expect(isSafeUrl(`https://exemple.test/${'a'.repeat(2100)}`)).toBe(false);
+  });
+
+  it('complète le schéma manquant, et LUI SEUL', () => {
+    expect(normalizeUrl('github.com/x')).toBe('https://github.com/x');
+    expect(normalizeUrl('  exemple.test  ')).toBe('https://exemple.test');
+    // Un schéma déjà là n’est jamais réécrit : sinon `javascript:` deviendrait
+    // `https://javascript:` et passerait la validation au lieu d’être refusé.
+    expect(normalizeUrl('http://exemple.test')).toBe('http://exemple.test');
+    expect(normalizeUrl('javascript:alert(1)')).toBe('javascript:alert(1)');
+    expect(normalizeUrl('')).toBe('');
+  });
+
+  it('un schéma exotique complété ne devient pas acceptable pour autant', () => {
+    expect(isSafeUrl(normalizeUrl('javascript:alert(1)'))).toBe(false);
+    expect(isSafeUrl(normalizeUrl('github.com/x'))).toBe(true);
+  });
+});
+
+describe('fraîcheur d’une capture en attente (#78)', () => {
+  const t0 = 1_700_000_000_000;
+
+  it('accepte ce qui vient d’être déposé, refuse ce qui a vieilli', () => {
+    expect(isFreshCapture(t0, t0)).toBe(true);
+    expect(isFreshCapture(t0, t0 + CAPTURE_TTL_MS)).toBe(true);
+    // Une seconde de trop : le popup a été rouvert à la main, bien plus tard.
+    expect(isFreshCapture(t0, t0 + CAPTURE_TTL_MS + 1)).toBe(false);
+  });
+
+  it('tolère une horloge remise à l’heure, refuse une date absente', () => {
+    // Le brouillon vient forcément d’être écrit : le montrer est le bon choix.
+    expect(isFreshCapture(t0 + 60_000, t0)).toBe(true);
+    expect(isFreshCapture(Number.NaN, t0)).toBe(false);
   });
 });

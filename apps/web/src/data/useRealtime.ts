@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import type { Board, Task, Universe } from '@penduline/shared';
+import type { Attachment, Board, Task, Universe } from '@penduline/shared';
 import { supabase } from '../lib/supabase';
 
 /** Ce que le store confie au temps réel : de quoi fusionner, et de quoi repartir. */
@@ -7,6 +7,7 @@ export interface RealtimeSink {
   setTasks: (fn: (ts: Task[]) => Task[]) => void;
   setBoards: (fn: (bs: Board[]) => Board[]) => void;
   setUniverses: (fn: (us: Universe[]) => Universe[]) => void;
+  setAttachments: (fn: (as: Attachment[]) => Attachment[]) => void;
   /** Une tâche a-t-elle sa place en mémoire ? Même règle que le chargement (#40). */
   admits: (t: Task) => boolean;
   /** Rechargement complet, après une coupure. */
@@ -113,6 +114,17 @@ export function useRealtime(userId: string, sink: RealtimeSink) {
           return;
         }
         courant.current.setBoards((bs) => fusionner(bs, msg.new as Board));
+      })
+      // Les pièces jointes suivent la même règle que le reste (#78) : sans ça,
+      // un lien ajouté dans un onglet n'apparaîtrait dans l'autre qu'au
+      // rechargement. Pas de `admits` ici — un lien appartient à sa tâche, et
+      // c'est la présence de la TÂCHE qui décide de ce qu'on affiche.
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'task_attachments', filter: filtre }, (msg) => {
+        if (msg.eventType === 'DELETE') {
+          const id = (msg.old as Partial<Attachment>).id;
+          return void (id && courant.current.setAttachments((as) => retirer(as, id)));
+        }
+        courant.current.setAttachments((as) => fusionner(as, msg.new as Attachment));
       })
       .on('postgres_changes', { event: '*', schema: 'public', table: 'universes', filter: filtre }, (msg) => {
         if (msg.eventType === 'DELETE') {

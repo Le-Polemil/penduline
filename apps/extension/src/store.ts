@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { classifyWriteFailure } from '@penduline/shared';
+import { classifyWriteFailure, isSafeUrl, normalizeUrl } from '@penduline/shared';
 import type { QuadrantKey, Board, Task, TaskPatch, Universe } from '@penduline/shared';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from './supabase';
@@ -17,6 +17,14 @@ export interface ExtStore {
   /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
   addBoard: (name: string) => Promise<string | null>;
   addTask: (boardId: string, quadrant: QuadrantKey, title: string, position: number) => Promise<void>;
+  /**
+   * Capture depuis le formulaire (#78) : la tâche ET son lien, en une fois.
+   *
+   * `false` = rien n'a été écrit, et le formulaire garde la saisie. Un échec sur
+   * le lien seul ne condamne pas la tâche : mieux vaut une tâche sans son lien
+   * qu'une capture perdue.
+   */
+  captureTask: (boardId: string, title: string, position: number, url: string) => Promise<boolean>;
   patchTask: (id: string, patch: TaskPatch) => Promise<void>;
 }
 
@@ -141,6 +149,36 @@ export function useExtStore(userId: string): ExtStore {
     [userId, persist],
   );
 
+  const captureTask = useCallback(
+    async (boardId: string, title: string, position: number, url: string) => {
+      const { ok, data } = await persist<Task>({
+        label: 'Créer la tâche',
+        write: () =>
+          supabase
+            .from('tasks')
+            // Ce qui arrive par un canal automatique n'a par définition pas été
+            // classé — et « À trier » existe exactement pour ça.
+            .insert({ user_id: userId, board_id: boardId, title, quadrant: 'parking', position })
+            .select(TASK_COLS)
+            .single(),
+        commit: (t) => setTasks((ts) => [...ts, t]),
+      });
+      if (!ok || !data) return false;
+
+      const propre = normalizeUrl(url);
+      if (propre && isSafeUrl(propre)) {
+        // Volontairement hors de `persist` : son échec ne doit ni annuler la
+        // tâche, ni rendre `false` — la capture, elle, a bien eu lieu.
+        const { error } = await supabase
+          .from('task_attachments')
+          .insert({ task_id: data.id, user_id: userId, url: propre, position: 0 });
+        if (error) console.error('[penduline] pièce jointe', error.message);
+      }
+      return true;
+    },
+    [userId, persist],
+  );
+
   const patchTask = useCallback(
     async (id: string, patch: TaskPatch) => {
       // Même convention que le web : l'état d'avant est capturé DANS la fonction
@@ -167,5 +205,5 @@ export function useExtStore(userId: string): ExtStore {
     [persist],
   );
 
-  return { ready, universes, boards, tasks, addBoard, addTask, patchTask };
+  return { ready, universes, boards, tasks, addBoard, addTask, captureTask, patchTask };
 }

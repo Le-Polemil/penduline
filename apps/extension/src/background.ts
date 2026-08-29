@@ -20,6 +20,7 @@
  */
 import { supabase, isConfigured } from './supabase';
 import { getActiveBoard } from './active-board';
+import { clearPending, setPending } from './pending-capture';
 
 /** Liste des matrices, alimentée par le popup. */
 const BOARDS_KEY = 'penduline-boards-cache';
@@ -104,7 +105,21 @@ function titleFrom(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab)
   return raw.replace(/\s+/g, ' ').slice(0, 500);
 }
 
-async function capture(boardId: string | null, title: string) {
+/**
+ * Le lien qu'on retient : celui qu'on a visé, à défaut la page où l'on est.
+ *
+ * C'était le manque de #52 : `titleFrom` se servait de `linkUrl` comme d'un
+ * titre de repli, donc le lien disparaissait dès qu'il y avait une sélection —
+ * c'est-à-dire dans le cas le plus fréquent, et le plus utile.
+ */
+function urlFrom(info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab): string {
+  const raw = info.linkUrl?.trim() || info.pageUrl?.trim() || tab?.url?.trim() || '';
+  // Une page interne (`chrome://`, `about:`) n'est un lien pour personne, et la
+  // base la refuserait de toute façon.
+  return /^https?:\/\//i.test(raw) ? raw.slice(0, 2048) : '';
+}
+
+async function capture(boardId: string | null, title: string, url = '') {
   if (!isConfigured) return flash('!', '#a63d2a', 'Penduline — configuration manquante');
   if (!title) return flash('!', '#a63d2a', 'Penduline — rien à capturer ici');
 
@@ -130,7 +145,7 @@ async function capture(boardId: string | null, title: string) {
     .limit(1);
   const position = ((last?.[0]?.position as number | undefined) ?? -1) + 1;
 
-  const { error } = await supabase.from('tasks').insert({
+  const { data, error } = await supabase.from('tasks').insert({
     user_id: userId,
     board_id: target,
     title,
@@ -138,12 +153,25 @@ async function capture(boardId: string | null, title: string) {
     // et « À trier » existe exactement pour ça.
     quadrant: 'parking',
     position,
-  });
+  })
+    .select('id')
+    .single();
 
-  if (error) {
-    console.error('[penduline] capture', error.message);
+  if (error || !data) {
+    console.error('[penduline] capture', error?.message);
     return flash('!', '#a63d2a', 'Penduline — échec de la capture');
   }
+
+  // Le lien est attaché APRÈS, et son échec ne condamne pas la tâche : mieux
+  // vaut une tâche sans son lien qu'une capture perdue. Le `check` de la base
+  // refuse tout ce qui n'est pas `http(s)`, d'où le filtrage de `urlFrom`.
+  if (url) {
+    const { error: lien } = await supabase
+      .from('task_attachments')
+      .insert({ task_id: data.id, user_id: userId, url, position: 0 });
+    if (lien) console.error('[penduline] pièce jointe', lien.message);
+  }
+
   flash('✓', '#5c6b45', 'Penduline — tâche ajoutée à « À trier »');
 }
 
@@ -161,10 +189,41 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; boards?: CachedBoard
   })();
 });
 
+/**
+ * Le clic sur une entrée de menu ouvre le formulaire (#78).
+ *
+ * ⚠️ `chrome.action.openPopup()` n'est sorti du canal dev qu'avec **Chrome 127**,
+ * et il échoue aussi quand aucune fenêtre n'a le focus. Le repli est le
+ * comportement d'avant : on écrit directement. C'est le point non négociable —
+ * une capture perdue en silence serait pire que l'absence de formulaire.
+ *
+ * L'ordre compte : la capture en attente est déposée AVANT d'ouvrir le popup,
+ * sinon celui-ci se monte et ne trouve rien. Et elle est nettoyée si l'ouverture
+ * échoue, faute de quoi le formulaire s'afficherait à la prochaine ouverture
+ * manuelle, pour une capture déjà écrite.
+ */
+async function demander(boardId: string | null, info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
+  const title = titleFrom(info, tab);
+  const url = urlFrom(info, tab);
+  // ⚠️ `null` est résolu ICI, pas dans le formulaire : l'entrée « Ajouter à
+  // « X » » annonce un nom, et le formulaire doit montrer CE nom. Le laisser
+  // à `null` faisait retomber la sélection sur la première matrice de la liste,
+  // c'est-à-dire sur une destination que rien n'avait annoncée.
+  const cible = boardId ?? (await getActiveBoard());
+
+  await setPending({ title, url, boardId: cible, at: Date.now() });
+  try {
+    await chrome.action.openPopup();
+  } catch {
+    await clearPending();
+    await capture(boardId, title, url);
+  }
+}
+
 chrome.contextMenus.onClicked.addListener((info, tab) => {
   const id = String(info.menuItemId);
-  if (id === ROOT_ACTIVE) return void capture(null, titleFrom(info, tab));
+  if (id === ROOT_ACTIVE) return void demander(null, info, tab);
   if (id.startsWith(`${ROOT_OTHER}:`)) {
-    return void capture(id.slice(ROOT_OTHER.length + 1), titleFrom(info, tab));
+    return void demander(id.slice(ROOT_OTHER.length + 1), info, tab);
   }
 });
