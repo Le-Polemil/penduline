@@ -2,8 +2,9 @@
 slug: "temps-reel"
 title: "Synchronisation temps réel (#39)"
 issues: [39]
+pr: 84
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -17,7 +18,7 @@ status: "In Progress"
 | 3. `store.ts` : branchement et règle d'admission en mémoire | Terminé | 2026-08-29 |
 | 4. Vérifications automatiques | Terminé | 2026-08-29 |
 | 5. Validation à deux onglets (10 points) | Terminé | 2026-08-29 |
-| 6. Commit, push et PR fermant #39 | En attente | |
+| 6. Commit, push et PR fermant #39 | Terminé | 2026-08-29 |
 
 ## Journal
 

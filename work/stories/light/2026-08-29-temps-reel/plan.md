@@ -2,8 +2,9 @@
 slug: "temps-reel"
 title: "Synchronisation temps réel (#39)"
 issues: [39]
+pr: 84
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # #39 — Synchronisation temps réel
