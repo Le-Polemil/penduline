@@ -10,6 +10,7 @@ import {
   pinnedTasks,
   planPairDetach,
   planPairMove,
+  quadrant,
   planPairPatch,
   planReorder,
   visibleTasks,
@@ -125,8 +126,17 @@ export function MatrixScreen({
    * rendent ce qu'il y a à écrire. Ici on ne fait plus que persister — et c'est
    * cette séparation qui rend la règle testable.
    */
-  function apply(writes: TaskWrite[]) {
-    for (const w of writes) patchTask(w.id, w.patch);
+  /**
+   * Applique des écritures préparées par `packages/shared`, en UN geste annulable.
+   *
+   * Le libellé dit le geste, pas l'objet — c'est lui que le toast d'annulation
+   * affiche. Et le groupement est ce qui fait qu'une paire déplacée se défait
+   * d'un seul `Ctrl+Z`, et non par moitiés (#46).
+   */
+  function apply(label: string, writes: TaskWrite[]) {
+    store.group(label, () => {
+      for (const w of writes) void patchTask(w.id, w.patch);
+    });
   }
 
   function commitTaskRename() {
@@ -135,7 +145,13 @@ export function MatrixScreen({
     const before = tasks.find((t) => t.id === renamingTask.id)?.title;
     // Un titre vide ou inchangé n'écrit rien : la contrainte `tasks_title_check`
     // refuserait le premier, et le second coûterait une requête pour rien.
-    if (title && title !== before) patchTask(renamingTask.id, { title });
+    // Par `group` et non par `patchTask` directement : sinon le renommage
+    // s'écrit hors de tout groupe, aucun inverse n'est retenu, et `Ctrl+Z`
+    // afficherait son toast sans rien défaire (#46).
+    if (title && title !== before) {
+      const id = renamingTask.id;
+      store.group('Renommée', () => void patchTask(id, { title }));
+    }
     setRenamingTask(null);
   }
 
@@ -146,7 +162,7 @@ export function MatrixScreen({
    */
   function moveToBoard(task: Task, target: Board) {
     const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
-    withVT(() => apply(planPairMove(tasks, task, { board_id: target.id }, pos)));
+    withVT(() => apply(`Déplacée vers « ${target.name} »`, planPairMove(tasks, task, { board_id: target.id }, pos)));
   }
 
   /**
@@ -164,7 +180,7 @@ export function MatrixScreen({
 
   /** Défait le lien des deux côtés — un `pair_id` orphelin ne sert à rien. */
   function unpair(task: Task) {
-    withVT(() => apply(planPairDetach(tasks, task)));
+    withVT(() => apply('Dissociée', planPairDetach(tasks, task)));
     setMenuTask(null);
   }
 
@@ -178,7 +194,7 @@ export function MatrixScreen({
   function reorderTask(t: Task, dir: -1 | 1) {
     const plan = planReorder(tasks, t, dir);
     if (!plan) return;
-    withVT(() => apply(plan.writes));
+    withVT(() => apply(`Déplacée en ${ordinal(plan.index)} position`, plan.writes));
     announce(`« ${t.title} » déplacée en ${ordinal(plan.index)} position sur ${plan.total}.`);
     setMenuTask(null);
   }
@@ -188,17 +204,17 @@ export function MatrixScreen({
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
     const pos = endPosition(visibleTasks(tasks, board.id, quad));
-    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
+    withVT(() => apply(`Déplacée vers « ${quadrant(quad).label} »`, planPairMove(tasks, task, { quadrant: quad }, pos)));
     setMenuTask(null);
   }
   function togglePin(t: Task) {
     if (t.pinned) {
       const pos = endPosition(visibleTasks(tasks, board.id, t.quadrant));
-      withVT(() => apply(planPairMove(tasks, t, { pinned: false }, pos)));
+      withVT(() => apply('Désépinglée', planPairMove(tasks, t, { pinned: false }, pos)));
     } else {
       // Épingler ne change pas les positions : les épinglées ont leur propre
       // zone, et la paire y sera regroupée par `buildRows` comme ailleurs.
-      withVT(() => apply(planPairPatch(tasks, t, { pinned: true })));
+      withVT(() => apply('Épinglée', planPairPatch(tasks, t, { pinned: true })));
     }
     setMenuTask(null);
   }
@@ -206,7 +222,7 @@ export function MatrixScreen({
     const task = tasks.find((t) => t.id === id);
     // Même règle qu'à l'archivage : la survivante est dissociée plutôt que de
     // garder un lien qui ne pointe plus vers rien.
-    if (task) withVT(() => apply(planPairDetach(tasks, task, { deleted: true, pinned: false })));
+    if (task) withVT(() => apply('Supprimée', planPairDetach(tasks, task, { deleted: true, pinned: false })));
     setMenuTask(null);
   }
 
@@ -218,7 +234,7 @@ export function MatrixScreen({
     const pos = endPosition(visibleTasks(tasks, board.id, quad));
     // Glisser une tâche appairée emmène sa partenaire : c'est le comportement
     // inverse de l'ancien, et c'est voulu.
-    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
+    withVT(() => apply(`Déplacée vers « ${quadrant(quad).label} »`, planPairMove(tasks, task, { quadrant: quad }, pos)));
     setDrag(null);
     setHover(null);
   }
@@ -233,7 +249,7 @@ export function MatrixScreen({
       (t) => t.id !== task.id && t.id !== mate?.id,
     );
     const pos = insertPosition(buildRows(rest), rowIndex);
-    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
+    withVT(() => apply(`Déplacée vers « ${quadrant(quad).label} »`, planPairMove(tasks, task, { quadrant: quad }, pos)));
     setDrag(null);
     setHover(null);
   }
