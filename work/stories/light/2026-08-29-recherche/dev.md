@@ -2,8 +2,9 @@
 slug: "recherche"
 title: "Recherche dans toutes les matrices (#45)"
 issues: [45]
+pr: 83
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -20,7 +21,7 @@ status: "In Progress"
 | 6. Styles | Terminé | 2026-08-29 |
 | 7. Vérifications automatiques | Terminé | 2026-08-29 |
 | 8. Validation en navigateur (8 points) | Terminé | 2026-08-29 |
-| 9. Commit, push et PR fermant #45 | En attente | |
+| 9. Commit, push et PR fermant #45 | Terminé | 2026-08-29 |
 
 ## Journal
 
