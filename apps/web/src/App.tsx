@@ -9,6 +9,7 @@ import { GlobalScreen, type Scope } from './screens/Global';
 import { AnnounceProvider } from './a11y/announce';
 import { ToastProvider } from './components/Toast';
 import { Search, type SearchHit } from './components/Search';
+import { useUndoShortcut } from './data/useUndoShortcut';
 import { clearSessionNotice, readSessionNotice } from './lib/session-notice';
 
 /**
@@ -165,6 +166,16 @@ function Workspace({ userId }: { userId: string }) {
   const store = useStore(userId);
   const [view, setView] = useState<View>(readView);
   const [searching, setSearching] = useState(false);
+  useUndoShortcut(store);
+
+  // Changer d'écran change le contexte : une entrée d'annulation viserait des
+  // états qu'on ne voit plus. Vider est plus sûr que deviner (#46).
+  useEffect(() => {
+    store.clearUndo();
+    // Seule l'identité de la vue compte, pas l'objet `store` qui change à chaque
+    // rendu.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view.kind, view.kind === 'board' ? view.id : null]);
 
   function allerA(hit: SearchHit) {
     setSearching(false);

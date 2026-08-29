@@ -8,6 +8,7 @@ import {
   partnerOf,
   planPairDetach,
   planPairMove,
+  quadrant,
   planPairPatch,
   visibleTasks,
   type Board,
@@ -104,15 +105,30 @@ export function GlobalScreen({
   const doneList = scopedTasks.filter((t) => t.done && !t.deleted);
   const delList = scopedTasks.filter((t) => t.deleted);
 
-  function apply(writes: TaskWrite[]) {
-    for (const w of writes) patchTask(w.id, w.patch);
+  /**
+   * Applique des écritures préparées par `packages/shared`, en UN geste annulable.
+   *
+   * Le libellé dit le geste, pas l'objet — c'est lui que le toast d'annulation
+   * affiche. Et le groupement est ce qui fait qu'une paire déplacée se défait
+   * d'un seul `Ctrl+Z`, et non par moitiés (#46).
+   */
+  function apply(label: string, writes: TaskWrite[]) {
+    store.group(label, () => {
+      for (const w of writes) void patchTask(w.id, w.patch);
+    });
   }
 
   function commitTaskRename() {
     if (!renamingTask) return;
     const title = renamingTask.title.trim();
     const before = tasks.find((t) => t.id === renamingTask.id)?.title;
-    if (title && title !== before) patchTask(renamingTask.id, { title });
+    // Par `group` et non par `patchTask` directement : sinon le renommage
+    // s'écrit hors de tout groupe, aucun inverse n'est retenu, et `Ctrl+Z`
+    // afficherait son toast sans rien défaire (#46).
+    if (title && title !== before) {
+      const id = renamingTask.id;
+      store.group('Renommée', () => void patchTask(id, { title }));
+    }
     setRenamingTask(null);
   }
 
@@ -122,13 +138,13 @@ export function GlobalScreen({
    */
   function moveQuad(task: Task, quad: QuadrantKey) {
     const pos = endPosition(visibleTasks(tasks, task.board_id, quad));
-    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
+    withVT(() => apply(`Déplacée vers « ${quadrant(quad).label} »`, planPairMove(tasks, task, { quadrant: quad }, pos)));
     setMenuTask(null);
   }
 
   function moveToBoard(task: Task, target: Board) {
     const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
-    withVT(() => apply(planPairMove(tasks, task, { board_id: target.id }, pos)));
+    withVT(() => apply(`Déplacée vers « ${target.name} »`, planPairMove(tasks, task, { board_id: target.id }, pos)));
   }
 
   /** Même règle que l'écran matrice : on n'annonce que le départ d'une PAIRE. */
@@ -142,20 +158,20 @@ export function GlobalScreen({
   function togglePin(t: Task) {
     if (t.pinned) {
       const pos = endPosition(visibleTasks(tasks, t.board_id, t.quadrant));
-      withVT(() => apply(planPairMove(tasks, t, { pinned: false }, pos)));
+      withVT(() => apply('Désépinglée', planPairMove(tasks, t, { pinned: false }, pos)));
     } else {
-      withVT(() => apply(planPairPatch(tasks, t, { pinned: true })));
+      withVT(() => apply('Épinglée', planPairPatch(tasks, t, { pinned: true })));
     }
     setMenuTask(null);
   }
 
   function unpair(task: Task) {
-    withVT(() => apply(planPairDetach(tasks, task)));
+    withVT(() => apply('Dissociée', planPairDetach(tasks, task)));
     setMenuTask(null);
   }
 
   function removeTask(task: Task) {
-    withVT(() => apply(planPairDetach(tasks, task, { deleted: true, pinned: false })));
+    withVT(() => apply('Supprimée', planPairDetach(tasks, task, { deleted: true, pinned: false })));
     setMenuTask(null);
   }
 
@@ -166,7 +182,7 @@ export function GlobalScreen({
     setDrag(null);
     if (!task) return;
     const pos = endPosition(visibleTasks(tasks, task.board_id, quad));
-    withVT(() => apply(planPairMove(tasks, task, { quadrant: quad }, pos)));
+    withVT(() => apply(`Déplacée vers « ${quadrant(quad).label} »`, planPairMove(tasks, task, { quadrant: quad }, pos)));
   }
 
   /**

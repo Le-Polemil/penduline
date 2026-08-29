@@ -5,10 +5,12 @@ import {
   type Board,
   type Task,
   type TaskPatch,
+  type TaskWrite,
   type Universe,
 } from '@penduline/shared';
 import { supabase } from '../lib/supabase';
 import { useRealtime } from './useRealtime';
+import { pop, push, type UndoEntry } from './undo';
 import { usePersist, type WriteResult } from './persist';
 
 /** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
@@ -99,6 +101,7 @@ export interface Store {
   patchTask: (id: string, patch: TaskPatch) => Promise<boolean>;
   /** Suppression DÉFINITIVE (contrairement au drapeau `deleted`, qui est réversible). */
   purgeTasks: (ids: string[]) => Promise<void>;
+
   /**
    * Charge la corbeille des matrices demandées et la FUSIONNE dans `tasks`.
    *
@@ -106,6 +109,21 @@ export interface Store {
    * rien. Appelé à l'ouverture, jamais au démarrage — c'est l'objet de #40.
    */
   loadBin: (boardIds: string[]) => Promise<void>;
+  /**
+   * Groupe toutes les écritures de `fn` en UNE entrée d'annulation.
+   *
+   * Sans groupement, déplacer une paire — deux `patchTask` — laisserait une
+   * moitié de paire en arrière au premier `Ctrl+Z`.
+   */
+  group: (label: string, fn: () => void) => void;
+  undo: () => void;
+  redo: () => void;
+  /** Vide les deux piles : le contexte a changé, annuler n'aurait plus de sens. */
+  clearUndo: () => void;
+  /** Ce que `Ctrl+Z` défera, pour l'annoncer. `null` = rien à annuler. */
+  undoLabel: string | null;
+  redoLabel: string | null;
+
   /** Ces matrices ont-elles déjà leur corbeille en mémoire ? */
   binLoaded: (boardIds: string[]) => boolean;
   /**
@@ -150,6 +168,18 @@ export function useStore(userId: string): Store {
   /** Les matrices dont la corbeille est déjà en mémoire. En ref : `loadBin` se
    *  garde lui-même sans se re-créer à chaque chargement. */
   const binBoards = useRef(new Set<string>());
+  const [undoStack, setUndoStack] = useState<UndoEntry[]>([]);
+  const [redoStack, setRedoStack] = useState<UndoEntry[]>([]);
+  /**
+   * Le groupe en cours de constitution.
+   *
+   * En ref et non en state : `patchTask` y dépose ses inverses pendant que `fn`
+   * s'exécute, donc AVANT tout re-rendu. Un state serait lu périmé.
+   */
+  const collecte = useRef<TaskWrite[] | null>(null);
+  /** Pendant une annulation, on n'empile pas — on alimente l'autre pile. */
+  const sens = useRef<'normal' | 'undo' | 'redo'>('normal');
+
   /** Sert à re-rendre après un chargement — la ref, elle, ne le fait pas — et à
    *  signaler qu'un compte de corbeille est peut-être périmé. */
   const [binTick, setBinTick] = useState(0);
@@ -177,6 +207,10 @@ export function useStore(userId: string): Store {
     // semer des exemples imposerait une lecture (naguère : les pièces d'une maison).
     // Aucun univers n'est créé non plus : c'est l'état de tous les comptes au
     // lendemain de la migration, et il doit rester parfaitement utilisable.
+    // Le contexte vient de changer sous nos pieds : annuler viserait des états
+    // qui n'existent plus. Vider est plus sûr que deviner (#46).
+    setUndoStack([]);
+    setRedoStack([]);
     setUniverses(universesRes.data ?? []);
     setBoards(boardsRes.data ?? []);
     setTasks((tasksRes.data as Task[] | null) ?? []);
@@ -442,6 +476,11 @@ export function useStore(userId: string): Store {
 
   const patchTask = useCallback(
     async (id: string, patch: TaskPatch) => {
+      // ⚠️ Capturé MAINTENANT, de façon synchrone. `group` referme son
+      // collecteur dès que `fn` a rendu la main — c'est-à-dire bien avant que
+      // cette écriture ne se résolve. Le lire à la fin donnerait toujours `null`,
+      // et l'annulation s'afficherait sans rien défaire.
+      const collecteur = collecte.current;
       let before: TaskPatch | null = null;
       const { ok } = await persist<null>({
         label: taskLabel(patch),
@@ -463,10 +502,78 @@ export function useStore(userId: string): Store {
       // de la corbeille : son compte, pris côté serveur, devient périmé (#40).
       // Bumpé APRÈS l'écriture, pour que la requête suivante lise l'état réel.
       if (ok && ('done' in patch || 'deleted' in patch)) setBinTick((n) => n + 1);
+
+      // L'inverse n'est retenu QUE si l'écriture a tenu (#46). En cas d'échec,
+      // `persist` a déjà remis l'état d'avant : empiler ici ferait défaire un
+      // geste qui n'a jamais eu lieu — le « troisième état » que #34 évitait.
+      if (ok && before && collecteur) collecteur.push({ id, patch: before });
       return ok;
     },
     [persist],
   );
+
+  /**
+   * Groupe les écritures de `fn` en une seule entrée d'annulation.
+   *
+   * ⚠️ `fn` doit être SYNCHRONE. Les écritures partent en asynchrone, mais leurs
+   * inverses sont déposés dans `collecte` au retour de chaque `patchTask` — le
+   * groupe est donc refermé sur ce qui a été LANCÉ, et complété au fil des
+   * réponses. Une écriture qui échoue n'y laisse rien.
+   */
+  const group = useCallback((label: string, fn: () => void) => {
+    const parent = collecte.current;
+    const paquet: TaskWrite[] = [];
+    collecte.current = paquet;
+    try {
+      fn();
+    } finally {
+      collecte.current = parent;
+    }
+    // Les inverses arrivent après les réponses réseau : on empile l'entrée
+    // maintenant, le tableau se remplira tout seul — c'est la même référence.
+    if (sens.current === 'undo') setRedoStack((r) => push(r, { label, inverses: paquet }));
+    else if (sens.current === 'redo') setUndoStack((u) => push(u, { label, inverses: paquet }));
+    else {
+      setUndoStack((u) => push(u, { label, inverses: paquet }));
+      // Une action neuve rend le rétablissement caduc : il rejouerait une
+      // branche d'histoire qu'on vient de quitter.
+      setRedoStack([]);
+    }
+  }, []);
+
+  /** Applique les inverses d'une entrée, en enregistrant le geste dans l'autre pile. */
+  const rejouer = useCallback(
+    (entry: UndoEntry, direction: 'undo' | 'redo') => {
+      sens.current = direction;
+      try {
+        group(entry.label, () => {
+          for (const w of entry.inverses) void patchTask(w.id, w.patch);
+        });
+      } finally {
+        sens.current = 'normal';
+      }
+    },
+    [group, patchTask],
+  );
+
+  const undo = useCallback(() => {
+    const { rest, entry } = pop(undoStack);
+    if (!entry) return;
+    setUndoStack(rest);
+    rejouer(entry, 'undo');
+  }, [undoStack, rejouer]);
+
+  const redo = useCallback(() => {
+    const { rest, entry } = pop(redoStack);
+    if (!entry) return;
+    setRedoStack(rest);
+    rejouer(entry, 'redo');
+  }, [redoStack, rejouer]);
+
+  const clearUndo = useCallback(() => {
+    setUndoStack([]);
+    setRedoStack([]);
+  }, []);
 
   /**
    * Charge la corbeille à la demande, et la fusionne dans `tasks`.
@@ -594,6 +701,12 @@ export function useStore(userId: string): Store {
     addTask,
     patchTask,
     purgeTasks,
+    group,
+    undo,
+    redo,
+    clearUndo,
+    undoLabel: undoStack.length ? undoStack[undoStack.length - 1].label : null,
+    redoLabel: redoStack.length ? redoStack[redoStack.length - 1].label : null,
     loadBin,
     binLoaded,
     binVersion: binTick,
