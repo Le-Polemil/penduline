@@ -21,6 +21,7 @@ import { BinModal } from '../components/BinModal';
 import { Confirm } from '../components/Confirm';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
+import { useBinCount } from '../data/useBinCount';
 
 /** Ce que la vue globale montre : tout, ou un univers. */
 export type Scope = { kind: 'all' } | { kind: 'universe'; id: string };
@@ -92,6 +93,8 @@ export function GlobalScreen({
     (b) => scoped.kind === 'all' || b.universe_id === scoped.id,
   );
   const scopeLabel = universe?.name ?? 'Toutes les matrices';
+  // Après `boards` : la portée de la corbeille est celle de l'écran.
+  const binCount = useBinCount(store, boards.map((b) => b.id));
 
   const inScope = new Set(boards.map((b) => b.id));
   const scopedTasks = tasks.filter((t) => inScope.has(t.board_id));
@@ -261,9 +264,12 @@ export function GlobalScreen({
           className="bin-btn"
           // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
           // propre compteur lui tenait lieu d'intitulé.
-          aria-label={`Corbeille, ${doneList.length + delList.length} élément${doneList.length + delList.length > 1 ? 's' : ''}`}
+          aria-label={`Corbeille, ${binCount} élément${binCount > 1 ? 's' : ''}`}
           style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
           onClick={() => {
+            // Le contenu n'est plus en mémoire au démarrage (#40) : on le
+            // demande ici, une seule fois par session.
+            void store.loadBin(boards.map((b) => b.id));
             withVT(() => setBinOpen(true));
             setMenuTask(null);
             setScopeMenu(false);
@@ -274,7 +280,7 @@ export function GlobalScreen({
             <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
             <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
-          {doneList.length + delList.length}
+          {binCount}
         </button>
       </div>
 

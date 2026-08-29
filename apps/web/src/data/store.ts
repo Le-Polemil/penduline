@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   positionBefore,
   type QuadrantKey,
@@ -11,6 +11,9 @@ import { supabase } from '../lib/supabase';
 import { usePersist, type WriteResult } from './persist';
 
 /** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
+/** Taille de page de PostgREST : au-delà, il tronque en silence. */
+const PAGE = 1000;
+
 const TASK_COLS =
   'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, created_at, updated_at';
 
@@ -84,6 +87,26 @@ export interface Store {
   patchTask: (id: string, patch: TaskPatch) => Promise<boolean>;
   /** Suppression DÉFINITIVE (contrairement au drapeau `deleted`, qui est réversible). */
   purgeTasks: (ids: string[]) => Promise<void>;
+  /**
+   * Charge la corbeille des matrices demandées et la FUSIONNE dans `tasks`.
+   *
+   * Scopé, et idempotent par matrice : rouvrir la même corbeille ne recharge
+   * rien. Appelé à l'ouverture, jamais au démarrage — c'est l'objet de #40.
+   */
+  loadBin: (boardIds: string[]) => Promise<void>;
+  /** Ces matrices ont-elles déjà leur corbeille en mémoire ? */
+  binLoaded: (boardIds: string[]) => boolean;
+  /**
+   * Change à chaque écriture susceptible de modifier le contenu de la corbeille.
+   * `useBinCount` s'en sert pour redemander son compte — c'est ce qui garde le
+   * compteur exact sans jamais additionner deux sources.
+   */
+  binVersion: number;
+  /**
+   * Combien d'éléments la corbeille contient pour ces matrices, **sans en
+   * charger un seul** (`head: true, count: 'exact'`).
+   */
+  countBin: (boardIds: string[]) => Promise<number>;
   reload: () => Promise<void>;
 }
 
@@ -112,13 +135,30 @@ export function useStore(userId: string): Store {
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  /** Les matrices dont la corbeille est déjà en mémoire. En ref : `loadBin` se
+   *  garde lui-même sans se re-créer à chaque chargement. */
+  const binBoards = useRef(new Set<string>());
+  /** Sert à re-rendre après un chargement — la ref, elle, ne le fait pas — et à
+   *  signaler qu'un compte de corbeille est peut-être périmé. */
+  const [binTick, setBinTick] = useState(0);
   const persist = usePersist();
 
   const load = useCallback(async () => {
     const [universesRes, boardsRes, tasksRes] = await Promise.all([
       supabase.from('universes').select('*').order('position'),
       supabase.from('boards').select('*').order('position'),
-      supabase.from('tasks').select(TASK_COLS).order('position'),
+      // ⚠️ On ne charge QUE ce que la grille affiche (#40). Le reste — terminé,
+      // supprimé — arrive à l'ouverture de la corbeille, via `loadBin`.
+      //
+      // Le filtre ne s'invente pas : il est la négation exacte des prédicats de
+      // la corbeille (`done && !deleted` et `deleted`) déjà écrits dans les
+      // écrans. Le chargement ne respectait pas une règle qui existait déjà.
+      //
+      // Sans lui, PostgREST plafonnant ses réponses à 1000 lignes, un compte
+      // passé ce seuil perdait des tâches OUVERTES en silence : le tri se fait
+      // sur `position`, que les archives conservent, donc les deux
+      // s'entrelacent. Ce filtre referme ce trou par construction.
+      supabase.from('tasks').select(TASK_COLS).eq('done', false).eq('deleted', false).order('position'),
     ]);
 
     // Compte vide → on laisse vide. Le découpage appartient à l'utilisateur :
@@ -407,10 +447,90 @@ export function useStore(userId: string): Store {
         },
         write: () => supabase.from('tasks').update(patch).eq('id', id),
       });
+      // Cocher, décocher, supprimer ou restaurer fait entrer ou sortir une tâche
+      // de la corbeille : son compte, pris côté serveur, devient périmé (#40).
+      // Bumpé APRÈS l'écriture, pour que la requête suivante lise l'état réel.
+      if (ok && ('done' in patch || 'deleted' in patch)) setBinTick((n) => n + 1);
       return ok;
     },
     [persist],
   );
+
+  /**
+   * Charge la corbeille à la demande, et la fusionne dans `tasks`.
+   *
+   * ⚠️ FUSION, et non seconde liste. `patchTask`, `purgeTasks` et le retour
+   * arrière de `persist` opèrent tous sur `tasks` : deux listes obligeraient
+   * chacun à savoir laquelle il vise, et à gérer le passage de l'une à l'autre.
+   *
+   * « Rétablir » le montre à la lettre : `patchTask` fait un `map` sur `tasks`,
+   * et un `map` ne crée rien. Sans fusion, la tâche restaurée passerait bien à
+   * `deleted: false` en base, puis disparaîtrait de la corbeille sans jamais
+   * revenir dans la grille.
+   */
+  const loadBin = useCallback(async (boardIds: string[]) => {
+    // Idempotent PAR MATRICE : ouvrir la corbeille d'une matrice puis celle de
+    // la vue globale ne doit charger que le complément.
+    const manquantes = boardIds.filter((id) => !binBoards.current.has(id));
+    if (manquantes.length === 0) return;
+    // Marquées AVANT l'attente : deux ouvertures rapprochées ne doivent pas
+    // lancer deux fois la même requête.
+    manquantes.forEach((id) => binBoards.current.add(id));
+
+    // ⚠️ PAGINATION OBLIGATOIRE. PostgREST plafonne ses réponses à 1000 lignes,
+    // silencieusement — c'est précisément le défaut que ce ticket corrige côté
+    // grille, et le reproduire ici rendrait la corbeille incomplète sans que
+    // rien ne le signale. Une matrice peut très bien accumuler plus de mille
+    // tâches terminées : c'est même son état normal au bout d'un an.
+    const recues: Task[] = [];
+    for (let debut = 0; ; debut += PAGE) {
+      const { data, error } = await supabase
+        .from('tasks')
+        .select(TASK_COLS)
+        .in('board_id', manquantes)
+        .or('done.eq.true,deleted.eq.true')
+        .order('position')
+        .range(debut, debut + PAGE - 1);
+      if (error || !data) {
+        // Rejouable : sans ça, un échec réseau condamnerait ces corbeilles pour
+        // toute la session.
+        manquantes.forEach((id) => binBoards.current.delete(id));
+        return;
+      }
+      recues.push(...(data as Task[]));
+      if (data.length < PAGE) break;
+    }
+
+    setTasks((ts) => {
+      const connues = new Set(ts.map((t) => t.id));
+      // Les tâches archivées PENDANT la session sont déjà là, à jour : la
+      // réponse du serveur ne doit pas écraser leur état optimiste.
+      return [...ts, ...recues.filter((t) => !connues.has(t.id))];
+    });
+    setBinTick((n) => n + 1);
+  }, []);
+
+  /** Purement dérivé : `binTick` force la relecture après un chargement. */
+  const binLoaded = useCallback(
+    (boardIds: string[]) => binTick >= 0 && boardIds.every((id) => binBoards.current.has(id)),
+    [binTick],
+  );
+
+  /**
+   * Le nombre d'éléments de la corbeille, sans en transférer un seul.
+   *
+   * `head: true` renvoie les en-têtes et rien d'autre — le compte est calculé
+   * par la base. Compter en chargeant rejouerait le défaut que #40 corrige.
+   */
+  const countBin = useCallback(async (boardIds: string[]) => {
+    if (boardIds.length === 0) return 0;
+    const { count } = await supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .in('board_id', boardIds)
+      .or('done.eq.true,deleted.eq.true');
+    return count ?? 0;
+  }, []);
 
   const purgeTasks = useCallback(
     async (ids: string[]) => {
@@ -429,6 +549,8 @@ export function useStore(userId: string): Store {
         },
         write: () => supabase.from('tasks').delete().in('id', ids),
       });
+      // Une purge vide la corbeille d'autant : même raison que dans `patchTask`.
+      setBinTick((n) => n + 1);
     },
     [persist],
   );
@@ -449,6 +571,10 @@ export function useStore(userId: string): Store {
     addTask,
     patchTask,
     purgeTasks,
+    loadBin,
+    binLoaded,
+    binVersion: binTick,
+    countBin,
     reload: load,
   };
 }
