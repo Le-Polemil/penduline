@@ -3,7 +3,7 @@ slug: "sous-taches"
 title: "Sous-tâches, un seul niveau (#50)"
 issues: [50]
 created: 2026-08-29
-status: "In Progress"
+status: "Done"
 ---
 
 # #50 — Sous-tâches, un seul niveau
