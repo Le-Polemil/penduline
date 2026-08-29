@@ -225,7 +225,7 @@ function Workspace({ userId }: { userId: string }) {
         </span>
       </div>
       {searching && (
-        <Search boards={store.boards} onClose={() => setSearching(false)} onPick={allerA} />
+        <Search boards={store.boards} tasks={store.tasks} onClose={() => setSearching(false)} onPick={allerA} />
       )}
       {board ? (
         <MatrixScreen

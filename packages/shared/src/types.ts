@@ -50,6 +50,14 @@ export interface Task {
   position: number;
   /** Deux tâches partageant un `pair_id` s'affichent côte à côte (une ligne). */
   pair_id: string | null;
+  /**
+   * La tâche dont celle-ci est une étape. `null` = tâche de premier niveau.
+   *
+   * UN SEUL niveau : une sous-tâche ne peut pas en avoir, et la base le garantit
+   * par un trigger. Une sous-tâche n'a pas non plus de case propre — son
+   * classement urgent/important appartient à son parent (#50).
+   */
+  parent_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -73,5 +81,6 @@ export type TaskPatch = Partial<
     | 'deleted'
     | 'position'
     | 'pair_id'
+    | 'parent_id'
   >
 >;

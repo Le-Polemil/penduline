@@ -7,6 +7,7 @@ import {
 } from 'react';
 import {
   countOpen,
+  isOpenRow,
   groupByUniverse,
   planBoardReorder,
   QUADS,
@@ -634,7 +635,7 @@ export function Home({
                     n: countOpen(store.tasks, board.id, q.key),
                   })).filter((p) => p.n > 0);
                   const total = store.tasks.filter(
-                    (t) => t.board_id === board.id && !t.done && !t.deleted,
+                    (t) => t.board_id === board.id && isOpenRow(t),
                   ).length;
                   const meta = total ? `${total} ${total > 1 ? 'tâches' : 'tâche'}` : 'Rien à faire';
                   const isEditing = editing?.id === board.id;

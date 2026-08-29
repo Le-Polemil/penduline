@@ -2,14 +2,19 @@ import { useState, type CSSProperties, type DragEvent } from 'react';
 import { flushSync } from 'react-dom';
 import {
   ALL,
+  deleteLabel,
   endPosition,
   groupTasksByBoard,
+  isOpenRow,
   orderedBoards,
   partnerOf,
+  planDelete,
   planPairDetach,
   planPairMove,
-  quadrant,
   planPairPatch,
+  planRestore,
+  quadrant,
+  subtasksOf,
   visibleTasks,
   type Board,
   type Quadrant,
@@ -79,6 +84,8 @@ export function GlobalScreen({
   const [drag, setDrag] = useState<string | null>(null);
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
+  /** Suppression d'une tâche à étapes, en attente de confirmation. */
+  const [delAsk, setDelAsk] = useState<Task | null>(null);
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
 
@@ -99,11 +106,22 @@ export function GlobalScreen({
 
   const inScope = new Set(boards.map((b) => b.id));
   const scopedTasks = tasks.filter((t) => inScope.has(t.board_id));
-  const totalOpen = scopedTasks.filter((t) => !t.done && !t.deleted).length;
+  const totalOpen = scopedTasks.filter(isOpenRow).length;
   // Voir `Matrix.tsx` : `archived` n'est plus le critère d'affichage, il ne peut
   // donc plus être celui de la récupération (#75).
-  const doneList = scopedTasks.filter((t) => t.done && !t.deleted);
-  const delList = scopedTasks.filter((t) => t.deleted);
+  // Idem écran matrice : une étape n'est pas une ligne de corbeille.
+  /**
+   * Restauration depuis la corbeille — les étapes du parent reviennent avec lui.
+   * Groupée pour que `Ctrl+Z` défasse le tout d'un coup (#46).
+   */
+  function restore(id: string) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    withVT(() => apply('Restaurée', planRestore(tasks, t)));
+  }
+
+  const doneList = scopedTasks.filter((t) => t.done && !t.deleted && !t.parent_id);
+  const delList = scopedTasks.filter((t) => t.deleted && !t.parent_id);
 
   /**
    * Applique des écritures préparées par `packages/shared`, en UN geste annulable.
@@ -171,8 +189,19 @@ export function GlobalScreen({
   }
 
   function removeTask(task: Task) {
-    withVT(() => apply('Supprimée', planPairDetach(tasks, task, { deleted: true, pinned: false })));
+    withVT(() => apply(deleteLabel(tasks, task), planDelete(tasks, task)));
     setMenuTask(null);
+  }
+
+  /**
+   * Même règle qu'à l'écran matrice : on ne confirme que si la suppression est
+   * plus large que ce qu'on a désigné. Ici les étapes ne sont même pas
+   * affichées — raison de plus pour les annoncer avant qu'elles ne partent.
+   */
+  function askRemoveTask(task: Task) {
+    setMenuTask(null);
+    if (subtasksOf(tasks, task.id).length > 0) setDelAsk(task);
+    else removeTask(task);
   }
 
   /** Le seul dépôt de cet écran : sur une case, jamais entre deux cartes. */
@@ -217,7 +246,7 @@ export function GlobalScreen({
         onMoveBoard={(b) => askMoveToBoard(t, b)}
         onTogglePin={() => togglePin(t)}
         onUnpair={() => unpair(t)}
-        onDelete={() => removeTask(t)}
+        onDelete={() => askRemoveTask(t)}
         drag={{
           dragging: drag === t.id,
           start: () => setDrag(t.id),
@@ -310,7 +339,7 @@ export function GlobalScreen({
         <div className={`grid grid--${FRAME}`}>
           {ALL.map((q) => {
             const groups = groupTasksByBoard(tasks, boards, q.key, pending);
-            const open = scopedTasks.filter((t) => t.quadrant === q.key && !t.done && !t.deleted).length;
+            const open = scopedTasks.filter((t) => t.quadrant === q.key && isOpenRow(t)).length;
             return (
               <div
                 key={q.key}
@@ -379,8 +408,23 @@ export function GlobalScreen({
           doneList={doneList}
           delList={delList}
           onClose={() => withVT(() => setBinOpen(false))}
-          onRestore={(id) => withVT(() => patchTask(id, { done: false, archived: false, deleted: false }))}
+          onRestore={(id) => restore(id)}
           onPurge={(ids) => void store.purgeTasks(ids)}
+        />
+      )}
+
+      {delAsk && (
+        <Confirm
+          title={`Supprimer « ${delAsk.title} » ?`}
+          body={(() => {
+            const n = subtasksOf(tasks, delAsk.id).length;
+            return `${n > 1 ? `Ses ${n} étapes partiront` : 'Son étape partira'} à la corbeille avec elle. Vous pourrez tout restaurer.`;
+          })()}
+          onCancel={() => setDelAsk(null)}
+          onConfirm={() => {
+            removeTask(delAsk);
+            setDelAsk(null);
+          }}
         />
       )}
 
