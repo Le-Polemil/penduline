@@ -37,6 +37,11 @@ export interface Positioned {
  * de la grille sans entrer dans « Terminées » : invisible ET irrécupérable.
  */
 export function isVisible(t: Task, quad: QuadrantKey, pending?: string | null): boolean {
+  // Une sous-tâche n'est pas une ligne de la grille : elle s'affiche sous son
+  // parent, et son classement urgent/important est celui du parent (#50). Le
+  // filtre est ici plutôt que dans les composants, pour que les cinq écrans en
+  // héritent sans avoir à y penser.
+  if (t.parent_id) return false;
   if (t.quadrant !== quad || t.pinned || t.deleted) return false;
   return !t.done || t.id === pending;
 }
@@ -70,6 +75,8 @@ export function pinnedTasks(
         t.quadrant === quad &&
         t.pinned &&
         !t.deleted &&
+        // Une sous-tâche ne s'épingle pas : elle n'a pas de case à surmonter.
+        !t.parent_id &&
         // Cocher une épinglée doit lui laisser le même délai d'annulation
         // qu'aux autres.
         (!t.done || t.id === pending),
@@ -77,9 +84,92 @@ export function pinnedTasks(
     .sort((a, b) => a.position - b.position);
 }
 
+/**
+ * Une tâche qui compte : ouverte, et **ligne de grille**.
+ *
+ * Le point unique où « ouverte » se décide. Les compteurs de matrice, de case et
+ * d'accueil le redécouvraient chacun de leur côté ; l'arrivée des étapes (#50) a
+ * fait mentir les trois d'un coup, une matrice de cinq tâches en annonçant six
+ * dès qu'on ajoutait une étape.
+ */
+export function isOpenRow(t: Task): boolean {
+  return !t.done && !t.deleted && !t.parent_id;
+}
+
 /** Nombre de tâches ouvertes (non terminées, non supprimées) d'une case. */
 export function countOpen(tasks: Task[], boardId: string, quad: QuadrantKey): number {
-  return tasks.filter((t) => t.board_id === boardId && t.quadrant === quad && !t.done && !t.deleted).length;
+  return tasks.filter(
+    (t) =>
+      t.board_id === boardId &&
+      t.quadrant === quad &&
+      !t.done &&
+      !t.deleted &&
+      // Les sous-tâches ne comptent pas : un parent à douze étapes écraserait
+      // visuellement toute la matrice (#50).
+      !t.parent_id,
+  ).length;
+}
+
+/** Les étapes d'une tâche, dans l'ordre, les supprimées écartées. */
+export function subtasksOf(tasks: Task[], parentId: string): Task[] {
+  return tasks
+    .filter((t) => t.parent_id === parentId && !t.deleted)
+    .sort((a, b) => a.position - b.position);
+}
+
+/**
+ * Supprimer une tâche : la paire se défait, et les étapes suivent.
+ *
+ * ⚠️ Le `on delete cascade` de la base ne joue AUCUN rôle ici : notre suppression
+ * est douce (`deleted = true`), aucune ligne n'est réellement effacée. Sans ce
+ * rappel explicite, les étapes d'un parent supprimé resteraient vivantes en base
+ * et invisibles partout — elles ne sont jamais des lignes de grille, et leur
+ * parent n'est plus affiché nulle part. Le `cascade` ne sert qu'au vidage
+ * définitif de la corbeille, où la ligne part pour de bon.
+ */
+export function planDelete(tasks: Task[], task: Task): TaskWrite[] {
+  const writes = planPairDetach(tasks, task, { deleted: true, pinned: false });
+  for (const s of subtasksOf(tasks, task.id)) writes.push({ id: s.id, patch: { deleted: true } });
+  return writes;
+}
+
+/**
+ * Ce que le bandeau annonce quand on supprime.
+ *
+ * La suppression d'un parent emporte ses étapes — c'est plus large que ce que
+ * l'utilisateur a désigné, donc ça se dit. Pas de fenêtre de confirmation pour
+ * autant : la suppression est douce, la corbeille la rattrape et `Ctrl+Z` aussi.
+ * Un modal à chaque suppression coûterait plus qu'il ne protège.
+ */
+export function deleteLabel(tasks: Task[], task: Task): string {
+  const n = subtasksOf(tasks, task.id).length;
+  if (n === 0) return 'Supprimée';
+  return `Supprimée avec ${n} étape${n > 1 ? 's' : ''}`;
+}
+
+/**
+ * Restaurer depuis la corbeille : la tâche revient, ses étapes avec elle.
+ *
+ * Toutes ses étapes supprimées reviennent, y compris celles qu'on avait
+ * supprimées une à une AVANT le parent — rien en base ne distingue les deux cas.
+ * Le compromis est assumé dans ce sens-là : un parent qui revient sans ses cinq
+ * étapes serait manifestement cassé, une étape qui revient en trop se resupprime
+ * d'un clic.
+ */
+export function planRestore(tasks: Task[], task: Task): TaskWrite[] {
+  const writes: TaskWrite[] = [{ id: task.id, patch: { done: false, archived: false, deleted: false } }];
+  // Seul `deleted` est levé sur les étapes : une étape cochée avant la
+  // suppression du parent doit revenir cochée. Elle n'a rien demandé.
+  for (const s of tasks) {
+    if (s.parent_id === task.id && s.deleted) writes.push({ id: s.id, patch: { deleted: false } });
+  }
+  return writes;
+}
+
+/** Combien d'étapes sont faites, sur combien — le « 2/5 » du parent. */
+export function progress(tasks: Task[], parentId: string): { done: number; total: number } {
+  const etapes = subtasksOf(tasks, parentId);
+  return { done: etapes.filter((t) => t.done).length, total: etapes.length };
 }
 
 /**

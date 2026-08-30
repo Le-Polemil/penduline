@@ -14,6 +14,12 @@ import {
   planPairDetach,
   planPairMove,
   planReorder,
+  progress,
+  deleteLabel,
+  isOpenRow,
+  planDelete,
+  planRestore,
+  subtasksOf,
   positionBefore,
   summarizeUniverse,
   visibleTasks,
@@ -763,5 +769,124 @@ describe('réordonnancement au clavier — matrices', () => {
     const z = makeBoard({ id: 'z', position: 2 });
     const a = makeBoard({ id: 'a', position: 0 });
     expect(planBoardReorder([z, a], a, 1)).toEqual({ beforeId: null, index: 2, total: 2 });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('sous-tâches — un seul niveau', () => {
+  it('une sous-tâche n’est jamais une ligne de la grille', () => {
+    // C'est la règle qui fait tenir tout le reste : elle s'affiche sous son
+    // parent, pas dans la case.
+    const parent = makeTask({ id: 'p' });
+    const etape = makeTask({ id: 'e', parent_id: 'p' });
+    expect(visibleTasks([parent, etape], 'b1', 'faire').map((t) => t.id)).toEqual(['p']);
+    expect(isVisible(etape, 'faire')).toBe(false);
+  });
+
+  it('une sous-tâche ne s’épingle pas', () => {
+    // Épingler, c'est remonter en haut d'une case — or elle n'en a pas.
+    const etape = makeTask({ id: 'e', parent_id: 'p', pinned: true });
+    expect(pinnedTasks([etape], 'b1', 'faire')).toHaveLength(0);
+  });
+
+  it('les sous-tâches ne comptent pas dans le compteur de case', () => {
+    // Sans ça, un parent à douze étapes écraserait visuellement la matrice.
+    const parent = makeTask({ id: 'p' });
+    const etapes = [1, 2, 3].map((n) => makeTask({ id: `e${n}`, parent_id: 'p' }));
+    expect(countOpen([parent, ...etapes], 'b1', 'faire')).toBe(1);
+  });
+
+  it('`pending` ne ressuscite pas une sous-tâche dans la grille', () => {
+    // Le délai d'annulation vaut pour les lignes de grille, pas pour ce qui n'y
+    // figure pas.
+    const etape = makeTask({ id: 'e', parent_id: 'p', done: true, archived: true });
+    expect(visibleTasks([etape], 'b1', 'faire', 'e')).toHaveLength(0);
+  });
+
+  it('`subtasksOf` rend les étapes triées, sans les supprimées', () => {
+    const tasks = [
+      makeTask({ id: 'z', parent_id: 'p', position: 2 }),
+      makeTask({ id: 'a', parent_id: 'p', position: 1 }),
+      makeTask({ id: 'morte', parent_id: 'p', position: 0, deleted: true }),
+      makeTask({ id: 'ailleurs', parent_id: 'autre' }),
+    ];
+    expect(subtasksOf(tasks, 'p').map((t) => t.id)).toEqual(['a', 'z']);
+  });
+
+  it('`progress` compte les faites sur le total', () => {
+    const tasks = [
+      makeTask({ id: 'a', parent_id: 'p', done: true }),
+      makeTask({ id: 'b', parent_id: 'p', done: true }),
+      makeTask({ id: 'c', parent_id: 'p' }),
+      // Une étape supprimée sort du décompte : elle n'est plus une étape.
+      makeTask({ id: 'd', parent_id: 'p', deleted: true }),
+    ];
+    expect(progress(tasks, 'p')).toEqual({ done: 2, total: 3 });
+  });
+
+  it('un parent sans étape rend un total nul', () => {
+    // L'appelant s'en sert pour ne rien afficher du tout.
+    expect(progress([makeTask({ id: 'p' })], 'p')).toEqual({ done: 0, total: 0 });
+  });
+
+  it('une paire reste une paire, les sous-tâches n’y changent rien', () => {
+    const a = makeTask({ id: 'a', pair_id: 'x', position: 0 });
+    const b = makeTask({ id: 'b', pair_id: 'x', position: 1 });
+    const etape = makeTask({ id: 'e', parent_id: 'a', position: 0 });
+    const rows = buildRows(visibleTasks([a, b, etape], 'b1', 'faire'));
+    expect(rows).toHaveLength(1);
+    expect(rows[0].map((t) => t.id)).toEqual(['a', 'b']);
+  });
+});
+
+describe('suppression et restauration d’un parent (#50)', () => {
+  it('supprimer un parent emporte ses étapes — la base ne le fait pas', () => {
+    // `on delete cascade` ne joue qu’au vidage définitif : notre suppression est
+    // douce, donc la cascade est ici, dans le plan d’écriture.
+    const p = makeTask({ id: 'p' });
+    const tasks = [p, makeTask({ id: 'e1', parent_id: 'p' }), makeTask({ id: 'e2', parent_id: 'p' })];
+    const writes = planDelete(tasks, p);
+    expect(writes.map((w) => w.id).sort()).toEqual(['e1', 'e2', 'p']);
+    expect(writes.filter((w) => w.id !== 'p').every((w) => w.patch.deleted === true)).toBe(true);
+  });
+
+  it('supprimer une paire emporte les étapes de la tâche désignée', () => {
+    const p = makeTask({ id: 'p', pair_id: 'x' });
+    const mate = makeTask({ id: 'm', pair_id: 'x' });
+    const tasks = [p, mate, makeTask({ id: 'e', parent_id: 'p' })];
+    expect(planDelete(tasks, p).map((w) => w.id).sort()).toEqual(['e', 'm', 'p']);
+  });
+
+  it('restaurer un parent relève ses étapes supprimées, sans les décocher', () => {
+    const p = makeTask({ id: 'p', deleted: true });
+    const tasks = [
+      p,
+      makeTask({ id: 'faite', parent_id: 'p', done: true, deleted: true }),
+      makeTask({ id: 'vivante', parent_id: 'p' }),
+    ];
+    const writes = planRestore(tasks, p);
+    expect(writes.map((w) => w.id)).toEqual(['p', 'faite']);
+    // L’étape cochée avant la suppression revient cochée : elle n’a rien demandé.
+    expect(writes[1].patch).toEqual({ deleted: false });
+  });
+
+  it('l’annonce de suppression dit combien d’étapes partent avec', () => {
+    const p = makeTask({ id: 'p' });
+    expect(deleteLabel([p], p)).toBe('Supprimée');
+    expect(deleteLabel([p, makeTask({ id: 'a', parent_id: 'p' })], p)).toBe('Supprimée avec 1 étape');
+    expect(
+      deleteLabel([p, makeTask({ id: 'a', parent_id: 'p' }), makeTask({ id: 'b', parent_id: 'p' })], p),
+    ).toBe('Supprimée avec 2 étapes');
+  });
+});
+
+describe('isOpenRow — le point unique où « ouverte » se décide', () => {
+  it('compte une tâche ouverte, écarte terminée, supprimée et étape', () => {
+    expect(isOpenRow(makeTask({ id: 'a' }))).toBe(true);
+    expect(isOpenRow(makeTask({ id: 'b', done: true }))).toBe(false);
+    expect(isOpenRow(makeTask({ id: 'c', deleted: true }))).toBe(false);
+    // Le cas qui a fait mentir les trois compteurs : une matrice de cinq tâches
+    // en annonçait six dès qu'on ajoutait une étape.
+    expect(isOpenRow(makeTask({ id: 'd', parent_id: 'a' }))).toBe(false);
   });
 });

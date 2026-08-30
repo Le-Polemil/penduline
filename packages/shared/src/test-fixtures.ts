@@ -27,6 +27,7 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     // doit le dire, pas l'hériter de son rang d'appel.
     position: 0,
     pair_id: null,
+    parent_id: null,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
     ...partial,

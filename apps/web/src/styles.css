@@ -464,6 +464,57 @@ button { font: inherit; }
 .task__more { margin-left: auto; color: var(--color-neutral-700); font: 700 14px/1 var(--font-body); padding: 2px 6px; border-radius: 999px; cursor: pointer; background: none; border: none; }
 .task__more:hover { background: var(--color-accent-100); }
 
+/* ── Étapes (#50) ─────────────────────────────────────────────────────────────
+   Sous la carte, jamais dedans. Le bloc est volontairement plus petit et plus
+   pâle que la carte : une étape se lit APRÈS la tâche, pas en même temps.
+
+   ⚠️ Quand une tâche n'a aucune étape, l'entrée « ＋ étape » ne se montre qu'au
+   survol ou au focus clavier. Un bouton visible sous chacune des cartes ferait
+   d'une matrice de trente tâches une matrice de soixante lignes. */
+.sub { padding: 2px 0 0 30px; }
+.sub__toggle {
+  display: inline-flex; align-items: center; gap: 4px;
+  font: 600 11px/1.6 var(--font-body); color: var(--color-neutral-700);
+  background: none; border: none; padding: 1px 6px; border-radius: 999px; cursor: pointer;
+  opacity: 0; transition: opacity 0.15s, background 0.15s;
+}
+.card-wrap:hover .sub__toggle,
+.sub__toggle:focus-visible,
+.sub__toggle[aria-expanded='true'] { opacity: 1; }
+.sub__toggle:hover { background: var(--color-accent-100); }
+/* Une tâche QUI A des étapes affiche toujours son compteur : c'est une
+   information sur son avancement, pas une commande. */
+.sub--filled .sub__toggle { opacity: 1; color: var(--q-ink); }
+.sub__chevron { transition: rotate 0.18s ease; flex: none; }
+.sub__chevron--open { rotate: 90deg; }
+
+.sub__list { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; animation: mm-in 0.2s ease backwards; }
+.sub__item { display: flex; align-items: center; gap: 7px; font: 12.5px var(--font-body); color: var(--color-text); padding: 1px 6px; border-radius: 7px; }
+.sub__item:hover { background: var(--color-accent-100); }
+.sub__item--done { opacity: 0.5; }
+.sub__item--done .sub__title { text-decoration: line-through; }
+.sub__check {
+  width: 13px; height: 13px; border: 1.5px solid var(--q-ink); border-radius: 50%; flex: none;
+  cursor: pointer; background: transparent; padding: 0; transition: background 0.15s, transform 0.12s;
+}
+.sub__check:hover { transform: scale(1.2); }
+.sub__check--done { background: var(--q-ink); }
+.sub__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.sub__del {
+  flex: none; opacity: 0; background: none; border: none; cursor: pointer;
+  color: var(--color-neutral-700); font: 10px/1 var(--font-body); padding: 3px; border-radius: 999px;
+  transition: opacity 0.15s;
+}
+.sub__item:hover .sub__del, .sub__del:focus-visible { opacity: 1; }
+.sub__add { display: flex; padding: 1px 6px; }
+.sub__input {
+  flex: 1; min-width: 0; font: 12.5px var(--font-body); color: var(--color-text);
+  background: none; border: none; border-bottom: 1px dashed var(--color-neutral-400);
+  padding: 1px 0 2px 20px; outline: none;
+}
+.sub__input::placeholder { color: var(--color-neutral-700); opacity: 0.7; }
+.sub__input:focus-visible { border-bottom-color: var(--color-accent); }
+
 /* ── Menu de tâche ────────────────────────────────────────────────────────── */
 .task-menu {
   position: absolute; right: 0; top: 105%; z-index: 20; background: var(--card-warm);
@@ -929,6 +980,7 @@ button.uni-head__name:focus-visible {
    plutôt que d'en peindre une seconde. */
 .sr-hit--active { background: var(--color-accent-100); }
 .sr-hit__dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.sr-hit__sub { flex: none; font: 600 9.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.4px; color: var(--color-neutral-700); background: var(--color-neutral-100); border-radius: 999px; padding: 3px 6px; }
 .sr-hit__title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sr-hit__quad { font: 600 11px var(--font-body); flex: none; }
 .sr-empty { padding: 22px 24px; color: var(--color-neutral-700); font-size: 13.5px; margin: 0; }

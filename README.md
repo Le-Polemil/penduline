@@ -21,6 +21,13 @@ penduline/
 
 - **Une matrice = un contexte, au choix de l'utilisateur** (un lieu, un moment,
   un projet). `boards` → `tasks` directement.
+- **Une tâche peut avoir des étapes, sur UN SEUL niveau** (`tasks.parent_id`).
+  C'était la seule entorse à la platitude du modèle, et elle est tenue par trois
+  règles sans lesquelles la matrice deviendrait un gestionnaire de projet :
+  une étape ne peut pas en avoir *(garantie par un trigger, pas par l'interface)*,
+  elle n'a pas de case à elle *(elle hérite de celle du parent)*, et elle ne
+  compte dans aucun compteur. Elle ne se déplace pas, ne s'épingle pas, ne
+  s'appaire pas : elle se coche et se supprime, rien d'autre.
 - **Les matrices peuvent être regroupées en univers** (Perso, Boulot, Maison…),
   et ce niveau est **facultatif de bout en bout** : on peut n'en créer aucun, et
   une matrice peut n'appartenir à aucun. Supprimer un univers ne supprime pas ses

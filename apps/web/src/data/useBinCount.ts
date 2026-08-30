@@ -43,5 +43,5 @@ export function useBinCount(store: Store, boardIds: string[]): number {
 
   if (!charge) return serverCount;
   const portee = new Set(boardIds);
-  return store.tasks.filter((t) => portee.has(t.board_id) && (t.done || t.deleted)).length;
+  return store.tasks.filter((t) => portee.has(t.board_id) && !t.parent_id && (t.done || t.deleted)).length;
 }

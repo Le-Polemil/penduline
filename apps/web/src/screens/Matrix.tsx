@@ -4,15 +4,20 @@ import {
   ALL,
   buildRows,
   countOpen,
+  deleteLabel,
   endPosition,
   insertPosition,
+  isOpenRow,
   partnerOf,
   pinnedTasks,
+  planDelete,
   planPairDetach,
   planPairMove,
-  quadrant,
   planPairPatch,
   planReorder,
+  planRestore,
+  quadrant,
+  subtasksOf,
   visibleTasks,
   type QuadrantKey,
   type Board,
@@ -36,6 +41,9 @@ type Hover =
   | null;
 
 type Drag = { id: string; quad: QuadrantKey } | null;
+
+/** Où le repli des étapes est retenu, par appareil. */
+const SUB_KEY = 'penduline:subtasks-open';
 
 /** Anime un changement structurel via l'API View Transitions (dégradation gracieuse). */
 function withVT(fn: () => void) {
@@ -69,6 +77,31 @@ export function MatrixScreen({
   const [binOpen, setBinOpen] = useState(false);
   /** La tâche que la recherche a désignée, le temps de son clignotement. */
   const [flash, setFlash] = useState<string | null>(null);
+  /**
+   * Les tâches dont les étapes sont dépliées. Local et par appareil, en
+   * `localStorage` comme le repli des univers : c'est un état de lecture.
+   */
+  const [ouvertes, setOuvertes] = useState<Set<string>>(() => {
+    try {
+      return new Set(JSON.parse(window.localStorage.getItem(SUB_KEY) ?? '[]') as string[]);
+    } catch {
+      // Stockage refusé ou contenu corrompu : tout replié vaut mieux que rien.
+      return new Set();
+    }
+  });
+
+  function basculer(id: string) {
+    setOuvertes((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      try {
+        window.localStorage.setItem(SUB_KEY, JSON.stringify([...n]));
+      } catch {
+        // Perdre la mémoire du repli est un désagrément, pas une panne.
+      }
+      return n;
+    });
+  }
   /** `null` = titre affiché ; une chaîne = renommage en cours. */
   const [renaming, setRenaming] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -80,6 +113,8 @@ export function MatrixScreen({
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
+  /** Suppression d'une tâche à étapes, en attente de confirmation. */
+  const [delAsk, setDelAsk] = useState<Task | null>(null);
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
   const binCount = useBinCount(store, [board.id]);
@@ -116,7 +151,7 @@ export function MatrixScreen({
   const announce = useAnnounce();
 
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
-  const totalOpen = boardTasks.filter((t) => !t.done && !t.deleted).length;
+  const totalOpen = boardTasks.filter(isOpenRow).length;
   const otherBoards = store.boards.filter((b) => b.id !== board.id);
 
   /**
@@ -178,6 +213,16 @@ export function MatrixScreen({
     else moveToBoard(task, target);
   }
 
+  /**
+   * Restauration depuis la corbeille — les étapes du parent reviennent avec lui.
+   * Groupée pour que `Ctrl+Z` défasse le tout d'un coup (#46).
+   */
+  function restore(id: string) {
+    const t = tasks.find((x) => x.id === id);
+    if (!t) return;
+    withVT(() => apply('Restaurée', planRestore(tasks, t)));
+  }
+
   /** Défait le lien des deux côtés — un `pair_id` orphelin ne sert à rien. */
   function unpair(task: Task) {
     withVT(() => apply('Dissociée', planPairDetach(tasks, task)));
@@ -218,11 +263,25 @@ export function MatrixScreen({
     }
     setMenuTask(null);
   }
+  /**
+   * On confirme quand, et seulement quand, la suppression est plus large que ce
+   * qu'on a désigné : une tâche à étapes les emporte toutes. C'est la règle
+   * déjà tenue par `askMoveToBoard` pour les paires — la demander à chaque
+   * suppression lasserait pour rien, la suppression étant douce et annulable.
+   */
+  function askRemoveTask(id: string) {
+    setMenuTask(null);
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    if (subtasksOf(tasks, task.id).length > 0) setDelAsk(task);
+    else removeTask(id);
+  }
+
   function removeTask(id: string) {
     const task = tasks.find((t) => t.id === id);
     // Même règle qu'à l'archivage : la survivante est dissociée plutôt que de
     // garder un lien qui ne pointe plus vers rien.
-    if (task) withVT(() => apply('Supprimée', planPairDetach(tasks, task, { deleted: true, pinned: false })));
+    if (task) withVT(() => apply(deleteLabel(tasks, task), planDelete(tasks, task)));
     setMenuTask(null);
   }
 
@@ -279,8 +338,10 @@ export function MatrixScreen({
   // masquage sur `done` seul (#75). Sans elle, une tâche héritée de l'ancien
   // comportement — cochée, jamais archivée — sortirait de la grille sans entrer
   // ici : invisible ET irrécupérable. « Rétablir » la normalise au passage.
-  const doneList = boardTasks.filter((t) => t.done && !t.deleted);
-  const delList = boardTasks.filter((t) => t.deleted);
+  // La corbeille liste des TÂCHES. Une étape n'y figure pas seule : hors de son
+  // parent elle n'a plus de sens, et elle revient avec lui (`planRestore`).
+  const doneList = boardTasks.filter((t) => t.done && !t.deleted && !t.parent_id);
+  const delList = boardTasks.filter((t) => t.deleted && !t.parent_id);
 
   /**
    * Une carte, câblée sur l'état local de l'écran.
@@ -310,6 +371,19 @@ export function MatrixScreen({
         otherBoards={otherBoards}
         pinnedCard={pinnedCard}
         flash={flash === t.id}
+        subtasks={{
+          open: ouvertes.has(t.id),
+          onToggleOpen: () => basculer(t.id),
+          onAdd: (title, position) =>
+            store.group('Étape ajoutée', () => void store.addTask(board.id, t.quadrant, title, position, t.id)),
+          // Une étape se coche SANS délai d'annulation : elle est sous les yeux,
+          // dans une liste courte, et `Ctrl+Z` la rattrape s'il le faut.
+          onCheck: (st) =>
+            store.group(st.done ? 'Étape rouverte' : 'Étape terminée', () =>
+              void patchTask(st.id, { done: !st.done, archived: !st.done }),
+            ),
+          onDelete: (st) => store.group('Étape supprimée', () => void patchTask(st.id, { deleted: true })),
+        }}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}
         rename={{
@@ -324,7 +398,7 @@ export function MatrixScreen({
         onMoveBoard={(b) => askMoveToBoard(t, b)}
         onTogglePin={() => togglePin(t)}
         onUnpair={() => unpair(t)}
-        onDelete={() => removeTask(t.id)}
+        onDelete={() => askRemoveTask(t.id)}
         drag={{
           dragging: drag?.id === t.id,
           start: () => setDrag({ id: t.id, quad: q.key }),
@@ -582,7 +656,7 @@ export function MatrixScreen({
           doneList={doneList}
           delList={delList}
           onClose={() => withVT(() => setBinOpen(false))}
-          onRestore={(id) => withVT(() => patchTask(id, { done: false, archived: false, deleted: false }))}
+          onRestore={(id) => restore(id)}
           onPurge={(ids) => void store.purgeTasks(ids)}
         />
       )}
@@ -600,6 +674,21 @@ export function MatrixScreen({
             setConfirmDelete(false);
             await store.deleteBoard(board.id);
             onHome();
+          }}
+        />
+      )}
+
+      {delAsk && (
+        <Confirm
+          title={`Supprimer « ${delAsk.title} » ?`}
+          body={(() => {
+            const n = subtasksOf(tasks, delAsk.id).length;
+            return `${n > 1 ? `Ses ${n} étapes partiront` : 'Son étape partira'} à la corbeille avec elle. Vous pourrez tout restaurer.`;
+          })()}
+          onCancel={() => setDelAsk(null)}
+          onConfirm={() => {
+            removeTask(delAsk.id);
+            setDelAsk(null);
           }}
         />
       )}

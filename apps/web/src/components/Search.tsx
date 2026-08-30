@@ -45,10 +45,13 @@ function grouper(tasks: Task[], boards: Board[]): Groupe[] {
  */
 export function Search({
   boards,
+  tasks,
   onClose,
   onPick,
 }: {
   boards: Board[];
+  /** Les tâches en mémoire — pour savoir où mène une étape trouvée (#50). */
+  tasks: Task[];
   onClose: () => void;
   onPick: (hit: SearchHit) => void;
 }) {
@@ -66,8 +69,32 @@ export function Search({
     champ.current?.focus();
   }, []);
 
-  const ouvertes = useMemo(() => results.filter((t) => !t.done && !t.deleted), [results]);
-  const corbeille = useMemo(() => results.filter((t) => t.done || t.deleted), [results]);
+  /**
+   * Où mène un résultat.
+   *
+   * Une étape n'est pas une carte : elle s'affiche SOUS son parent, jamais
+   * seule — on ouvre donc le parent (#50).
+   *
+   * `inBin` se déduit de la présence du parent en mémoire, pas de l'état de
+   * l'étape : depuis #40 seules les tâches ouvertes sont chargées, et depuis #50
+   * les étapes cochées le sont aussi. Parent absent = parent terminé ou
+   * supprimé, donc dans la corbeille — qui, elle, charge à l'ouverture et l'y
+   * trouvera. Se fier à l'état de l'étape rangerait une étape cochée sous un
+   * parent bien vivant dans la section « Corbeille ».
+   */
+  const cible = useMemo(() => {
+    const parId = new Map(tasks.map((t) => [t.id, t]));
+    return (t: Task): SearchHit => {
+      if (!t.parent_id) return { boardId: t.board_id, taskId: t.id, inBin: t.done || t.deleted };
+      const parent = parId.get(t.parent_id);
+      return { boardId: t.board_id, taskId: t.parent_id, inBin: !parent || parent.done || parent.deleted };
+    };
+  }, [tasks]);
+
+  // Le partage suit la DESTINATION, pas l'état du résultat : une étape cochée
+  // sous un parent vivant se retrouve encore sur la grille, pas à la corbeille.
+  const ouvertes = useMemo(() => results.filter((t) => !cible(t).inBin), [results, cible]);
+  const corbeille = useMemo(() => results.filter((t) => cible(t).inBin), [results, cible]);
 
   /**
    * La liste à plat des résultats, dans l'ordre affiché.
@@ -77,10 +104,6 @@ export function Search({
    */
   const plat = useMemo(() => [...ouvertes, ...corbeille], [ouvertes, corbeille]);
   const actif = plat[Math.min(curseur, plat.length - 1)];
-
-  function choisir(t: Task) {
-    onPick({ boardId: t.board_id, taskId: t.id, inBin: t.done || t.deleted });
-  }
 
   function onKeyDown(e: ReactKeyboardEvent) {
     if (e.key === 'Escape') return dialog.onKeyDown(e);
@@ -93,7 +116,7 @@ export function Search({
       setCurseur((c) => Math.max(c - 1, 0));
     } else if (e.key === 'Enter' && actif) {
       e.preventDefault();
-      choisir(actif);
+      onPick(cible(actif));
     }
   }
 
@@ -106,10 +129,13 @@ export function Search({
         // Le curseur suit la souris : deux surbrillances concurrentes seraient
         // illisibles, et `Entrée` doit ouvrir ce que l'œil désigne.
         onMouseEnter={() => setCurseur(plat.findIndex((x) => x.id === t.id))}
-        onClick={() => choisir(t)}
+        onClick={() => onPick(cible(t))}
       >
         <span className="sr-hit__dot" style={{ background: q.ink }} aria-hidden="true" />
         <span className="sr-hit__title">{t.title}</span>
+        {/* Sans cette mention, on clique sur « Acheter des cartons » et on
+            atterrit sur « Préparer le déménagement » sans comprendre pourquoi. */}
+        {t.parent_id && <span className="sr-hit__sub">étape</span>}
         <span className="sr-hit__quad" style={{ color: q.dark }}>
           {q.label}
         </span>

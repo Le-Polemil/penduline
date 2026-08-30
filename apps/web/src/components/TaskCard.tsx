@@ -7,6 +7,7 @@ import {
   type QuadrantKey,
   type Task,
 } from '@penduline/shared';
+import { Subtasks } from './Subtasks';
 
 /** Le déplacement au doigt/à la souris. Absent, la carte n'est pas déplaçable. */
 export interface CardDrag {
@@ -79,6 +80,7 @@ export function TaskCard({
   split,
   reorder,
   flash,
+  subtasks,
 }: {
   task: Task;
   quad: Quadrant;
@@ -102,6 +104,19 @@ export function TaskCard({
   reorder?: CardReorder;
   /** Mise en évidence passagère, à l'arrivée depuis la recherche. */
   flash?: boolean;
+  /**
+   * Les étapes de cette tâche. Absent = la carte n'en affiche aucune.
+   *
+   * Facultatif comme `drag`, `split` et `reorder` : la vue globale ne les montre
+   * pas — elle agrège des matrices, pas des plans d'action.
+   */
+  subtasks?: {
+    open: boolean;
+    onToggleOpen: () => void;
+    onAdd: (title: string, position: number) => void;
+    onCheck: (t: Task) => void;
+    onDelete: (t: Task) => void;
+  };
 }) {
   const renaming = rename.value !== null;
   const splitActive = !!split?.ok && !!split.active;
@@ -220,6 +235,19 @@ export function TaskCard({
           ⋯
         </button>
       </div>
+      {/* Sous la carte, jamais dedans : une étape n'est pas une demi-tâche, elle
+          appartient à un autre niveau de lecture. */}
+      {subtasks && !renaming && (
+        <Subtasks
+          parent={task}
+          tasks={tasks}
+          open={subtasks.open}
+          onToggleOpen={subtasks.onToggleOpen}
+          onAdd={subtasks.onAdd}
+          onCheck={subtasks.onCheck}
+          onDelete={subtasks.onDelete}
+        />
+      )}
       {menuOpen && (
         <div className="task-menu">
           <button

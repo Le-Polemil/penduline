@@ -13,23 +13,29 @@ import { useRealtime } from './useRealtime';
 import { pop, push, type UndoEntry } from './undo';
 import { usePersist, type WriteResult } from './persist';
 
-/** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
 /**
  * Une tâche a-t-elle sa place dans l'état chargé au démarrage ?
  *
  * Une seule écriture de la règle, pour le chargement (#40) ET pour le temps réel
  * (#39) — sans quoi un événement distant réintroduirait en mémoire les archives
  * que le chargement en a sorties.
+ *
+ * ⚠️ Elle doit rester le miroir EXACT de la requête de `load`, l'exception des
+ * étapes cochées comprise (#50) : sinon le temps réel évacuerait de la mémoire
+ * ce que le chargement vient d'y mettre, et un « 3/5 » retomberait à « 0/2 » au
+ * premier événement distant.
  */
 export function inWorkingSet(t: Task): boolean {
-  return !t.done && !t.deleted;
+  if (t.deleted) return false;
+  return !t.done || !!t.parent_id;
 }
 
 /** Taille de page de PostgREST : au-delà, il tronque en silence. */
 const PAGE = 1000;
 
+/** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
 const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, created_at, updated_at';
+  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, created_at, updated_at';
 
 /** Tout ce qui s'ordonne par position se retrie pareil. */
 function byPosition<T extends { position: number }>(a: T, b: T): number {
@@ -92,7 +98,14 @@ export interface Store {
   deleteUniverse: (id: string) => Promise<void>;
   /** Supprime la matrice ET ses tâches (cascade assurée par la clé étrangère). */
   deleteBoard: (id: string) => Promise<void>;
-  addTask: (boardId: string, quadrant: QuadrantKey, title: string, position: number) => Promise<void>;
+  /** `parentId` : la tâche dont celle-ci est une étape (#50). */
+  addTask: (
+    boardId: string,
+    quadrant: QuadrantKey,
+    title: string,
+    position: number,
+    parentId?: string,
+  ) => Promise<void>;
   /**
    * Renvoie `false` si la persistance a échoué — l'état local a alors été
    * rétabli. `useCompletion` s'en sert pour annuler l'archivage d'une tâche
@@ -200,7 +213,23 @@ export function useStore(userId: string): Store {
       // passé ce seuil perdait des tâches OUVERTES en silence : le tri se fait
       // sur `position`, que les archives conservent, donc les deux
       // s'entrelacent. Ce filtre referme ce trou par construction.
-      supabase.from('tasks').select(TASK_COLS).eq('done', false).eq('deleted', false).order('position'),
+      // ⚠️ Une ÉTAPE cochée reste chargée (#50), et c'est la seule exception au
+      // filtre ci-dessus : sans elle, un « 3/5 » redevient « 0/2 » au
+      // rechargement, et le compteur d'avancement ne veut plus rien dire. Le
+      // volume ne rouvre pas le trou de #40 — ce sont quelques lignes par
+      // tâche, pas l'historique d'une année.
+      //
+      // Résidu assumé : les étapes d'un parent TERMINÉ sont chargées elles
+      // aussi, alors qu'elles ne s'affichent nulle part. Les en exclure
+      // demanderait de filtrer sur l'état du parent, donc une jointure — deux
+      // requêtes et une dépendance au nom de la contrainte. À reprendre si le
+      // volume le justifie un jour ; il croît en étapes, pas en archives.
+      supabase
+        .from('tasks')
+        .select(TASK_COLS)
+        .eq('deleted', false)
+        .or('done.eq.false,parent_id.not.is.null')
+        .order('position'),
     ]);
 
     // Compte vide → on laisse vide. Le découpage appartient à l'utilisateur :
@@ -459,13 +488,22 @@ export function useStore(userId: string): Store {
   );
 
   const addTask = useCallback(
-    async (boardId: string, quadrant: QuadrantKey, title: string, position: number) => {
+    async (boardId: string, quadrant: QuadrantKey, title: string, position: number, parentId?: string) => {
       await persist<Task>({
         label: 'Créer la tâche',
         write: () =>
           supabase
             .from('tasks')
-            .insert({ user_id: userId, board_id: boardId, title, quadrant, position })
+            .insert({
+          user_id: userId,
+          board_id: boardId,
+          title,
+          quadrant,
+          position,
+          // Une étape hérite de la case de son parent — elle n'en a pas
+          // elle-même, mais la colonne n'est pas nullable.
+          parent_id: parentId ?? null,
+        })
             .select(TASK_COLS)
             .single(),
         commit: (t) => setTasks((ts) => [...ts, t]),
@@ -647,6 +685,10 @@ export function useStore(userId: string): Store {
       .from('tasks')
       .select('id', { count: 'exact', head: true })
       .in('board_id', boardIds)
+      // Le compte doit correspondre à ce que la corbeille AFFICHE, et elle
+      // n'affiche pas les étapes (#50) : sans ce filtre, le bouton annoncerait
+      // plus d'éléments que la liste n'en montre.
+      .is('parent_id', null)
       .or('done.eq.true,deleted.eq.true');
     return count ?? 0;
   }, []);
