@@ -1121,6 +1121,10 @@ button.uni-head__name:focus-visible {
   /* Une seule colonne : deux boutons à 240px ne tiennent pas côte à côte, et un
      flex-wrap qui casse à mi-largeur est pire que l'empilement franc. */
   .home-lenses { flex-direction: column; }
+  /* ⚠️ La base de `flex: 1 1 240px` porte sur l'axe PRINCIPAL : en colonne, elle
+     devient une HAUTEUR de 240px. Sans cette remise à zéro, chaque bouton
+     mesurait 240px de haut et l'accueil était illisible en mobile. */
+  .home-lenses .home-global { flex: 0 0 auto; }
   /* Les retraits de 20px alignaient le texte sous le titre ; à cette largeur ils
      ne coûtent que de la place. */
   .review-signal__hint,
@@ -1129,10 +1133,16 @@ button.uni-head__name:focus-visible {
   .review-signal__foot { margin-left: 0; }
 }
 
-/* Cible tactile : le réglage de seuil et l'ouverture d'une matrice se touchent
-   au doigt comme le reste (#89). */
+/* Cible tactile. `min-height` explicite plutôt qu'un calcul de marges : une
+   marge suffisante aujourd'hui cesse de l'être dès qu'on touche à la police, et
+   personne ne le remarque. 44px est le minimum des deux plateformes.
+
+   Ne couvre QUE les éléments propres à la revue. La case à cocher et le `⋯` des
+   cartes font 18px et sont partagés avec l'écran matrice et la vue globale :
+   c'est un défaut préexistant, et il appartient à #89. */
 @media (hover: none) {
-  .review-signal__toggle { padding: 4px 0; }
-  .review-signal__tune { padding: 9px 14px; }
-  .review-board { padding: 14px; }
+  .review-signal__toggle { min-height: 44px; }
+  .review-signal__tune { min-height: 44px; padding: 0 16px; }
+  .review-tune input { min-height: 44px; }
+  .review-board { min-height: 44px; padding: 12px 14px; }
 }
