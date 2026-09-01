@@ -2,11 +2,13 @@ import type { CSSProperties, DragEvent, KeyboardEvent as ReactKeyboardEvent } fr
 import {
   partnerOf,
   QUADS,
+  type Attachment,
   type Board,
   type Quadrant,
   type QuadrantKey,
   type Task,
 } from '@penduline/shared';
+import { Attachments } from './Attachments';
 import { Subtasks } from './Subtasks';
 
 /** Le déplacement au doigt/à la souris. Absent, la carte n'est pas déplaçable. */
@@ -81,6 +83,7 @@ export function TaskCard({
   reorder,
   flash,
   subtasks,
+  attachments,
 }: {
   task: Task;
   quad: Quadrant;
@@ -116,6 +119,21 @@ export function TaskCard({
     onAdd: (title: string, position: number) => void;
     onCheck: (t: Task) => void;
     onDelete: (t: Task) => void;
+  };
+  /**
+   * Les liens de cette tâche (#78). Absent = la carte n'en affiche aucun.
+   *
+   * Comme `subtasks`, facultatif : la vue globale s'en passe. `adding` vit chez
+   * l'appelant parce qu'un seul champ doit être ouvert à la fois, tout l'écran
+   * confondu — la même règle que le renommage.
+   */
+  attachments?: {
+    all: Attachment[];
+    adding: boolean;
+    onStartAdd: () => void;
+    onCancelAdd: () => void;
+    onAdd: (url: string) => Promise<boolean>;
+    onRemove: (a: Attachment) => void;
   };
 }) {
   const renaming = rename.value !== null;
@@ -235,6 +253,18 @@ export function TaskCard({
           ⋯
         </button>
       </div>
+      {/* Les liens d'abord, les étapes ensuite : le lien qualifie la tâche
+          elle-même, l'étape la décompose. */}
+      {attachments && !renaming && (
+        <Attachments
+          task={task}
+          attachments={attachments.all}
+          adding={attachments.adding}
+          onCancelAdd={attachments.onCancelAdd}
+          onAdd={attachments.onAdd}
+          onRemove={attachments.onRemove}
+        />
+      )}
       {/* Sous la carte, jamais dedans : une étape n'est pas une demi-tâche, elle
           appartient à un autre niveau de lecture. */}
       {subtasks && !renaming && (
@@ -282,6 +312,19 @@ export function TaskCard({
                 ↓ Descendre <kbd className="task-menu__key">Alt+↓</kbd>
               </button>
             </>
+          )}
+          {/* L'ajout d'un lien vit ICI et pas sur la carte : une tâche sans
+              lien ne doit rien afficher de plus qu'aujourd'hui. */}
+          {attachments && (
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                attachments.onStartAdd();
+                onMenu(false);
+              }}
+            >
+              ↗ Attacher un lien
+            </button>
           )}
           <div className="task-menu__label">Déplacer vers</div>
           <div className="task-menu__grid">

@@ -115,6 +115,8 @@ export function MatrixScreen({
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
   /** Suppression d'une tâche à étapes, en attente de confirmation. */
   const [delAsk, setDelAsk] = useState<Task | null>(null);
+  /** La tâche dont le champ « attacher un lien » est ouvert. Une seule à la fois. */
+  const [linking, setLinking] = useState<string | null>(null);
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
   const binCount = useBinCount(store, [board.id]);
@@ -371,6 +373,14 @@ export function MatrixScreen({
         otherBoards={otherBoards}
         pinnedCard={pinnedCard}
         flash={flash === t.id}
+        attachments={{
+          all: store.attachments,
+          adding: linking === t.id,
+          onStartAdd: () => setLinking(t.id),
+          onCancelAdd: () => setLinking(null),
+          onAdd: (url) => store.addAttachment(t.id, url),
+          onRemove: (a) => void store.removeAttachment(a.id),
+        }}
         subtasks={{
           open: ouvertes.has(t.id),
           onToggleOpen: () => basculer(t.id),

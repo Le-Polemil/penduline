@@ -1,7 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  endPosition,
+  isSafeUrl,
+  normalizeUrl,
   positionBefore,
   type QuadrantKey,
+  type Attachment,
   type Board,
   type Task,
   type TaskPatch,
@@ -32,6 +36,9 @@ export function inWorkingSet(t: Task): boolean {
 
 /** Taille de page de PostgREST : au-delà, il tronque en silence. */
 const PAGE = 1000;
+
+/** Colonnes de pièce jointe qu'on lit/écrit (l'ordre suit le schéma). */
+const ATTACHMENT_COLS = 'id, task_id, user_id, url, label, position, created_at';
 
 /** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
 const TASK_COLS =
@@ -80,6 +87,8 @@ export interface Store {
   universes: Universe[];
   boards: Board[];
   tasks: Task[];
+  /** Les liens de toutes les tâches, à plat (#78). */
+  attachments: Attachment[];
   /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
   addBoard: (name: string) => Promise<string | null>;
   renameBoard: (id: string, name: string) => Promise<void>;
@@ -114,6 +123,12 @@ export interface Store {
   patchTask: (id: string, patch: TaskPatch) => Promise<boolean>;
   /** Suppression DÉFINITIVE (contrairement au drapeau `deleted`, qui est réversible). */
   purgeTasks: (ids: string[]) => Promise<void>;
+  /**
+   * Attache un lien à une tâche. `url` est complétée et validée AVANT l'appel —
+   * la base refuserait de toute façon ce qui n'est pas `http(s)`.
+   */
+  addAttachment: (taskId: string, url: string, label?: string) => Promise<boolean>;
+  removeAttachment: (id: string) => Promise<void>;
 
   /**
    * Charge la corbeille des matrices demandées et la FUSIONNE dans `tasks`.
@@ -178,6 +193,7 @@ export function useStore(userId: string): Store {
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
   /** Les matrices dont la corbeille est déjà en mémoire. En ref : `loadBin` se
    *  garde lui-même sans se re-créer à chaque chargement. */
   const binBoards = useRef(new Set<string>());
@@ -198,8 +214,34 @@ export function useStore(userId: string): Store {
   const [binTick, setBinTick] = useState(0);
   const persist = usePersist();
 
+  /**
+   * Toutes les pièces jointes de l'utilisateur, en une passe paginée (#78).
+   *
+   * ⚠️ La pagination n'est pas une optimisation : PostgREST tronque à 1000
+   * lignes SANS RIEN DIRE (#40). Un compte actif dépasse ce seuil, et les liens
+   * manquants ne se signaleraient par aucune erreur — juste des cartes nues.
+   *
+   * Chargées toutes, et non pas seulement celles des tâches en mémoire : filtrer
+   * demanderait un `in` de plusieurs milliers d'identifiants dans l'URL. Le
+   * volume est de l'ordre du lien par tâche, pas de la ligne par action.
+   */
+  const loadAttachments = useCallback(async (): Promise<Attachment[]> => {
+    const recues: Attachment[] = [];
+    for (let debut = 0; ; debut += PAGE) {
+      const { data, error } = await supabase
+        .from('task_attachments')
+        .select(ATTACHMENT_COLS)
+        .order('position')
+        .range(debut, debut + PAGE - 1);
+      if (error || !data) return recues;
+      recues.push(...(data as Attachment[]));
+      if (data.length < PAGE) break;
+    }
+    return recues;
+  }, []);
+
   const load = useCallback(async () => {
-    const [universesRes, boardsRes, tasksRes] = await Promise.all([
+    const [universesRes, boardsRes, tasksRes, attachmentsRes] = await Promise.all([
       supabase.from('universes').select('*').order('position'),
       supabase.from('boards').select('*').order('position'),
       // ⚠️ On ne charge QUE ce que la grille affiche (#40). Le reste — terminé,
@@ -230,6 +272,7 @@ export function useStore(userId: string): Store {
         .eq('deleted', false)
         .or('done.eq.false,parent_id.not.is.null')
         .order('position'),
+      loadAttachments(),
     ]);
 
     // Compte vide → on laisse vide. Le découpage appartient à l'utilisateur :
@@ -243,8 +286,9 @@ export function useStore(userId: string): Store {
     setUniverses(universesRes.data ?? []);
     setBoards(boardsRes.data ?? []);
     setTasks((tasksRes.data as Task[] | null) ?? []);
+    setAttachments(attachmentsRes);
     setReady(true);
-  }, []);
+  }, [loadAttachments]);
 
   useEffect(() => {
     void load();
@@ -625,6 +669,60 @@ export function useStore(userId: string): Store {
    * `deleted: false` en base, puis disparaîtrait de la corbeille sans jamais
    * revenir dans la grille.
    */
+  /**
+   * Attache un lien (#78). Pas d'écriture optimiste ici : l'identifiant vient du
+   * serveur, et une pastille qui apparaîtrait puis disparaîtrait au moindre
+   * refus serait plus déroutante que le très court délai d'un aller-retour.
+   *
+   * `false` en retour dit au champ de saisie de garder ce qu'on avait tapé.
+   */
+  const addAttachment = useCallback(
+    async (taskId: string, url: string, label?: string) => {
+      const propre = normalizeUrl(url);
+      // La base refuserait, mais avec une erreur SQL opaque : on préfère le dire
+      // ici. La validation côté client N'EST PAS la barrière — le `check` l'est.
+      if (!isSafeUrl(propre)) return false;
+      const position = endPosition(attachments.filter((a) => a.task_id === taskId));
+      const { ok } = await persist<Attachment>({
+        label: 'Ajouter le lien',
+        write: () =>
+          supabase
+            .from('task_attachments')
+            .insert({
+              task_id: taskId,
+              user_id: userId,
+              url: propre,
+              label: label?.trim() || null,
+              position,
+            })
+            .select(ATTACHMENT_COLS)
+            .single(),
+        commit: (a) => setAttachments((as) => [...as, a]),
+      });
+      return ok;
+    },
+    [attachments, userId, persist],
+  );
+
+  const removeAttachment = useCallback(
+    async (id: string) => {
+      let retire: Attachment | undefined;
+      await persist<null>({
+        label: 'Supprimer le lien',
+        apply: () =>
+          setAttachments((as) => {
+            retire = as.find((a) => a.id === id);
+            return as.filter((a) => a.id !== id);
+          }),
+        // Remis à sa place, pas en fin de liste : `attachmentsOf` retrie sur
+        // `position`, donc l'ordre est retrouvé quoi qu'il arrive.
+        revert: () => setAttachments((as) => (retire ? [...as, retire] : as)),
+        write: () => supabase.from('task_attachments').delete().eq('id', id).select().maybeSingle(),
+      });
+    },
+    [persist],
+  );
+
   const loadBin = useCallback(async (boardIds: string[]) => {
     // Idempotent PAR MATRICE : ouvrir la corbeille d'une matrice puis celle de
     // la vue globale ne doit charger que le complément.
@@ -723,6 +821,7 @@ export function useStore(userId: string): Store {
     setTasks,
     setBoards,
     setUniverses,
+    setAttachments,
     admits: inWorkingSet,
     reload: load,
   });
@@ -752,6 +851,9 @@ export function useStore(userId: string): Store {
     loadBin,
     binLoaded,
     binVersion: binTick,
+    attachments,
+    addAttachment,
+    removeAttachment,
     countBin,
     reload: load,
   };

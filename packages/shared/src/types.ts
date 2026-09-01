@@ -84,3 +84,24 @@ export type TaskPatch = Partial<
     | 'parent_id'
   >
 >;
+
+/**
+ * Un lien attaché à une tâche (#78).
+ *
+ * Une tâche en porte PLUSIEURS — une issue et sa PR, un article et sa
+ * discussion. Une colonne unique obligerait à choisir lequel compte.
+ */
+export interface Attachment {
+  id: string;
+  task_id: string;
+  user_id: string;
+  /**
+   * Toujours `http(s)` : la base le vérifie par un `check`, et pas seulement le
+   * champ de saisie. Un `javascript:` entré par l'API finirait cliquable.
+   */
+  url: string;
+  /** `null` = pas de nom donné ; l'interface affiche alors le domaine. */
+  label: string | null;
+  position: number;
+  created_at: string;
+}

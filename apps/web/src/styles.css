@@ -464,6 +464,37 @@ button { font: inherit; }
 .task__more { margin-left: auto; color: var(--color-neutral-700); font: 700 14px/1 var(--font-body); padding: 2px 6px; border-radius: 999px; cursor: pointer; background: none; border: none; }
 .task__more:hover { background: var(--color-accent-100); }
 
+/* ── Pièces jointes (#78) ─────────────────────────────────────────────────────
+   Des pastilles sous la carte. Une tâche SANS lien n'affiche rien : le composant
+   ne rend rien du tout, et rien ici ne réserve de place. */
+.att { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 4px 0 0 30px; }
+.att__chip {
+  display: inline-flex; align-items: center; max-width: 100%;
+  background: var(--color-neutral-100); border-radius: 999px;
+  font: 600 11px/1 var(--font-body); transition: background 0.15s;
+}
+.att__chip:hover { background: var(--color-accent-100); }
+.att__link {
+  display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  color: var(--q-ink); text-decoration: none; padding: 4px 4px 4px 9px;
+}
+.att__link:hover { text-decoration: underline; }
+.att__link:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 1px; border-radius: 999px; }
+.att__del {
+  flex: none; background: none; border: none; cursor: pointer; color: var(--color-neutral-700);
+  font: 10px/1 var(--font-body); padding: 4px 8px 4px 4px; border-radius: 999px; opacity: 0;
+  transition: opacity 0.15s;
+}
+.att__chip:hover .att__del, .att__del:focus-visible { opacity: 1; }
+.att__add { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 140px; }
+.att__input {
+  font: 12px var(--font-body); color: var(--color-text);
+  background: var(--color-neutral-100); border: 1.5px solid var(--color-accent);
+  border-radius: 999px; padding: 3px 10px; outline: none; min-width: 0;
+}
+.att__input--bad { border-color: #a63d2a; }
+.att__error { font: 10.5px var(--font-body); color: #a63d2a; padding-left: 10px; }
+
 /* ── Étapes (#50) ─────────────────────────────────────────────────────────────
    Sous la carte, jamais dedans. Le bloc est volontairement plus petit et plus
    pâle que la carte : une étape se lit APRÈS la tâche, pas en même temps.

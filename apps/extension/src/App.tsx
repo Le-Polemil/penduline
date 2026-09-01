@@ -19,6 +19,8 @@ import {
 } from '@penduline/shared';
 import { isConfigured, supabase } from './supabase';
 import { getActiveBoard, setActiveBoard } from './active-board';
+import { Capture } from './Capture';
+import { getPending, type PendingCapture } from './pending-capture';
 import { Loader } from './Loader';
 import { useExtStore, type ExtStore } from './store';
 import { ToastProvider } from './toast';
@@ -146,6 +148,15 @@ function PopupApp({ userId }: { userId: string }) {
   const [screen, setScreen] = useState<'home' | 'detail'>('home');
   const [boardId, setBoardId] = useState<string | null>(null);
   const [activeBoard, setActive] = useState<string | null>(null);
+  /**
+   * La capture déposée par le service worker (#78). `undefined` = pas encore lu ;
+   * `null` = rien en attente, on affiche la grille comme avant.
+   */
+  const [pending, setPending] = useState<PendingCapture | null | undefined>(undefined);
+
+  useEffect(() => {
+    void getPending().then(setPending);
+  }, []);
 
   // Reprise de la dernière matrice ouverte (TTL géré côté store).
   useEffect(() => {
@@ -181,7 +192,21 @@ function PopupApp({ userId }: { userId: string }) {
     withVT(() => setScreen('detail'));
   }
 
-  if (!store.ready) return <Loader label="Chargement des matrices…" />;
+  if (!store.ready || pending === undefined) return <Loader label="Chargement des matrices…" />;
+
+  // Le formulaire passe AVANT la grille : le popup vient d'être ouvert pour ça.
+  if (pending) {
+    return (
+      <Capture
+        pending={pending}
+        boards={store.boards}
+        tasks={store.tasks}
+        onWrite={store.captureTask}
+        onDone={() => setPending(null)}
+        onCancel={() => setPending(null)}
+      />
+    );
+  }
 
   const board = store.boards.find((r) => r.id === boardId) ?? null;
   if (screen === 'detail' && board) {
