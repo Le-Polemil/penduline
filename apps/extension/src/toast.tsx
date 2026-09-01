@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
 /**
- * Les messages du popup — en pratique : les échecs d'écriture.
+ * Les messages du panneau — en pratique : les échecs d'écriture.
  *
  * Même API que l'hôte du web (`apps/web/src/components/Toast.tsx`), en un seul
- * emplacement : le popup n'a pas de toast concurrent (cocher y archive tout de
+ * emplacement : le panneau n'a pas de toast concurrent (cocher y archive tout de
  * suite, sans délai d'annulation), donc rien à empiler. Un nouveau message
  * remplace le précédent, ce qui déduplique au passage les deux écritures d'un
  * geste sur une paire.

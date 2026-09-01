@@ -2,16 +2,16 @@
  * Service worker MV3.
  *
  * Porte la capture depuis la page consultée : un menu contextuel qui crée une
- * tâche dans « À trier » sans jamais ouvrir le popup.
+ * tâche dans « À trier », et l'ouverture du panneau latéral sur le formulaire.
  *
  * Deux contraintes façonnent ce fichier :
  *
  * 1. `chrome.contextMenus` exige que les entrées soient enregistrées À L'AVANCE :
  *    impossible d'aller chercher la liste des matrices au moment du clic droit.
  *    Plutôt que de faire interroger Supabase par le worker — qui peut être tué à
- *    tout moment — c'est le popup qui lui transmet la liste qu'il a déjà chargée.
- *    Un cache `chrome.storage.local` couvre le démarrage à froid, avant toute
- *    ouverture du popup.
+ *    tout moment — c'est le panneau qui lui transmet la liste qu'il a déjà
+ *    chargée. Un cache `chrome.storage.local` couvre le démarrage à froid, avant
+ *    toute ouverture du panneau.
  *
  * 2. Le retour à l'utilisateur passe par le BADGE de l'icône, pas par
  *    `chrome.notifications`, qui coûterait une permission de plus. Le manifeste
@@ -22,7 +22,7 @@ import { supabase, isConfigured } from './supabase';
 import { getActiveBoard } from './active-board';
 import { clearPending, setPending } from './pending-capture';
 
-/** Liste des matrices, alimentée par le popup. */
+/** Liste des matrices, alimentée par le panneau. */
 const BOARDS_KEY = 'penduline-boards-cache';
 
 type CachedBoard = { id: string; name: string };
@@ -135,7 +135,7 @@ async function capture(boardId: string | null, title: string, url = '') {
   if (!target) return flash('!', '#a63d2a', 'Penduline — aucune matrice où ranger ceci');
 
   // Position en fin de case : on lit le maximum existant plutôt que de deviner.
-  // Un aller-retour de plus, mais l'ordre reste cohérent avec celui du popup.
+  // Un aller-retour de plus, mais l'ordre reste cohérent avec celui du panneau.
   const { data: last } = await supabase
     .from('tasks')
     .select('position')
@@ -177,10 +177,31 @@ async function capture(boardId: string | null, title: string, url = '') {
 
 // ── Branchements ─────────────────────────────────────────────────────────────
 
-chrome.runtime.onInstalled.addListener(() => void buildMenus());
-chrome.runtime.onStartup.addListener(() => void buildMenus());
+/**
+ * Le clic sur l'icône ouvre le panneau — sans écouteur à maintenir.
+ *
+ * C'est ce que remplace le retrait de `action.default_popup` du manifeste : tant
+ * qu'il y était, il gagnait sur tout le reste et cette préférence n'avait aucun
+ * effet. Déclarée aux deux événements comme `buildMenus`, parce que le worker
+ * MV3 est tué en permanence et qu'aucun des deux seul ne couvre tous les
+ * réveils.
+ */
+function preferPanel() {
+  chrome.sidePanel
+    ?.setPanelBehavior({ openPanelOnActionClick: true })
+    .catch((e: unknown) => console.error('[penduline] panneau', e));
+}
 
-/** Le popup pousse la liste des matrices à chaque chargement. */
+chrome.runtime.onInstalled.addListener(() => {
+  preferPanel();
+  void buildMenus();
+});
+chrome.runtime.onStartup.addListener(() => {
+  preferPanel();
+  void buildMenus();
+});
+
+/** Le panneau pousse la liste des matrices à chaque chargement. */
 chrome.runtime.onMessage.addListener((msg: { type?: string; boards?: CachedBoard[] }) => {
   if (msg?.type !== 'boards' || !Array.isArray(msg.boards)) return;
   void (async () => {
@@ -192,29 +213,50 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; boards?: CachedBoard
 /**
  * Le clic sur une entrée de menu ouvre le formulaire (#78).
  *
- * ⚠️ `chrome.action.openPopup()` n'est sorti du canal dev qu'avec **Chrome 127**,
- * et il échoue aussi quand aucune fenêtre n'a le focus. Le repli est le
- * comportement d'avant : on écrit directement. C'est le point non négociable —
- * une capture perdue en silence serait pire que l'absence de formulaire.
+ * ⚠️ **L'ouverture passe en premier, et c'est contre-intuitif.**
+ * `chrome.sidePanel.open()` exige un geste utilisateur, et la fenêtre de geste
+ * se referme au premier `await` : la dérouler après `setPending` ou après
+ * `getActiveBoard` la ferait échouer *systématiquement*. On ouvre donc d'abord,
+ * on prépare ensuite.
  *
- * L'ordre compte : la capture en attente est déposée AVANT d'ouvrir le popup,
- * sinon celui-ci se monte et ne trouve rien. Et elle est nettoyée si l'ouverture
- * échoue, faute de quoi le formulaire s'afficherait à la prochaine ouverture
+ * La contrepartie est une course — le panneau peut se monter avant que la
+ * capture ne soit déposée. Elle est absorbée côté interface, qui écoute
+ * `chrome.storage.session` au lieu de ne lire qu'au montage (voir `App.tsx`).
+ * C'est le même mécanisme qui traite le cas nouveau d'une capture reçue
+ * **panneau déjà ouvert**, impossible du temps du popup puisqu'il se fermait au
+ * premier clic dans la page.
+ *
+ * Le repli ne change pas de nature : si l'ouverture échoue, on écrit
+ * directement. C'est le point non négociable — une capture perdue en silence
+ * serait pire que l'absence de formulaire. Et la capture en attente est
+ * nettoyée, faute de quoi le formulaire s'afficherait à la prochaine ouverture
  * manuelle, pour une capture déjà écrite.
  */
 async function demander(boardId: string | null, info: chrome.contextMenus.OnClickData, tab?: chrome.tabs.Tab) {
   const title = titleFrom(info, tab);
   const url = urlFrom(info, tab);
+
+  // ⚠️ Aucun `await` avant cette ligne : c'est la condition du geste utilisateur.
+  // `windowId` plutôt que `tabId` : le panneau vaut pour la fenêtre entière, et
+  // le viser par onglet le ferait disparaître au premier changement d'onglet.
+  // Le résultat est réduit à un booléen TOUT DE SUITE : laisser une promesse
+  // rejetable en vol pendant les deux `await` qui suivent produirait un rejet
+  // non traité, que MV3 remonte en erreur de service worker.
+  const ouvert = tab?.windowId
+    ? chrome.sidePanel.open({ windowId: tab.windowId }).then(
+        () => true,
+        () => false,
+      )
+    : Promise.resolve(false);
+
   // ⚠️ `null` est résolu ICI, pas dans le formulaire : l'entrée « Ajouter à
   // « X » » annonce un nom, et le formulaire doit montrer CE nom. Le laisser
   // à `null` faisait retomber la sélection sur la première matrice de la liste,
   // c'est-à-dire sur une destination que rien n'avait annoncée.
   const cible = boardId ?? (await getActiveBoard());
-
   await setPending({ title, url, boardId: cible, at: Date.now() });
-  try {
-    await chrome.action.openPopup();
-  } catch {
+
+  if (!(await ouvert)) {
     await clearPending();
     await capture(boardId, title, url);
   }

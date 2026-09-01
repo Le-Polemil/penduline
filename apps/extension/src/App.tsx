@@ -20,7 +20,7 @@ import {
 import { isConfigured, supabase } from './supabase';
 import { getActiveBoard, setActiveBoard } from './active-board';
 import { Capture } from './Capture';
-import { getPending, type PendingCapture } from './pending-capture';
+import { getPending, watchPending, type PendingCapture } from './pending-capture';
 import { Loader } from './Loader';
 import { useExtStore, type ExtStore } from './store';
 import { ToastProvider } from './toast';
@@ -35,7 +35,7 @@ const WEB_APP_URL =
 /**
  * « À trier » n'a pas de fond propre : `PARK.bg` vaut `'transparent'`
  * (packages/shared/src/quadrants.ts), parce que sur le web la zone occupe toute
- * la largeur sous la grille et se fond dans la page. Dans le popup elle est une
+ * la largeur sous la grille et se fond dans la page. Dans le panneau elle est une
  * case comme les autres, il lui faut donc un fond — même repli neutre que celui
  * déjà appliqué au rendu de la corbeille côté web.
  */
@@ -108,8 +108,8 @@ export function App() {
   }, []);
 
   return (
-    <div className="popup">
-      {/* Au-dessus de `PopupApp` : c'est `useExtStore` qui signale les échecs
+    <div className="panel">
+      {/* Au-dessus de `PanelApp` : c'est `useExtStore` qui signale les échecs
           d'écriture, il doit donc se rendre à l'intérieur de l'hôte. */}
       <ToastProvider>
         {!isConfigured ? (
@@ -119,7 +119,7 @@ export function App() {
         ) : !session ? (
           <SignIn />
         ) : (
-          <PopupApp userId={session.user.id} />
+          <PanelApp userId={session.user.id} />
         )}
       </ToastProvider>
     </div>
@@ -143,7 +143,7 @@ function ConfigNeeded() {
   );
 }
 
-function PopupApp({ userId }: { userId: string }) {
+function PanelApp({ userId }: { userId: string }) {
   const store = useExtStore(userId);
   const [screen, setScreen] = useState<'home' | 'detail'>('home');
   const [boardId, setBoardId] = useState<string | null>(null);
@@ -157,6 +157,21 @@ function PopupApp({ userId }: { userId: string }) {
   useEffect(() => {
     void getPending().then(setPending);
   }, []);
+
+  /**
+   * Les captures qui arrivent APRÈS le montage.
+   *
+   * La lecture ci-dessus ne suffit plus depuis le passage au panneau : le
+   * service worker doit appeler `sidePanel.open()` avant d'écrire la capture
+   * (contrainte du geste utilisateur), et le panneau ne se ferme plus, donc il
+   * peut très bien être monté depuis dix minutes quand elle arrive. Voir
+   * `watchPending`, qui documente les deux cas.
+   *
+   * ⚠️ `setPending(c)` et non `setPending(c ?? null)` en cascade : la valeur
+   * `undefined` est réservée au « pas encore lu » de la lecture initiale, et la
+   * laisser réapparaître ici renverrait l'écran de chargement.
+   */
+  useEffect(() => watchPending((c) => setPending(c)), []);
 
   // Reprise de la dernière matrice ouverte (TTL géré côté store).
   useEffect(() => {
@@ -194,7 +209,8 @@ function PopupApp({ userId }: { userId: string }) {
 
   if (!store.ready || pending === undefined) return <Loader label="Chargement des matrices…" />;
 
-  // Le formulaire passe AVANT la grille : le popup vient d'être ouvert pour ça.
+  // Le formulaire passe AVANT la grille : c'est ce que l'utilisateur vient de
+  // demander, que le panneau se soit ouvert pour ça ou qu'il fût déjà là.
   if (pending) {
     return (
       <Capture
@@ -244,7 +260,7 @@ function Home({
     if (!name) return;
     const id = await store.addBoard(name);
     setDraft(null);
-    // On ouvre la matrice créée : dans un popup, rester sur une liste pour aller
+    // On ouvre la matrice créée : dans un panneau, rester sur une liste pour aller
     // rechercher ce qu'on vient de nommer serait une étape de trop.
     if (id) onOpen(id);
   }
@@ -405,7 +421,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
   /**
    * Applique des écritures préparées par `packages/shared`.
    *
-   * Le popup n'affiche pas les paires côte à côte — c'est une mise en page du
+   * Le panneau n'affiche pas les paires côte à côte — c'est une mise en page du
    * web — mais il ne doit pas pour autant **casser** un lien que le web
    * garantit. La règle vit désormais en un seul endroit, partagé par les deux
    * applications : c'est précisément parce qu'elle existait en double que
@@ -454,10 +470,15 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
   }
 
   /**
-   * Change une tâche de matrice. Pas de confirmation ici, contrairement au web :
-   * un popup de 400 px ne peut pas empiler une boîte modale sans se couvrir
-   * lui-même. La partenaire suit tout de même — l'invariant prime, et le web
-   * reste l'endroit où l'on fait du rangement en connaissance de cause.
+   * Change une tâche de matrice. Pas de confirmation ici, contrairement au web.
+   * La partenaire suit tout de même — l'invariant prime, et le web reste
+   * l'endroit où l'on fait du rangement en connaissance de cause.
+   *
+   * ⚠️ La raison invoquée jusqu'ici n'en est plus une : « un popup de 400 px ne
+   * peut pas empiler une boîte modale sans se couvrir lui-même » valait pour
+   * l'ancien hôte. Le panneau, lui, a la place. Le geste reste donc sans
+   * confirmation par simple inertie, pas par décision — à trancher pour de bon
+   * quand on reprendra ce menu (#95).
    */
   function moveToBoard(task: Task, targetId: string) {
     const rest = tasks.filter(
@@ -745,7 +766,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
   );
 }
 
-// ── Connexion minimale (le popup a sa propre session) ────────────────────────
+// ── Connexion minimale (le panneau a sa propre session) ────────────────────────
 function SignIn() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -798,9 +819,13 @@ function SignIn() {
       </button>
       {/*
         Le parcours de réinitialisation n'est PAS dupliqué ici : il suppose un
-        aller-retour par e-mail, et un popup de 400×600 qui se ferme au moindre
-        clic ailleurs est le pire endroit pour ça. On renvoie vers l'app web,
-        qui porte le parcours complet.
+        aller-retour par e-mail, donc un détour par la boîte de réception et un
+        lien qui s'ouvre dans un onglet. On renvoie vers l'app web, qui porte le
+        parcours complet.
+
+        (Le motif invoqué auparavant — « un popup qui se ferme au moindre clic
+        ailleurs » — a disparu avec le passage au panneau. Celui de l'aller-retour
+        par e-mail, lui, tient toujours.)
       */}
       {mode === 'signin' && (
         <a className="signin-forgot" href={WEB_APP_URL} target="_blank" rel="noreferrer">

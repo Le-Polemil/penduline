@@ -11,7 +11,7 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 export const isConfigured = Boolean(url && anonKey);
 
 // On ne construit le client que si configuré : `createClient(undefined, …)`
-// lèverait « supabaseUrl is required » au chargement du popup.
+// lèverait « supabaseUrl is required » au chargement du panneau.
 export const supabase: SupabaseClient = isConfigured
   ? createSupabase({ url: url!, anonKey: anonKey!, storage: chromeStorage })
   : (null as unknown as SupabaseClient);

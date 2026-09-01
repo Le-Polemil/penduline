@@ -1,8 +1,16 @@
-/* Penduline — popup d'extension, porté depuis « Extension Prototype.dc.html ». */
+/* Penduline — panneau latéral d'extension, porté depuis
+   « Extension Prototype.dc.html ».
+
+   ⚠️ La largeur n'est PLUS un nombre. Le panneau est redimensionné par
+   l'utilisateur, et Chrome le laisse descendre à ~240 px. Tout ce qui suit doit
+   tenir de 240 px à plusieurs centaines — d'où l'absence de dimension figée sur
+   la racine, et les largeurs en `min()` sur ce qui flotte au-dessus (le menu
+   d'actions). La maquette d'origine visait 400 px : elle reste la référence de
+   proportions, plus une contrainte de boîte. */
 
 /*
   Polices EMBARQUÉES, et non chargées depuis Google Fonts. Une extension publiée
-  ne doit pas dépendre d'un CDN : chaque ouverture du popup enverrait une requête
+  ne doit pas dépendre d'un CDN : chaque ouverture du panneau enverrait une requête
   à un tiers (à déclarer au Chrome Web Store) et le rendu casserait hors ligne.
   Sous-ensemble « latin » : il couvre les accents français, œ compris (U+0153).
   Figtree est une fonte variable — un seul fichier sert les graisses 400 à 700.
@@ -28,12 +36,20 @@
   --color-text: #201e1d;
   --color-accent: #c67139;
   /* Fond de la case « À trier », qui n'a pas de couleur propre. Même valeur que
-     le ramp du web, pour n'avoir qu'une convention entre les deux applications. */
+     le ramp du web, pour n'avoir qu'une convention entre les deux applications.
+
+     ⚠️ `100` et `700` MANQUAIENT, alors que le formulaire de capture les
+     utilise depuis #78 (`.cap__area`, `.cap__input`, `.cap__btn`). Une variable
+     non définie rend la déclaration invalide au calcul : le fond des champs
+     retombait sur `transparent` et la couleur du bouton sur celle héritée.
+     Valeurs reprises telles quelles du ramp web, pas réinventées. */
+  --color-neutral-100: #f9f4ed;
   --color-neutral-200: #eee7db;
   --color-neutral-300: #dcd3c4;
   --color-neutral-400: #c0b6a5;
   --color-neutral-500: #a19786;
   --color-neutral-600: #82796a;
+  --color-neutral-700: #645c50;
   --color-neutral-900: #2e2b25;
   --color-accent-100: #fff2eb;
   --color-accent-300: #ffc6a5;
@@ -53,15 +69,22 @@
 }
 
 * { box-sizing: border-box; }
+/* `height: 100%` sur les deux ancêtres : sans lui, `100%` sur `.panel` n'a
+   aucune hauteur à référencer et la colonne s'effondre sur son contenu. */
+html, body { height: 100%; }
 body { margin: 0; }
 input::placeholder { color: inherit; opacity: 0.55; }
 
 @keyframes mm-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 ::view-transition-group(*) { animation-duration: 0.25s; }
 
-.popup {
-  width: 400px;
-  height: 600px;
+/* La racine épouse le panneau au lieu de le dicter.
+   `100dvh` et non `100vh` : la seconde ignore les barres d'outils rétractables
+   et laisse dépasser le pied de page. La colonne flex reste inchangée — c'est
+   elle qui tient l'en-tête et le pied pendant que la liste défile. */
+.panel {
+  width: 100%;
+  height: 100dvh;
   background: var(--color-bg);
   color: var(--color-text);
   font-family: var(--font-body);
@@ -73,7 +96,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
 /* ── Accueil ──────────────────────────────────────────────────────────────── */
 .home-head { display: flex; align-items: center; gap: 9px; padding: 16px 16px 8px; flex: none; animation: mm-in 0.25s ease backwards; }
 .home-brand { font: 400 20px var(--font-heading); color: var(--color-text); }
-.home-openapp { margin-left: auto; font: 600 11.5px var(--font-body); color: var(--color-accent-700); text-decoration: none; cursor: pointer; }
+.home-openapp { margin-left: auto; flex: none; white-space: nowrap; font: 600 11.5px var(--font-body); color: var(--color-accent-700); text-decoration: none; cursor: pointer; }
 .home-openapp:hover { color: var(--color-accent-800); }
 
 .logo { width: 26px; height: 26px; border-radius: 50%; background: var(--color-accent); display: flex; align-items: center; justify-content: center; flex: none; }
@@ -98,11 +121,16 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .board:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
 .board--calm { opacity: 0.75; }
 .board--calm:hover { opacity: 1; }
-.board__name { font: 600 13.5px var(--font-body); color: var(--color-text); }
-.board__meta { margin-left: auto; font: 11px var(--font-body); color: var(--color-neutral-500); }
-.board__pills { margin-left: auto; display: flex; gap: 4px; }
+/* Même règle que `.detail-board` : le nom est l'élastique de la ligne, les
+   compteurs et le chevron ne se compriment jamais. */
+.board__name {
+  font: 600 13.5px var(--font-body); color: var(--color-text);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.board__meta { margin-left: auto; flex: none; font: 11px var(--font-body); color: var(--color-neutral-500); }
+.board__pills { margin-left: auto; flex: none; display: flex; gap: 4px; }
 .pill { color: #fff; border-radius: 999px; font: 700 10px/1 var(--font-body); padding: 4px 7px; }
-.board__chev { color: var(--color-neutral-400); }
+.board__chev { flex: none; color: var(--color-neutral-400); }
 /* Un en-tête par univers, discret : il situe, il ne concurrence pas les noms
    de matrices. Sans aucun univers, aucun en-tête n'est rendu. */
 .uni { display: flex; flex-direction: column; gap: 6px; }
@@ -156,12 +184,17 @@ input::placeholder { color: inherit; opacity: 0.55; }
 /* ── Détail ───────────────────────────────────────────────────────────────── */
 .detail-head { display: flex; align-items: center; gap: 9px; padding: 14px 16px 8px; flex: none; animation: mm-in 0.25s ease backwards; }
 .back { font: 700 15px var(--font-body); color: var(--color-accent-700); cursor: pointer; padding: 2px 6px 2px 0; background: none; border: none; }
-.detail-board { font: 400 21px var(--font-heading); color: var(--color-text); }
+/* Le nom cède la place aux pastilles plutôt que de les pousser dehors : dans un
+   panneau étroit, c'est lui le seul élément élastique de la ligne. */
+.detail-board {
+  font: 400 21px var(--font-heading); color: var(--color-text);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
 /* ── Sélecteur de case ────────────────────────────────────────────────────────
    Les quatre tuiles doivent se lire comme UNE matrice : coins extérieurs
    arrondis, coin tourné vers le centre laissé carré — la règle des tuiles du
    logo. Le disque « À trier » occupe la jonction. */
-.squares { margin-left: auto; position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
+.squares { margin-left: auto; flex: none; position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
 .square { width: 16px; height: 16px; color: #fff; font: 700 9px/16px var(--font-body); text-align: center; cursor: pointer; border: none; padding: 0; outline-offset: 1px; transition: opacity 0.15s, font-size 0.18s ease; }
 .square--1 { border-radius: 4px 0 0 0; }
 .square--2 { border-radius: 0 4px 0 0; }
@@ -217,9 +250,14 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .detail-list { flex: 1; overflow: auto; padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 9px; animation: mm-in 0.25s ease backwards; }
 .quad { border: 2px dotted transparent; border-radius: 14px; padding: 9px 11px; transition: border-color 0.15s; }
 .quad-head { display: flex; align-items: baseline; gap: 7px; margin-bottom: 6px; }
-.quad-label { font: 400 15px var(--font-heading); color: var(--q-dark); }
-.quad-sub { font: 10.5px var(--font-body); color: var(--q-dark); }
-.quad-count { margin-left: auto; background: var(--q-ink); color: #fff; border-radius: 999px; font: 700 10px/1 var(--font-body); padding: 3px 7px; }
+.quad-label { flex: none; font: 400 15px var(--font-heading); color: var(--q-dark); }
+/* C'est le sous-titre qui s'efface en premier quand la place manque : le titre
+   de la case et son compte sont l'information, lui n'est qu'un rappel. */
+.quad-sub {
+  font: 10.5px var(--font-body); color: var(--q-dark);
+  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.quad-count { margin-left: auto; flex: none; background: var(--q-ink); color: #fff; border-radius: 999px; font: 700 10px/1 var(--font-body); padding: 3px 7px; }
 .quad-tasks { display: flex; flex-direction: column; }
 
 .gap { height: 6px; display: flex; align-items: center; transition: height 0.12s; }
@@ -259,7 +297,10 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .task__more:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
 
 .task-menu {
-  position: absolute; right: 0; top: 100%; z-index: 20; width: 210px;
+  /* 210 px reste la largeur voulue, mais elle ne peut plus être un plancher :
+     dans un panneau réduit au minimum, la carte est plus étroite que ça et le
+     menu déborderait par la droite. `min()` le borne à sa carte. */
+  position: absolute; right: 0; top: 100%; z-index: 20; width: min(210px, 100%);
   background: var(--card-warm); border-radius: 14px; box-shadow: var(--shadow-lg);
   padding: 9px; animation: mm-in 0.16s ease both;
 }
@@ -365,8 +406,8 @@ input::placeholder { color: inherit; opacity: 0.55; }
 }
 
 /* ── Toast ──────────────────────────────────────────────────────────────────
-   Un seul emplacement (voir `toast.tsx`), ancré en bas du popup. `fixed` suffit :
-   le popup EST le viewport, 400 × 600. Mêmes règles que côté web, sans la pile. */
+   Un seul emplacement (voir `toast.tsx`), ancré en bas du panneau. `fixed` suffit :
+   le panneau EST le viewport. Mêmes règles que côté web, sans la pile. */
 .toast {
   position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50;
   max-width: calc(100% - 24px);
@@ -385,7 +426,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .toast__close:hover { opacity: 1; }
 
 /* ── Formulaire de capture (#78) ──────────────────────────────────────────────
-   Le popup s'ouvre sur ce formulaire quand une capture attend. Il occupe toute
+   Le panneau s'ouvre sur ce formulaire quand une capture attend. Il occupe toute
    la largeur : c'est l'unique chose à faire à cet instant. */
 .cap { display: flex; flex-direction: column; gap: 3px; padding: 14px; }
 .cap__title { margin: 0 0 6px; font: 700 15px/1 var(--font-display, var(--font-body)); color: var(--color-text); }
