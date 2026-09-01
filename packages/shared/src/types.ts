@@ -97,6 +97,13 @@ export type TaskPatch = Partial<
     | 'position'
     | 'pair_id'
     | 'parent_id'
+    /**
+     * Jamais écrit en avant — la base le tient elle-même par trigger. Il n'est
+     * ici que pour l'INVERSE d'annulation : une annulation étant elle-même un
+     * changement de case, le trigger y remettrait `now()` et `Ctrl+Z` rendrait
+     * la tâche à sa case sans lui rendre son ancienneté (#47).
+     */
+    | 'quadrant_changed_at'
   >
 >;
 

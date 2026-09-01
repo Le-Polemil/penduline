@@ -6,6 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import {
+  ageInDays,
   countOpen,
   isOpenRow,
   groupByUniverse,
@@ -16,6 +17,7 @@ import {
   type UniverseSummary,
 } from '@penduline/shared';
 import type { Store } from '../data/store';
+import { readLastReview } from '../data/reviewPrefs';
 import { Confirm } from '../components/Confirm';
 import { dropTarget, gapIndexAt } from '../dnd/gap';
 import { ordinal, useAnnounce } from '../a11y/announce';
@@ -103,10 +105,12 @@ export function Home({
   store,
   onOpen,
   onGlobal,
+  onReview,
 }: {
   store: Store;
   onOpen: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
+  onReview: () => void;
 }) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
   const [draft, setDraft] = useState<string | null>(null);
@@ -161,6 +165,21 @@ export function Home({
    * comptes au lendemain de la migration — il doit rester impeccable.
    */
   const grouped = store.universes.length > 0;
+  /**
+   * Le repère « dernière revue ». Calculé au rendu et non mémorisé : il change
+   * de jour en jour, et l'accueil se re-rend bien plus souvent que ça.
+   *
+   * Arrondi au jour plein, et « aujourd'hui » plutôt que « il y a 0 jour ».
+   */
+  const reviewHint = (() => {
+    const last = readLastReview();
+    if (!last) return 'ce qui stagne, ce qui n’a jamais bougé';
+    const days = ageInDays(last, Date.now());
+    if (days === null) return 'ce qui stagne, ce qui n’a jamais bougé';
+    const d = Math.floor(days);
+    if (d <= 0) return 'consultée aujourd’hui';
+    return `dernière consultation il y a ${d} jour${d > 1 ? 's' : ''}`;
+  })();
   /**
    * Les univers dans l'ordre affiché — la liste que le glisser réordonne.
    *
@@ -362,10 +381,18 @@ export function Home({
           matrice de plus. Masquée tant qu'aucune matrice n'existe : il n'y
           aurait rien à voir d'ensemble. */}
       {store.boards.length > 0 && (
-        <button className="home-global" onClick={() => onGlobal({ kind: 'all' })}>
-          Vue globale
-          <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
-        </button>
+        <div className="home-lenses">
+          <button className="home-global" onClick={() => onGlobal({ kind: 'all' })}>
+            Vue globale
+            <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
+          </button>
+          {/* Le seul rappel du produit, et il est passif : un repère, pas une
+              relance. Un outil qui harcèle finit désinstallé (#47). */}
+          <button className="home-global home-global--review" onClick={onReview}>
+            Revue
+            <span className="home-global__hint">{reviewHint}</span>
+          </button>
+        </div>
       )}
 
       {store.boards.length === 0 && !grouped ? (

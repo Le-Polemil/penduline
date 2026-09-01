@@ -6,6 +6,7 @@ import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
 import { GlobalScreen, type Scope } from './screens/Global';
+import { ReviewScreen } from './screens/Review';
 import { AnnounceProvider } from './a11y/announce';
 import { ToastProvider } from './components/Toast';
 import { Search, type SearchHit } from './components/Search';
@@ -105,7 +106,9 @@ type View =
    * grille où la tâche n'est pas serait pire que ne rien faire.
    */
   | { kind: 'board'; id: string; focusTask?: string; openBin?: boolean }
-  | { kind: 'global'; scope: Scope };
+  | { kind: 'global'; scope: Scope }
+  /** La revue périodique (#47). Sans portée : elle regarde tout le compte. */
+  | { kind: 'review' };
 
 const HOME: View = { kind: 'home' };
 
@@ -134,6 +137,7 @@ function readView(): View {
     const v = JSON.parse(raw) as View;
     if (v.kind === 'board' && typeof v.id === 'string') return v;
     if (v.kind === 'global' && (v.scope?.kind === 'all' || typeof v.scope?.id === 'string')) return v;
+    if (v.kind === 'review') return v;
     return HOME;
   } catch {
     // `sessionStorage` peut lever (navigation privée verrouillée), et le JSON
@@ -243,11 +247,14 @@ function Workspace({ userId }: { userId: string }) {
           scope={view.scope}
           onScope={(scope) => setView({ kind: 'global', scope })}
         />
+      ) : view.kind === 'review' ? (
+        <ReviewScreen store={store} onOpenBoard={(id) => setView({ kind: 'board', id })} />
       ) : (
         <Home
           store={store}
           onOpen={(id) => setView({ kind: 'board', id })}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
+          onReview={() => setView({ kind: 'review' })}
         />
       )}
     </>

@@ -42,7 +42,7 @@ const ATTACHMENT_COLS = 'id, task_id, user_id, url, label, position, created_at'
 
 /** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
 const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, created_at, updated_at';
+  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, created_at, updated_at, quadrant_changed_at';
 
 /** Tout ce qui s'ordonne par position se retrie pareil. */
 function byPosition<T extends { position: number }>(a: T, b: T): number {
@@ -57,6 +57,19 @@ function byPosition<T extends { position: number }>(a: T, b: T): number {
  */
 function previousValues(task: Task, patch: TaskPatch): TaskPatch {
   const keys = Object.keys(patch) as (keyof TaskPatch)[];
+  // Un déplacement de case emporte `quadrant_changed_at`, que l'aller n'écrit
+  // jamais (le trigger le pose) mais que le retour DOIT restaurer.
+  //
+  // Sans ça, `Ctrl+Z` rendait la tâche à sa case sans lui rendre son
+  // ancienneté : le trigger, voyant la case changer, réécrivait `now()`. Une
+  // fausse manœuvre suivie de son annulation faisait donc disparaître la tâche
+  // de la revue (#47) pour trente jours — l'inverse de ce que `Ctrl+Z` promet.
+  //
+  // Le trigger cède devant une valeur explicite, c'est ce qui rend ce retour
+  // possible (voir `set_quadrant_changed_at`).
+  if ('quadrant' in patch && !keys.includes('quadrant_changed_at')) {
+    keys.push('quadrant_changed_at');
+  }
   // Le cast est inévitable : `fromEntries` perd la corrélation clé/valeur, que
   // `TaskPatch` porte champ par champ.
   return Object.fromEntries(keys.map((k) => [k, task[k]])) as TaskPatch;

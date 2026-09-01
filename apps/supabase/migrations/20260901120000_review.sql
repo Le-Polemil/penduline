@@ -42,13 +42,25 @@ comment on column public.tasks.quadrant_changed_at is
   déplacement de position. Le test `is distinct from` reste néanmoins
   nécessaire — la clause `of` se déclenche dès que la colonne est CITÉE dans le
   `set`, sa valeur fût-elle inchangée.
+
+  ⚠️ LA SECONDE CONDITION EXISTE POUR `Ctrl+Z`, et elle n'est pas cosmétique.
+  Une annulation EST un changement de case : sans elle, le trigger réécrivait
+  `now()` et la tâche rendue à sa case d'origine ressortait de la revue pour N
+  jours. Autrement dit, une fausse manœuvre suivie de son annulation faisait
+  perdre un signal — alors que `Ctrl+Z` promet exactement le contraire.
+
+  La règle est donc : le trigger ne pose l'horodatage que si l'appelant ne l'a
+  pas fourni. Une valeur explicite l'emporte, ce qui permet à l'inverse
+  d'annulation (`previousValues` dans `apps/web/src/data/store.ts`) de restaurer
+  la date d'avant en même temps que la case.
 */
 create or replace function public.set_quadrant_changed_at()
 returns trigger
 language plpgsql
 as $$
 begin
-  if new.quadrant is distinct from old.quadrant then
+  if new.quadrant is distinct from old.quadrant
+     and new.quadrant_changed_at is not distinct from old.quadrant_changed_at then
     new.quadrant_changed_at = now();
   end if;
   return new;

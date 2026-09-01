@@ -1031,3 +1031,108 @@ button.uni-head__name:focus-visible {
   /* Sans mouvement, le repère reste — c'est l'information, pas la décoration. */
   .task--flash { animation: none; box-shadow: 0 0 0 3px var(--color-accent-600); }
 }
+
+/* ── Revue périodique (#47) ───────────────────────────────────────────────── */
+
+/* Les deux lectures de l'accueil, côte à côte. En ligne plutôt qu'empilées :
+   ce sont deux entrées de même rang, et les empiler aurait repoussé les
+   matrices d'une hauteur de bouton pour rien. */
+.home-lenses { display: flex; gap: 10px; margin: 0 0 18px; flex-wrap: wrap; }
+.home-lenses .home-global { flex: 1 1 240px; margin: 0; }
+/* La revue se distingue par sa teinte, pas par sa forme : même rang, autre nature. */
+.home-global--review { color: var(--color-accent-2-800); }
+.home-global--review:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+
+.review { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
+.review-head { margin-bottom: 26px; }
+.review-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
+.review-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-700); margin: 8px 0 10px; }
+.review-total { font: 600 12.5px var(--font-body); color: var(--color-neutral-700); }
+
+.review-signals { display: flex; flex-direction: column; gap: 14px; }
+
+.review-signal {
+  background: var(--card-warm); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); padding: 14px 16px 12px;
+}
+/* Un signal satisfait s'affiche, il ne se masque pas — mais il s'efface : le
+   regard doit tomber sur ce qui demande une décision. */
+.review-signal--clear { box-shadow: none; background: none; border: 1.5px dashed var(--color-neutral-300); }
+
+.review-signal__head { display: flex; align-items: center; gap: 10px; }
+.review-signal__toggle {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+  font: 400 19px/1.25 var(--font-heading); color: var(--color-text);
+}
+.review-signal__caret { flex: none; font-size: 12px; color: var(--color-neutral-700); }
+.review-signal__count {
+  flex: none; font: 700 14px var(--font-body); color: var(--color-accent-800);
+  background: var(--color-accent-100); border-radius: 999px; padding: 2px 11px;
+}
+.review-signal--clear .review-signal__count { color: var(--color-neutral-700); background: var(--color-neutral-100); }
+
+.review-signal__hint { font: 13px/1.45 var(--font-body); color: var(--color-neutral-700); margin: 4px 0 0 20px; }
+.review-signal__empty { font: 13.5px var(--font-body); color: var(--color-neutral-700); margin: 12px 0 0 20px; }
+.review-signal__empty--failed { color: var(--color-accent-700); }
+/* La réserve sur une mesure encore jeune. Discrète, mais dite : un signal vide
+   sans elle passerait pour un bilan. */
+.review-signal__note {
+  font: italic 12px/1.4 var(--font-body); color: var(--color-neutral-700);
+  margin: 12px 0 0 20px;
+}
+.review-signal__foot { margin: 12px 0 0 20px; }
+.review-signal__tune {
+  font: 600 12px var(--font-body); color: var(--color-neutral-700);
+  background: var(--color-neutral-100); border: none; border-radius: 999px;
+  padding: 4px 11px; cursor: pointer;
+}
+.review-signal__tune:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+.review-tune { display: inline-flex; align-items: center; gap: 8px; font: 600 12px var(--font-body); color: var(--color-neutral-700); }
+.review-tune input {
+  width: 72px; font: 600 13px var(--font-body); padding: 4px 8px;
+  border: 1.5px solid var(--color-neutral-400); border-radius: 8px; background: var(--card-warm);
+  color: var(--color-text);
+}
+
+.review-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 0; }
+.review-card { display: flex; flex-direction: column; gap: 3px; }
+/* La matrice d'origine : la revue agrège, donc sans elle on ne sait pas de quel
+   contexte la tâche parle. */
+.review-card__board {
+  font: 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--color-neutral-700); padding-left: 2px;
+}
+
+.review-board {
+  display: flex; align-items: baseline; gap: 10px; width: 100%;
+  background: var(--color-neutral-100); border: none; border-radius: 10px;
+  padding: 11px 14px; cursor: pointer; text-align: left;
+  font: 600 14px var(--font-body); color: var(--color-text);
+  transition: background 0.15s;
+}
+.review-board:hover { background: var(--color-accent-100); }
+.review-board__name { flex: 1; }
+.review-board__detail { flex: none; font: 400 12px var(--font-body); color: var(--color-neutral-700); }
+
+@media (max-width: 720px) {
+  .review { padding: 28px 16px 48px; }
+  .review-title { font-size: 28px; }
+  /* Une seule colonne : deux boutons à 240px ne tiennent pas côte à côte, et un
+     flex-wrap qui casse à mi-largeur est pire que l'empilement franc. */
+  .home-lenses { flex-direction: column; }
+  /* Les retraits de 20px alignaient le texte sous le titre ; à cette largeur ils
+     ne coûtent que de la place. */
+  .review-signal__hint,
+  .review-signal__empty,
+  .review-signal__note,
+  .review-signal__foot { margin-left: 0; }
+}
+
+/* Cible tactile : le réglage de seuil et l'ouverture d'une matrice se touchent
+   au doigt comme le reste (#89). */
+@media (hover: none) {
+  .review-signal__toggle { padding: 4px 0; }
+  .review-signal__tune { padding: 9px 14px; }
+  .review-board { padding: 14px; }
+}
