@@ -2,7 +2,7 @@
 story: "Extension : passer du popup au panneau latéral"
 story_code: "side-panel"
 created: 2026-09-02
-status: "In Progress"
+status: "Done"
 ---
 
 # Extension : passer du popup au panneau latéral
