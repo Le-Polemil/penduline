@@ -1,4 +1,4 @@
-import { QUADS, type QuadrantKey } from './quadrants';
+import { ALL, QUADS, type QuadrantKey } from './quadrants';
 import type { Board } from './types';
 
 /**
@@ -221,7 +221,13 @@ export function statsReadings({
 
   // Toutes les cases, y compris à zéro : une case absente de la liste se lirait
   // comme une case qu'on a oublié d'afficher, pas comme une case vide.
-  const byQuadrant: QuadrantShare[] = QUADS.map((q) => {
+  //
+  // ⚠️ `ALL` et non `QUADS` : « À trier » en fait partie. On peut cocher une
+  // tâche sans l'avoir classée, et ces complétions existent donc réellement.
+  // Les omettre les laisserait dans le dénominateur — `total` est calculé sur
+  // `by_quadrant`, qui les contient — sans jamais les afficher : les parts ne
+  // feraient plus 100 %, et le manque serait mis sur le compte de l'arrondi.
+  const byQuadrant: QuadrantShare[] = ALL.map((q) => {
     const s = statByQuad.get(q.key);
     const completed = s?.completed ?? 0;
     return {
@@ -303,8 +309,15 @@ export function statsReadings({
 
 // ── Le constat en clair ─────────────────────────────────────────────────────
 
-/** En dessous, on se taît : généraliser sur trois tâches n'est pas une statistique. */
+/** En dessous, on se tait : généraliser sur trois tâches n'est pas une statistique. */
 export const SENTENCE_MIN = 5;
+
+/**
+ * Combien de fois la case dominante doit dépasser la suivante pour qu'on parle
+ * de dominance. En dessous, la phrase désignerait une case au hasard parmi des
+ * égales.
+ */
+export const DOMINANCE_RATIO = 1.5;
 
 /**
  * Ce que les chiffres disent, en une phrase.
@@ -326,6 +339,22 @@ export function statsSentence(readings: StatsReadings): string | null {
   const top = ranked[0];
   if (!top || top.completed === 0) return null;
 
+  // ⚠️ NE PAS AFFIRMER UNE DOMINANCE QUI N'EXISTE PAS.
+  //
+  // Vu sur des données réelles : cinq cases à 20 % chacune produisaient « 20 % de
+  // ce que vous avez terminé venait de Faire » — une phrase vraie au chiffre près
+  // et fausse au sens, puisqu'elle désigne arbitrairement une case parmi cinq
+  // équivalentes. Un écran qui prétend voir un motif là où il n'y en a pas perd
+  // sa crédibilité plus vite qu'un écran qui se tait.
+  //
+  // Le critère est un RAPPORT et non un seuil de part : il reste juste quel que
+  // soit le nombre de cases actives. Une seule case active donne un second à
+  // zéro, donc une dominance franche — ce qui est le bon résultat.
+  const second = ranked[1]?.completed ?? 0;
+  if (second > 0 && top.completed < second * DOMINANCE_RATIO) {
+    return `Sur cette période, ce que vous avez terminé se répartit assez uniformément entre les cases : aucune ne se détache.`;
+  }
+
   const part = `${top.share} % de ce que vous avez terminé venait de « ${top.label} ».`;
 
   const lecture: Record<QuadrantKey, string> = {
@@ -343,8 +372,12 @@ export function statsSentence(readings: StatsReadings): string | null {
   // Le délai moyen n'est ajouté que s'il éclaire quelque chose — et « Planifier »
   // lent est le fonctionnement NORMAL de la méthode, pas un retard. On le dit,
   // sinon le chiffre se lit comme un reproche.
+  //
+  // Omis sous un jour : « ont attendu 0 jours en moyenne » n'apprend rien et fait
+  // douter du reste de la phrase. Vu sur des données réelles, où la plupart des
+  // tâches sont créées et cochées le même jour.
   const delai =
-    top.avgDays === null
+    top.avgDays === null || top.avgDays < 1
       ? ''
       : top.quadrant === 'planifier'
         ? ` Ces tâches ont attendu ${fr(top.avgDays)} jours en moyenne, ce qui est le rythme attendu de cette case.`
