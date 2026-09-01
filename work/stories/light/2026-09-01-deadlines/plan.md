@@ -2,7 +2,7 @@
 slug: "deadlines"
 title: "Deadlines : échéance, statut « dans le rouge » et tri"
 created: 2026-09-01
-status: "In Progress"
+status: "Done"
 ---
 
 # #19 — Deadlines : échéance, statut « dans le rouge » et tri

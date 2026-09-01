@@ -28,6 +28,7 @@ import { Confirm } from '../components/Confirm';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
 import { useBinCount } from '../data/useBinCount';
+import { useNow } from '../data/useNow';
 
 /** Ce que la vue globale montre : tout, ou un univers. */
 export type Scope = { kind: 'all' } | { kind: 'universe'; id: string };
@@ -88,7 +89,12 @@ export function GlobalScreen({
   const [delAsk, setDelAsk] = useState<Task | null>(null);
   /** La tâche dont le champ « attacher un lien » est ouvert. Une seule à la fois. */
   const [linking, setLinking] = useState<string | null>(null);
+  /** La tâche dont l'éditeur d'échéance est ouvert. Une seule à la fois (#19). */
+  const [dating, setDating] = useState<string | null>(null);
 
+  // Même minuteur d'affichage que la matrice : le statut d'échéance doit se
+  // recalculer sans rechargement, sur les deux écrans (#19).
+  const now = useNow();
   const { onCheck, pending } = useCompletion(tasks, patchTask);
 
   // Garde-fou : l'univers choisi comme portée peut avoir été supprimé ailleurs
@@ -260,6 +266,16 @@ export function GlobalScreen({
           onAdd: (url) => store.addAttachment(t.id, url),
           onRemove: (a) => void store.removeAttachment(a.id),
         }}
+        deadline={{
+          now,
+          editing: dating === t.id,
+          onStartEdit: () => setDating(t.id),
+          onCancelEdit: () => setDating(null),
+          onSet: (dueAt) =>
+            store.group('Échéance fixée', () => void patchTask(t.id, { due_at: dueAt })),
+          onClear: () =>
+            store.group('Échéance retirée', () => void patchTask(t.id, { due_at: null })),
+        }}
         drag={{
           dragging: drag === t.id,
           start: () => setDrag(t.id),
@@ -351,7 +367,7 @@ export function GlobalScreen({
       ) : (
         <div className={`grid grid--${FRAME}`}>
           {ALL.map((q) => {
-            const groups = groupTasksByBoard(tasks, boards, q.key, pending);
+            const groups = groupTasksByBoard(tasks, boards, q.key, pending, now);
             const open = scopedTasks.filter((t) => t.quadrant === q.key && isOpenRow(t)).length;
             return (
               <div
@@ -397,6 +413,14 @@ export function GlobalScreen({
                           {cards.map((t) => card(t, q, true))}
                         </div>
                       ))}
+                      {/* Zone « en retard » (#19), entre les épinglées et
+                          l'ordre manuel — le même découpage que la matrice. */}
+                      {g.overdue.map((cards, i) => (
+                        <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`late-${i}`}>
+                          {cards.map((t) => card(t, q, false))}
+                        </div>
+                      ))}
+                      {g.overdue.length > 0 && g.rows.length > 0 && <div className="zone-split" />}
                       {g.rows.map((cards, i) => (
                         <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`row-${i}`}>
                           {cards.map((t) => card(t, q, false))}
