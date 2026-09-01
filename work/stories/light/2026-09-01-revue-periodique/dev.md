@@ -3,7 +3,7 @@ story: "Revue périodique : ce qui stagne, ce qui n'a jamais bougé"
 story_code: "revue-periodique"
 issue: 47
 created: 2026-09-01
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -16,13 +16,13 @@ status: "In Progress"
 | 2. `packages/shared/types.ts` : `quadrant_changed_at` sur `Task` + fixture `makeTask` | Terminé | 2026-09-01 |
 | 3. `packages/shared/review.ts` : seuils, défauts et calcul pur des 5 signaux | Terminé | 2026-09-01 |
 | 4. `packages/shared/review.test.ts` : un test par signal + les bords | Terminé | 2026-09-01 |
-| 5. `store.ts` : `quadrant_changed_at` dans `TASK_COLS` | En attente | |
-| 6. `data/useReview.ts` : appel de la RPC, une fois par visite | En attente | |
-| 7. `screens/Review.tsx` : l'écran, réutilisant `TaskCard` et `store.group` | En attente | |
-| 8. `App.tsx` + `Home.tsx` : routage `{ kind: 'review' }` et bouton d'entrée | En attente | |
-| 9. `styles.css` : styles de l'écran, mobile compris | En attente | |
-| 10. Qualité : `npm test` + `npm run typecheck` | En attente | |
-| 11. Validation manuelle navigateur (mobile + desktop) | En attente | |
+| 5. `store.ts` : `quadrant_changed_at` dans `TASK_COLS` | Terminé | 2026-09-01 |
+| 6. `data/useReview.ts` : appel de la RPC, une fois par visite | Terminé | 2026-09-01 |
+| 7. `screens/Review.tsx` : l'écran, réutilisant `TaskCard` et `store.group` | Terminé | 2026-09-01 |
+| 8. `App.tsx` + `Home.tsx` : routage `{ kind: 'review' }` et bouton d'entrée | Terminé | 2026-09-01 |
+| 9. `styles.css` : styles de l'écran, mobile compris | Terminé | 2026-09-01 |
+| 10. Qualité : `npm test` + `npm run typecheck` | Terminé | 2026-09-01 |
+| 11. Validation manuelle navigateur (mobile + desktop) | Terminé | 2026-09-01 |
 
 ## Journal
 
@@ -117,3 +117,94 @@ réintroduire précisément le bug qui a justifié la migration. Trois tests tom
 - **Une matrice vide n'est pas dormante.** Sans ligne dans `stats`, elle est exclue :
   reprocher à quelqu'un de ne pas avoir rempli la matrice qu'il vient de créer serait le ton
   que le ticket interdit explicitement.
+
+### 2026-09-01 : l'écran, le routage et les styles
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `store.ts` : `quadrant_changed_at` ajouté à `TASK_COLS`.
+- `data/reviewPrefs.ts` (nouveau) : seuils et date de dernière consultation en `localStorage`,
+  avec fusion champ par champ sur les défauts.
+- `data/useReview.ts` (nouveau) : appel de `review_boards()`, `refresh()` explicite.
+- `screens/Review.tsx` (nouveau) : les cinq sections, réutilisant `TaskCard` et `store.group`.
+- `App.tsx` : `View` gagne `{ kind: 'review' }`, validé par `readView` et routé.
+- `Home.tsx` : `.home-lenses` avec les deux entrées, et le repère « dernière consultation ».
+- `styles.css` : styles de l'écran, média queries mobile et tactile.
+
+**Fichiers modifiés** :
+- `apps/web/src/data/store.ts`, `apps/web/src/App.tsx`, `apps/web/src/screens/Home.tsx`,
+  `apps/web/src/styles.css`, `apps/web/src/components/TaskCard.tsx`
+- `apps/web/src/data/reviewPrefs.ts`, `apps/web/src/data/useReview.ts`,
+  `apps/web/src/screens/Review.tsx` (nouveaux)
+
+### 2026-09-01 : Validation navigateur — trois défauts trouvés et corrigés
+
+**Statut** : Terminé
+
+**Méthode** : app lancée contre le Supabase local, compte `demo@penduline.test`, avec trois
+matrices de test additives (`⚗ …`) portant des données datées pour armer chaque signal.
+Supprimées après validation — 4428 tâches avant, 4428 après, aucune donnée réelle touchée.
+
+**Ce que la validation a prouvé** — chaque cas construit exprès :
+
+| Cas | Attendu | Observé |
+|---|---|---|
+| « Refaire le CV (renommée hier) » | présente | ✅ dans « Jamais reclassées » |
+| « Réserver le train (déplacée hier) » | absente | ✅ absente |
+| « Payer la taxe (promue hier) », créée il y a 200 j | absente de « Faire » | ✅ absente |
+| « Rappeler le garagiste » | dans DEUX signaux | ✅ signaux 2 et 3 |
+| Matrice dont tout est terminé | pas dormante | ✅ (c'est l'objet de la RPC) |
+| Seuil 14 j → 1 j | la liste s'allonge | ✅ 5 → 6, persisté |
+
+**Trois défauts trouvés, tous corrigés :**
+
+**1. `flex-basis` devenu une hauteur.** `.home-lenses .home-global { flex: 1 1 240px }`
+passait en `flex-direction: column` sous 720 px — or la base porte sur l'axe PRINCIPAL.
+Chaque bouton mesurait donc **240 px de haut** et l'accueil était illisible en mobile.
+Corrigé par `flex: 0 0 auto` dans la média query.
+
+**2. Une poignée de glisser sans glisser.** `TaskCard` rendait `.task__grip` (`⠿`)
+inconditionnellement, alors que la carte portait `draggable="false"`. La revue est le
+premier écran à ne pas passer `drag`, donc elle a révélé le défaut. La poignée est
+désormais conditionnée à `drag`, ce qui suit la logique déjà écrite dans le composant
+(« absentes, les gestes correspondants n'existent tout simplement pas »). Aucun effet sur
+l'écran matrice ni sur la vue globale, qui passent tous deux `drag`.
+
+**3. `Ctrl+Z` rendait la case sans rendre l'ancienneté.** Le plus intéressant des trois, et
+une régression que la story introduisait. Une annulation EST un changement de case : le
+trigger réécrivait donc `now()`, et une tâche rendue à sa case ressortait de la revue pour
+trente jours. Une fausse manœuvre suivie de son annulation faisait perdre un signal —
+l'inverse exact de ce que `Ctrl+Z` promet (#46).
+
+Corrigé en trois endroits : le trigger ne pose l'horodatage que si l'appelant ne l'a pas
+fourni (`new.quadrant_changed_at is not distinct from old.quadrant_changed_at`) ;
+`quadrant_changed_at` entre dans `TaskPatch`, uniquement pour l'inverse ; et
+`previousValues` le capture dès que le patch touche `quadrant`.
+
+Vérifié des deux côtés — en SQL (aller pose `now()`, retour explicite l'emporte, et les
+deux non-régressions : déplacement ordinaire, renommage) et dans le navigateur : 19
+éléments → 17 après déplacement → **19** après `Ctrl+Z`, avec `quadrant_changed_at`
+revenu à sa valeur exacte de 45 jours.
+
+**Cibles tactiles** — sous émulation tactile réelle (`390x844x3,mobile,touch`, sans quoi
+`hover: none` ne s'applique pas et la mesure ne veut rien dire) : 48 / 44 / 44 px, aucun
+débordement horizontal. La case à cocher et le `⋯` des cartes restent à 18 px : partagés
+avec l'écran matrice, défaut préexistant, périmètre de #89.
+
+**Piège d'environnement, à retenir** — deux stacks Supabase tournent en local. `penduline`
+est mappé sur le port **55321**, `unaya` occupe 54321. `npm run status` annonce 54321,
+c'est-à-dire la valeur de `config.toml`, PAS le port réellement mappé. Le `.env.example`
+donne donc un port qui pointe vers l'autre projet. Une heure de « Invalid login
+credentials » alors que le hash correspondait en base.
+
+**Reste connu, non corrigé** : une tâche présente dans deux signaux ouvre ses deux menus
+`⋯` en même temps (`menuTask` est indexé par identifiant de tâche). Conséquence directe de
+la non-partition assumée, sans incidence fonctionnelle.
+
+### 2026-09-01 : Qualité
+
+- `npm test` : **177 tests verts** (146 sur `main` + 31 pour `review.test.ts`).
+- `npm run typecheck` : propre sur les trois workspaces.
+- `npm run build` : propre (shared + web + extension).
+- Pas de script de lint dans le dépôt.

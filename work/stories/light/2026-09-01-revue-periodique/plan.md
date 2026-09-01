@@ -3,7 +3,7 @@ story: "Revue périodique : ce qui stagne, ce qui n'a jamais bougé"
 story_code: "revue-periodique"
 issue: 47
 created: 2026-09-01
-status: "In Progress"
+status: "Done"
 ---
 
 # #47 — Revue périodique : ce qui stagne, ce qui n'a jamais bougé
