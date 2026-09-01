@@ -106,11 +106,13 @@ export function Home({
   onOpen,
   onGlobal,
   onReview,
+  onStats,
 }: {
   store: Store;
   onOpen: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
   onReview: () => void;
+  onStats: () => void;
 }) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
   const [draft, setDraft] = useState<string | null>(null);
@@ -391,6 +393,12 @@ export function Home({
           <button className="home-global home-global--review" onClick={onReview}>
             Revue
             <span className="home-global__hint">{reviewHint}</span>
+          </button>
+          {/* Troisième lentille, et la seule tournée vers le passé : la revue
+              dit ce qui stagne, la rétrospective où le temps est passé (#48). */}
+          <button className="home-global home-global--stats" onClick={onStats}>
+            Rétrospective
+            <span className="home-global__hint">dans quelle case passe votre temps</span>
           </button>
         </div>
       )}
