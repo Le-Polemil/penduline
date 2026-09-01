@@ -15,6 +15,13 @@ on:
         description: "Commit, tag ou branche à déployer (défaut : main)"
         type: string
         default: main
+      migrations:
+        description: "Migrations Supabase : les appliquer avant le front, ou passer outre"
+        type: choice
+        default: auto
+        options:
+          - auto
+          - ignorer
 
 # Deux déploiements simultanés sur la même machine, c'est l'incident assuré.
 concurrency:
@@ -30,7 +37,129 @@ env:
   APP_URL: https://penduline.polemil.dev
 
 jobs:
+  # ── Les migrations, AVANT le front ─────────────────────────────────────────
+  #
+  # L'ordre n'est pas une préférence : un front qui interroge une table absente
+  # répond 404 sans rien dire, et c'est arrivé quatre fois de suite (#45, #39,
+  # #50, #78). Le mettre ici le rend garanti par construction.
+  #
+  # La connexion passe par SSH, comme la procédure manuelle du README — mais la
+  # clé est bornée par une COMMANDE FORCÉE côté hôte
+  # (`apps/supabase/deploy/penduline-migrate.sh`) : elle ne donne pas de shell,
+  # seulement « lister », « appliquer », « vérifier ».
+  migrate:
+    if: inputs.migrations == 'auto'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+
+      # Pas d'action tierce pour trois lignes de `ssh` : ce job détient la clé
+      # de la base de production, il n'a rien à emprunter à personne.
+      - name: Préparer la connexion
+        env:
+          CLE: ${{ secrets.MIGRATE_SSH_KEY }}
+          HOTES_CONNUS: ${{ secrets.MIGRATE_SSH_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          [ -n "$CLE" ] || { echo "::error::Secret MIGRATE_SSH_KEY absent. Voir apps/supabase/README.md, ou relancer avec migrations=ignorer."; exit 1; }
+          # `known_hosts` renseigné, jamais `StrictHostKeyChecking=no` : accepter
+          # n'importe quelle empreinte reviendrait à livrer la clé au premier
+          # qui se met en travers.
+          [ -n "$HOTES_CONNUS" ] || { echo "::error::Secret MIGRATE_SSH_KNOWN_HOSTS absent (ssh-keyscan de l'hôte)."; exit 1; }
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$CLE" > ~/.ssh/id_migrate
+          chmod 600 ~/.ssh/id_migrate
+          printf '%s\n' "$HOTES_CONNUS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Comparer le dépôt et la base
+        id: comparer
+        env:
+          HOTE: ${{ secrets.MIGRATE_SSH_HOST }}
+          UTILISATEUR: ${{ secrets.MIGRATE_SSH_USER }}
+          PORT: ${{ vars.MIGRATE_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          ssh_hote() { ssh -q -i ~/.ssh/id_migrate -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$UTILISATEUR@$HOTE" "$@"; }
+
+          ssh_hote applied > /tmp/appliquees.txt
+          echo "Versions déjà en base : $(wc -l < /tmp/appliquees.txt | tr -d ' ')"
+
+          : > /tmp/en-attente.txt
+          for f in apps/supabase/migrations/*.sql; do
+            base=$(basename "$f" .sql)
+            version=${base%%_*}
+            nom=${base#*_}
+            [[ "$version" =~ ^[0-9]{14}$ ]] || { echo "::error::Nom de fichier inattendu : $f"; exit 1; }
+            grep -qx "$version" /tmp/appliquees.txt || printf '%s\t%s\t%s\n' "$version" "$nom" "$f" >> /tmp/en-attente.txt
+          done
+
+          nb=$(wc -l < /tmp/en-attente.txt | tr -d ' ')
+          echo "nb=$nb" >> "$GITHUB_OUTPUT"
+
+          if [ "$nb" -eq 0 ]; then
+            echo "### Migrations — rien à appliquer" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          # ⚠️ Le garde-fou qui compte. Cette instance n'a pas été créée par le
+          # CLI : si la table de suivi vient d'être créée, elle est vide — et
+          # « vide » ne veut pas dire « base neuve », ça veut dire « historique
+          # jamais suivi ». Réappliquer `init.sql` sur une base en service serait
+          # l'incident. On s'arrête, et on demande une baseline explicite.
+          if [ ! -s /tmp/appliquees.txt ]; then
+            echo "::error::La base ne déclare AUCUNE migration appliquée. Si elle est en service, son historique n'a jamais été suivi : faites une baseline avant (voir apps/supabase/README.md)."
+            exit 1
+          fi
+
+          {
+            echo "### Migrations à appliquer ($nb)"
+            cut -f1,2 /tmp/en-attente.txt | sed 's/\t/_/; s/^/- `/; s/$/`/'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Appliquer
+        if: steps.comparer.outputs.nb != '0'
+        env:
+          HOTE: ${{ secrets.MIGRATE_SSH_HOST }}
+          UTILISATEUR: ${{ secrets.MIGRATE_SSH_USER }}
+          PORT: ${{ vars.MIGRATE_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          # Une par une, dans l'ordre des versions, et on s'arrête à la première
+          # qui tombe : la suivante suppose la précédente.
+          sort -k1,1 /tmp/en-attente.txt | while IFS=$'\t' read -r version nom fichier; do
+            echo "→ ${version}_${nom}"
+            ssh -q -i ~/.ssh/id_migrate -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" \
+              "$UTILISATEUR@$HOTE" "apply $version $nom" < "$fichier"
+          done
+
+      # Lecture seule. Le propriétaire doit être `supabase_admin`, le RLS actif,
+      # la policy présente — et surtout les droits de la nouvelle table
+      # identiques à ceux des anciennes : c'est le seul des quatre contrôles qui
+      # prouve que l'application pourra la lire.
+      - name: Vérifier le schéma
+        if: steps.comparer.outputs.nb != '0'
+        env:
+          HOTE: ${{ secrets.MIGRATE_SSH_HOST }}
+          UTILISATEUR: ${{ secrets.MIGRATE_SSH_USER }}
+          PORT: ${{ vars.MIGRATE_SSH_PORT || '22' }}
+        run: |
+          set -euo pipefail
+          {
+            echo "### Schéma après migration"
+            echo '```'
+            ssh -q -i ~/.ssh/id_migrate -o IdentitiesOnly=yes -o BatchMode=yes -p "$PORT" "$UTILISATEUR@$HOTE" verify
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
   deploy:
+    needs: migrate
+    # `migrations=ignorer` saute le job précédent : sans ceci, il emporterait le
+    # déploiement avec lui.
+    if: ${{ !cancelled() && (needs.migrate.result == 'success' || needs.migrate.result == 'skipped') }}
     runs-on: ubuntu-latest
     environment:
       name: production

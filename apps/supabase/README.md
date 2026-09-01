@@ -11,6 +11,8 @@ Projet Supabase de Penduline : schéma, policies RLS et seed local.
 ```
 apps/supabase/
 ├── config.toml                       # config du projet local
+├── deploy/
+│   └── penduline-migrate.sh          # commande forcée SSH, à poser sur l'hôte
 ├── migrations/
 │   ├── 20260724090000_init.sql       # tables rooms/tasks + enum + RLS
 │   ├── 20260810100000_rooms_to_boards.sql
@@ -130,6 +132,100 @@ conséquence, une colonne inutilisée ne gêne personne.
 **Ce que `seed.sql` ne fait jamais** : il n'est joué que par `db reset`, en local.
 Aucune donnée de démo ne part en production.
 
+### Automatiser — la CI applique, vous relisez
+
+Le workflow `Deploy` applique les migrations en attente **avant** de publier le
+front. C'est le même geste que la procédure ci-dessus, joué par une Action :
+`ssh <hôte> 'docker exec -i <db> psql …'`.
+
+Deux choses le rendent moins risqué que son équivalent manuel : l'enregistrement
+de la version part dans **la même transaction** que le DDL (la procédure à la
+main les sépare, et une migration appliquée mais non enregistrée se rejoue au
+passage suivant), et le `notify pgrst, 'reload schema'` est systématique.
+
+#### Ce qu'il faut poser une fois sur l'hôte
+
+**1. Le script.** Il est dans le dépôt, `apps/supabase/deploy/penduline-migrate.sh` :
+
+```bash
+scp apps/supabase/deploy/penduline-migrate.sh <hôte>:/tmp/
+ssh <hôte> 'sudo install -m 0755 /tmp/penduline-migrate.sh /usr/local/bin/penduline-migrate.sh && rm /tmp/penduline-migrate.sh'
+```
+
+Si la machine héberge **plusieurs** stacks Supabase, désignez celui de Penduline —
+sinon le script refuse de choisir, et il a raison :
+
+```bash
+echo 'PENDULINE_DB_CONTAINER=<conteneur-db>' | sudo tee /etc/default/penduline-migrate
+```
+
+**2. Une clé dédiée, bornée à ce script.** C'est le point qui rend l'ensemble
+acceptable : sans la directive `command=`, la clé donne un **shell sur la
+production** à quiconque peut modifier un workflow du dépôt.
+
+```bash
+ssh-keygen -t ed25519 -f ~/.ssh/penduline-ci -C "penduline-ci" -N ""
+```
+
+Puis, dans l'`authorized_keys` de l'utilisateur visé sur l'hôte, **une seule
+ligne** — la partie avant la clé n'est pas décorative :
+
+```
+command="/usr/local/bin/penduline-migrate.sh",no-agent-forwarding,no-port-forwarding,no-pty,no-user-rc,no-X11-forwarding ssh-ed25519 AAAA… penduline-ci
+```
+
+Ce que la clé peut alors faire : `applied`, `apply`, `record`, `verify`. Rien
+d'autre. Tout le reste est refusé **avant** que le script ne touche à Docker, et
+ni la version ni le nom de migration n'entrent dans une requête sans être bornés
+par une expression régulière.
+
+**3. Les secrets**, dans l'environnement `production` du dépôt :
+
+| Secret | Contenu |
+|---|---|
+| `MIGRATE_SSH_KEY` | la clé **privée** `~/.ssh/penduline-ci` |
+| `MIGRATE_SSH_HOST` | l'hôte Coolify |
+| `MIGRATE_SSH_USER` | l'utilisateur dont l'`authorized_keys` porte la ligne |
+| `MIGRATE_SSH_KNOWN_HOSTS` | la sortie de `ssh-keyscan <hôte>` |
+
+`MIGRATE_SSH_KNOWN_HOSTS` n'est pas une formalité : sans lui, il faudrait
+`StrictHostKeyChecking=no`, c'est-à-dire livrer la clé au premier qui se met en
+travers. Le workflow échoue si le secret manque plutôt que de baisser la garde.
+
+Port non standard : variable de dépôt `MIGRATE_SSH_PORT` (22 par défaut).
+
+#### La baseline — à faire UNE fois, avant le premier passage
+
+⚠️ **Cette instance n'a pas d'historique suivi.** Une table de suivi vide ne veut
+pas dire « base neuve », elle veut dire « on n'a jamais noté ce qui était
+appliqué ». Le workflow s'arrête donc net dans ce cas, au lieu de rejouer
+`init.sql` sur une base en service.
+
+Déclarez ce qui est **déjà** en base, sans l'exécuter :
+
+```bash
+# Depuis le dépôt : les migrations déjà appliquées, une par ligne « version<TAB>nom »
+printf '20260724090000\tinit\n20260810100000\trooms_to_boards\n20260816120000\tuniverses\n' \
+  | ssh -i ~/.ssh/penduline-ci <utilisateur>@<hôte> record
+```
+
+N'y mettez que ce qui est réellement appliqué : une migration déclarée à tort
+disparaît du radar pour de bon.
+
+#### Au quotidien
+
+`Actions → Deploy → Run workflow`, et l'entrée **`migrations`** :
+
+- **`auto`** (défaut) — les migrations en attente sont listées, appliquées une à
+  une dans l'ordre des versions, puis le schéma est récapitulé dans le résumé du
+  run. Le front ne part qu'ensuite.
+- **`ignorer`** — le job est sauté et le déploiement se poursuit. Pour les cas où
+  la migration a été passée à la main, ou pendant l'installation de tout ceci.
+
+Si l'environnement `production` exige une revue, le run demande **deux**
+approbations : une avant de toucher à la base, une avant de publier le front. Ce
+n'est pas une gêne à contourner — ce sont deux risques distincts.
+
 ## Sécurité
 
 - Les clés `VITE_SUPABASE_*` (URL + anon) sont **publiques**. L'isolation entre
@@ -138,3 +234,7 @@ Aucune donnée de démo ne part en production.
 - La `service_role` key ne doit jamais être exposée au front ni à l'extension.
 - `seed.sql` insère directement dans `auth.users` : réservé au **local**
   (`db reset`), jamais joué par `db push`.
+- La clé SSH de la CI est bornée par une **commande forcée** : elle ne donne pas
+  de shell. Sans cette directive, un accès en écriture au dépôt vaudrait un accès
+  à la machine de production — c'est la seule raison pour laquelle le secret est
+  acceptable.
