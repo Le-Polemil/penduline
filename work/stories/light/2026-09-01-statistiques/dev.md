@@ -3,7 +3,7 @@ story: "Statistiques rétrospectives par case"
 story_code: "statistiques"
 issue: 48
 created: 2026-09-01
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -13,15 +13,15 @@ status: "In Progress"
 | Tâche | Statut | Date |
 |-------|--------|------|
 | 1. Migration : `completion_stats(since)` → `jsonb`, index partiel | Terminé | 2026-09-01 |
-| 2. `packages/shared/stats.ts` : types, parsing défensif, quatre lectures, constat en clair | Terminé (non testé) | 2026-09-01 |
-| 3. `packages/shared/stats.test.ts` : une lecture par test + les pièges (moyenne de moyennes, trous, jsonb malformé) | En attente | |
-| 4. `data/useStats.ts` : appel de la RPC, échec distingué de zéro | En attente | |
-| 5. Charger le skill `dataviz`, puis `screens/Stats.tsx` en SVG à la main | En attente | |
-| 6. `App.tsx` + `Home.tsx` : routage `{ kind: 'stats' }` et entrée | En attente | |
-| 7. `styles.css` : styles de l'écran, mobile compris | En attente | |
-| 8. Qualité : `npm test` + `npm run typecheck` | En attente | |
-| 9. Validation migration en transaction annulée (formes, concordance, RLS, fuseau) | En attente | |
-| 10. Validation manuelle navigateur (mobile + desktop) | En attente | |
+| 2. `packages/shared/stats.ts` : types, parsing défensif, quatre lectures, constat en clair | Terminé | 2026-09-01 |
+| 3. `packages/shared/stats.test.ts` : une lecture par test + les pièges (moyenne de moyennes, trous, jsonb malformé) | Terminé | 2026-09-02 |
+| 4. `data/useStats.ts` : appel de la RPC, échec distingué de zéro | Terminé | 2026-09-02 |
+| 5. Charger le skill `dataviz`, puis `screens/Stats.tsx` en SVG à la main | Terminé | 2026-09-02 |
+| 6. `App.tsx` + `Home.tsx` : routage `{ kind: 'stats' }` et entrée | Terminé | 2026-09-02 |
+| 7. `styles.css` : styles de l'écran, mobile compris | Terminé | 2026-09-02 |
+| 8. Qualité : `npm test` + `npm run typecheck` | Terminé | 2026-09-02 |
+| 9. Validation migration en transaction annulée (formes, concordance, RLS, fuseau) | Terminé | 2026-09-02 |
+| 10. Validation manuelle navigateur (mobile + desktop) | Terminé | 2026-09-02 |
 
 ## Journal
 
@@ -96,38 +96,115 @@ moyennes. Chaque agrégat porte sa somme ET son compte, la division n'arrive qu'
 moment sur les totaux. Les semaines creuses sont comblées à zéro par `weekKeys`, sans quoi la
 courbe rapprocherait deux points éloignés d'un mois et rendrait une inactivité invisible.
 
+### 2026-09-02 : tests, écran, et trois défauts trouvés
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `stats.test.ts` : **37 tests**.
+- `data/useStats.ts` : appel de la RPC, fuseau depuis `Intl`, `failed` distingué de zéro.
+- `screens/Stats.tsx` : les quatre lectures, en HTML/CSS.
+- `App.tsx` / `Home.tsx` : routage `{ kind: 'stats' }` et entrée sur l'accueil.
+- `styles.css` : styles de l'écran, média queries mobile et tactile.
+- 183 tests verts, `typecheck` et `build` propres.
+
+**Fichiers modifiés** :
+- `packages/shared/src/stats.ts`, `stats.test.ts` (nouveau), `index.ts`
+- `apps/web/src/data/useStats.ts`, `screens/Stats.tsx` (nouveaux)
+- `apps/web/src/App.tsx`, `screens/Home.tsx`, `styles.css`
+
 ---
 
-## ⏸ REPRISE — état exact au moment de la pause
+#### Défaut 1 — « À trier » comptait dans le total sans jamais s'afficher
 
-**Branche** : `story-light/statistiques`, partie de `main`, poussée à jour.
-**Tâches 1 et 2 faites** (migration validée 12/12 ; `stats.ts` écrit et typecheck propre).
+`statsReadings` calculait `total` sur les cinq cases (`by_quadrant` les contient toutes) mais
+n'affichait que `QUADS`, soit quatre. Une tâche cochée directement depuis « À trier » — geste
+parfaitement normal — restait donc au dénominateur sans apparaître nulle part : les parts ne
+faisaient plus 100 %, et le manque passait pour un arrondi. Corrigé en itérant sur `ALL`.
+Indice qui aurait dû me mettre sur la piste plus tôt : `statsSentence` avait déjà une entrée
+`parking` dans sa table de lectures.
 
-**Prochaine action : tâche 3 — `packages/shared/src/stats.test.ts`.** Rien n'est encore
-testé côté TypeScript. Les pièges à couvrir, par ordre d'importance :
+#### Défaut 2 — la phrase affirmait une dominance inexistante
 
-1. **Moyenne de moyennes** — deux matrices aux volumes très inégaux (ex. 100 tâches à 1 j et
-   2 tâches à 30 j). Vérifier que `avgDays` global vaut bien `somme/compte` (~1,6 j) et NON
-   la moyenne des deux moyennes (15,5 j). C'est le test qui protège tout le fichier.
-2. **Semaine creuse** — `by_week` avec un trou d'un mois → la série doit contenir les
-   semaines intermédiaires à zéro.
-3. **`jsonb` malformé** — clé absente, `null`, type inattendu, `quadrant` inconnu → sections
-   vides, aucune exception.
-4. **`statsSentence`** — `null` sous 5 tâches ; ton descriptif ; mention du rythme normal
-   quand la case dominante est « Planifier ».
-5. **Matrice supprimée ailleurs** — présente dans `by_board`, absente de `boards` → taire la
-   ligne plutôt qu'afficher un UUID.
-6. **Cases à zéro** — les cinq cases doivent apparaître dans `byQuadrant`, même vides.
+Trouvé **uniquement grâce aux données réelles**. Le compte local a ses complétions réparties
+uniformément : cinq cases à 20 % chacune. La phrase annonçait alors « 20 % de ce que vous avez
+terminé venait de Faire » — vraie au chiffre près, fausse au sens, puisqu'elle désigne une
+case au hasard parmi cinq égales. Un écran qui prétend voir un motif là où il n'y en a pas
+perd sa crédibilité plus vite qu'un écran qui se tait.
 
-**Puis, dans l'ordre** : tâche 4 (`useStats.ts`), tâche 5 (**charger le skill `dataviz`
-AVANT** d'écrire `Stats.tsx`), 6 (`App.tsx` + `Home.tsx`), 7 (`styles.css`), 8 (qualité),
-10 (validation navigateur).
+Corrigé par un critère de **rapport** (`DOMINANCE_RATIO = 1.5`) et non de part : il reste juste
+quel que soit le nombre de cases actives. En dessous, la phrase dit la vérité — « se répartit
+assez uniformément entre les cases : aucune ne se détache » — ce qui est un constat, pas un
+aveu d'échec. Vérifié sur les données réelles après correctif.
 
-**À ne pas oublier à la reprise** :
-- La migration de #48 **n'est pas appliquée** à la base locale (validée en transaction
-  annulée uniquement). Il faudra l'appliquer avant la validation navigateur.
-- Le `.env` local doit pointer sur le port **55321** (voir la synthèse de #47) — `.env.example`
-  donne 54321, qui est l'autre projet Supabase de cette machine.
-- Compte de démo : `demo@penduline.test` / `password123`.
-- Conflit de fusion attendu avec #47 (PR #100) dans `Home.tsx` et `styles.css` : les deux
-  ajoutent une entrée à côté de `.home-global`.
+#### Défaut 3 — « ont attendu 0 jours en moyenne »
+
+La plupart des tâches sont créées et cochées le même jour, donc le délai moyen arrondissait à
+zéro et la phrase se terminait par une clause qui n'apprenait rien et faisait douter du reste.
+Omise sous un jour.
+
+---
+
+#### La palette : le validateur a contredit mon plan
+
+Mon plan (D4) tenait pour acquis que les couleurs de `quadrants.ts` suffiraient, « d'autant
+qu'elles sont déjà testées en contraste ». Le validateur du skill `dataviz` dit non, et
+durement :
+
+```
+[FAIL] Normal-vision floor   Faire #5c6b45 ↔ Planifier #38607f  ΔE 11,4  (plancher 15)
+[FAIL] CVD separation        Éliminer #a63d2a ↔ Déléguer #8f6a14  ΔE 4,4 deutan  (plancher 8)
+[FAIL] Chroma floor          trois teintes lisent comme du gris
+[PASS] Contrast vs surface   les cinq ≥ 3:1
+```
+
+Le premier est un échec **dur** : deux cases indiscernables même avec une vision des couleurs
+normale, et le skill précise qu'aucun encodage secondaire ne l'excuse.
+
+Ce n'est pas un défaut de `quadrants.ts`. Ces teintes colorent de grands panneaux titrés,
+côte à côte, où l'on n'a jamais à comparer deux couleurs pour savoir laquelle est laquelle.
+Elles échouent seulement dans le rôle qu'un graphique empilé leur donnerait : distinguer des
+segments fins par la couleur SEULE.
+
+**On change donc de forme, pas de couleurs** — c'est l'étape 1 de la procédure. La tendance
+est en **petits multiples**, un panneau par case, à échelle commune : l'identité vient du titre
+du panneau, la couleur ne fait que rappeler la case. Inventer une seconde palette validée
+aurait donné deux langues de couleurs pour les mêmes quatre concepts, ce qui est pire.
+
+L'échelle est **commune** aux panneaux, et c'est délibéré : à échelles propres, une case à
+2 tâches et une case à 40 dessineraient la même colline.
+
+#### Vérification de bout en bout du piège de la moyenne des moyennes
+
+Données de test calibrées dans une matrice dédiée : 20 tâches « Faire » à 1 jour + 2 tâches
+« Planifier » à 40 jours.
+
+```
+juste  → (20×1 + 2×40) / 22 = 100/22 ≈ 4,5 j
+faux   → (1 + 40) / 2       = 20,5 j
+```
+
+L'écran a affiché **4,5 j**. Toute la chaîne calcule juste : sommes SQL, transport `jsonb`,
+parsing défensif, lectures dérivées, rendu. Les tests unitaires le vérifient aussi, et la
+mutation « moyenne des moyennes » fait tomber le test dédié, seul et précisément.
+
+#### Comblement des semaines creuses, vérifié
+
+Sur la période de 3 mois, 10 semaines rendues dont `20 juil.`, `27 juil.` et `3 août` à zéro —
+les trois semaines sans complétion. Sans comblement, la courbe sauterait du 13 juillet au
+10 août et masquerait trois semaines d'inactivité.
+
+#### Exclusions, vérifiées au niveau de la RPC
+
+« Terminée puis supprimée » et « Étape cochée » étaient toutes deux en `faire` dans la matrice
+de test *Perso* — qui ne rapporte **aucun** `faire`. Les deux filtres mordent.
+
+#### Reste connu, non corrigé
+
+Le compte local a une semaine à 4005 complétions contre 2 à 4 ailleurs (données de
+développement). L'échelle commune aplatit alors tout le reste. C'est la représentation
+honnête — des échelles propres mentiraient — mais un vrai compte très irrégulier lira mal ce
+graphique. À revoir si le cas se présente vraiment.
+
+**Cibles tactiles** — sous émulation tactile réelle : boutons de période à 44 px, aucun
+débordement horizontal, aucune cible sous 44 px dans l'écran.

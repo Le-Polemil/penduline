@@ -3,7 +3,7 @@ story: "Statistiques rétrospectives par case"
 story_code: "statistiques"
 issue: 48
 created: 2026-09-01
-status: "In Progress"
+status: "Done"
 ---
 
 # #48 — Statistiques rétrospectives par case
