@@ -409,3 +409,23 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .cap__btn--go { background: var(--color-accent); color: #fff; }
 .cap__btn--go:hover { background: var(--color-accent-600); }
 .cap__btn--go:disabled { opacity: 0.45; cursor: default; background: var(--color-accent); }
+
+/* ── Bandeau « Aujourd'hui » (#49) ────────────────────────────────────────── */
+/* En tête de liste, encadré : c'est un engagement, pas une matrice de plus. */
+.today {
+  border: 1.5px solid var(--color-accent-300); border-radius: 12px;
+  padding: 8px 10px 6px; margin-bottom: 8px; background: var(--color-accent-100);
+}
+.today-head {
+  display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px;
+  font: 700 10.5px var(--font-body); text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--color-accent-800);
+}
+.today-count { margin-left: auto; font: 400 10.5px var(--font-body); text-transform: none; letter-spacing: 0; color: var(--color-neutral-700); }
+.today-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+.today-check {
+  flex: none; width: 15px; height: 15px; border-radius: 999px; cursor: pointer;
+  border: 2px solid var(--color-accent-600); background: none; padding: 0;
+}
+.today-check:hover { background: var(--color-accent-300); }
+.today-title { font: 13px/1.35 var(--font-body); color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

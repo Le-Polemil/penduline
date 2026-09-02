@@ -5,7 +5,9 @@ import {
   ALL,
   countOpen,
   endPosition,
+  focusToday,
   groupByUniverse,
+  localDay,
   PARK,
   partnerOf,
   planPairMove,
@@ -239,6 +241,10 @@ function Home({
   const groups = groupByUniverse(store.universes, store.boards).filter((g) => g.boards.length > 0);
   const grouped = store.universes.length > 0;
 
+  // `localDay()` recalculé à chaque rendu : un popup rouvert le lendemain doit
+  // voir une sélection vide, pas celle de la veille (#49).
+  const focusRestant = focusToday(store.tasks, localDay());
+
   async function create() {
     const name = (draft ?? '').trim();
     if (!name) return;
@@ -260,6 +266,37 @@ function Home({
       </header>
 
       <div className="home-list">
+        {/* Le mode « aujourd'hui » (#49), en BANDEAU et non en écran séparé.
+            Dans 400 px, ce sur quoi on s'est engagé doit être visible à
+            l'ouverture, pas derrière une navigation.
+
+            ⚠️ Asymétrie assumée avec l'écran web : le popup ne charge que les
+            tâches OUVERTES, il ne peut donc pas afficher « 1 faite sur 3 ». Il
+            montre ce qui RESTE — ce qui, dans un popup dédié à l'action rapide,
+            se lit comme de l'avancement plutôt que comme une perte. */}
+        {focusRestant.length > 0 && (
+          <section className="today" aria-label="Tâches choisies pour aujourd'hui">
+            <p className="today-head">
+              Aujourd'hui
+              <span className="today-count">
+                {focusRestant.length} {focusRestant.length > 1 ? 'restantes' : 'restante'}
+              </span>
+            </p>
+            {focusRestant.map((t) => (
+              <div className="today-row" key={t.id}>
+                <button
+                  className="today-check"
+                  aria-label={`Terminer « ${t.title} »`}
+                  onClick={() =>
+                    void store.patchTask(t.id, { done: true, archived: true, pinned: false })
+                  }
+                />
+                <span className="today-title">{t.title}</span>
+              </div>
+            ))}
+          </section>
+        )}
+
         {/* L'état vide ne renvoie plus vers le web : c'était le seul moment où
             l'extension avouait son incomplétude, et il tombait au pire endroit —
             la toute première utilisation. */}
