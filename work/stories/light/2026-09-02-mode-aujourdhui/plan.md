@@ -3,7 +3,7 @@ story: "Mode « aujourd'hui » : s'engager sur quelques tâches"
 story_code: "mode-aujourdhui"
 issue: 49
 created: 2026-09-02
-status: "In Progress"
+status: "Done"
 ---
 
 # #49 — Mode « aujourd'hui » : s'engager sur quelques tâches
