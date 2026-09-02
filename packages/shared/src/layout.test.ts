@@ -17,6 +17,13 @@ import {
   progress,
   attachmentsOf,
   CAPTURE_TTL_MS,
+  deadlineStatus,
+  formatDeadline,
+  fromLocalInput,
+  isOverdue,
+  SOON_MS,
+  splitOverdue,
+  toLocalInput,
   deleteLabel,
   hostLabel,
   isFreshCapture,
@@ -957,5 +964,166 @@ describe('fraîcheur d’une capture en attente (#78)', () => {
     // Le brouillon vient forcément d’être écrit : le montrer est le bon choix.
     expect(isFreshCapture(t0 + 60_000, t0)).toBe(true);
     expect(isFreshCapture(Number.NaN, t0)).toBe(false);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('échéances (#19)', () => {
+  const t0 = 1_700_000_000_000;
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+  const iso = (ms: number) => new Date(ms).toISOString();
+  /** Une tâche datée, à `delta` millisecondes de `t0`. */
+  const due = (id: string, delta: number, partial = {}) =>
+    makeTask({ id, due_at: iso(t0 + delta), ...partial });
+
+  it('les trois états, et leurs frontières exactes', () => {
+    expect(deadlineStatus(null, t0)).toBe(null);
+    // L’instant pile : déjà en retard. Une échéance « à maintenant » est due.
+    expect(deadlineStatus(iso(t0), t0)).toBe('overdue');
+    expect(deadlineStatus(iso(t0 - 1), t0)).toBe('overdue');
+    expect(deadlineStatus(iso(t0 + 1), t0)).toBe('soon');
+    expect(deadlineStatus(iso(t0 + SOON_MS), t0)).toBe('soon');
+    // Une milliseconde de plus, et le signal s’éteint.
+    expect(deadlineStatus(iso(t0 + SOON_MS + 1), t0)).toBe('neutral');
+  });
+
+  it('une date illisible n’allume pas la case en rouge', () => {
+    // Elle peut venir d’un client tiers ou d’une colonne bricolée à la main :
+    // la traiter comme « en retard » ferait remonter n’importe quoi en tête.
+    expect(deadlineStatus('pas une date', t0)).toBe(null);
+    expect(deadlineStatus('', t0)).toBe(null);
+    expect(isOverdue(makeTask({ due_at: 'n’importe quoi' }), t0)).toBe(false);
+  });
+
+  it('les dépassées remontent, la plus vieille dette en tête', () => {
+    const rows = [
+      [makeTask({ id: 'sans' })],
+      [due('recent', -60_000)],
+      [due('futur', +DAY)],
+      [due('vieux', -10 * DAY)],
+    ];
+    const { overdue, rest } = splitOverdue(rows, t0);
+    expect(overdue.map((r) => r[0].id)).toEqual(['vieux', 'recent']);
+    // Ce qui n’est pas dépassé n’est pas trié : une échéance future ne bouscule
+    // personne, elle se contente d’un badge.
+    expect(rest.map((r) => r[0].id)).toEqual(['sans', 'futur']);
+  });
+
+  it('LE test de ce bloc : `rest` garde l’ordre reçu, donc l’ordre des positions', () => {
+    // `insertPosition` moyenne les positions de deux lignes voisines. Si
+    // `splitOverdue` réordonnait `rest`, le glisser-déposer déposerait à côté.
+    const rows = [
+      [makeTask({ id: 'a', position: 0 })],
+      [due('retard', -DAY, { position: 1 })],
+      [makeTask({ id: 'b', position: 2 })],
+      [makeTask({ id: 'c', position: 3 })],
+    ];
+    const { rest } = splitOverdue(rows, t0);
+    expect(strictlyOrdered(rest.flat().map((t) => t.position))).toBe(true);
+    expect(rest.flat().map((t) => t.id)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('une paire dont une seule carte est dépassée reste entière', () => {
+    // Découper sur les cartes la fendrait entre deux zones — l’invariant que #60
+    // a coûté cher à établir.
+    const paire = [
+      makeTask({ id: 'gauche', pair_id: 'p', position: 0 }),
+      due('droite', -DAY, { pair_id: 'p', position: 1 }),
+    ];
+    const { overdue, rest } = splitOverdue([paire, [makeTask({ id: 'seule', position: 2 })]], t0);
+    expect(overdue).toHaveLength(1);
+    expect(overdue[0].map((t) => t.id)).toEqual(['gauche', 'droite']);
+    expect(rest.flat().map((t) => t.id)).toEqual(['seule']);
+  });
+
+  it('une dépassée ne se réordonne pas : son rang appartient à son échéance', () => {
+    const tasks = [
+      makeTask({ id: 'a', position: 0 }),
+      due('retard', -DAY, { position: 1 }),
+      makeTask({ id: 'b', position: 2 }),
+    ];
+    const retard = tasks[1];
+    expect(planReorder(tasks, retard, -1, t0)).toBe(null);
+    expect(planReorder(tasks, retard, 1, t0)).toBe(null);
+  });
+
+  it('mais une dépassée ÉPINGLÉE le reste : l’épinglage garde la préséance', () => {
+    const tasks = [
+      makeTask({ id: 'p1', pinned: true, position: 0 }),
+      due('p2', -DAY, { pinned: true, position: 1 }),
+    ];
+    const plan = planReorder(tasks, tasks[1], -1, t0);
+    expect(plan).not.toBe(null);
+    expect(plan?.index).toBe(1);
+  });
+
+  it('le réordonnancement ignore la zone « en retard » dans son décompte', () => {
+    // Trois lignes ordinaires et une dépassée : « descendre » la première
+    // ordinaire doit la placer entre `b` et `c`, sans jamais compter la dépassée
+    // comme une voisine.
+    const tasks = [
+      due('retard', -DAY, { position: 0 }),
+      makeTask({ id: 'a', position: 1 }),
+      makeTask({ id: 'b', position: 2 }),
+      makeTask({ id: 'c', position: 3 }),
+    ];
+    const plan = planReorder(tasks, tasks[1], 1, t0);
+    expect(plan?.total).toBe(3);
+    expect(plan?.index).toBe(2);
+    const position = plan?.writes.find((w) => w.id === 'a')?.patch.position as number;
+    expect(position).toBeGreaterThan(2);
+    expect(position).toBeLessThan(3);
+  });
+
+  it('la vue globale rend les trois zones, matrice par matrice', () => {
+    const board = makeBoard({ id: 'b1' });
+    const tasks = [
+      makeTask({ id: 'epingle', board_id: 'b1', pinned: true, position: 0 }),
+      due('retard', -DAY, { board_id: 'b1', position: 1 }),
+      makeTask({ id: 'normale', board_id: 'b1', position: 2 }),
+    ];
+    const [groupe] = groupTasksByBoard(tasks, [board], 'faire', null, t0);
+    expect(groupe.pinned.flat().map((t) => t.id)).toEqual(['epingle']);
+    expect(groupe.overdue.flat().map((t) => t.id)).toEqual(['retard']);
+    expect(groupe.rows.flat().map((t) => t.id)).toEqual(['normale']);
+  });
+
+  it('le libellé est relatif tant qu’il se lit, absolu ensuite', () => {
+    expect(formatDeadline(iso(t0 - 1), t0)).toBe('en retard');
+    expect(formatDeadline(iso(t0 + 30 * 60_000), t0)).toBe('dans 30 min');
+    expect(formatDeadline(iso(t0 + 3 * HOUR), t0)).toBe('dans 3 h');
+    expect(formatDeadline(iso(t0 + 30 * HOUR), t0)).toBe('demain');
+    expect(formatDeadline(iso(t0 + 4 * DAY), t0)).toBe('dans 4 j');
+    // Au-delà d’une semaine, « dans 23 j » n’aide plus personne à s’organiser.
+    expect(formatDeadline(iso(t0 + 23 * DAY), t0)).toMatch(/^le /);
+  });
+
+  it('la saisie locale devient un instant UTC, et se relit à l’identique', () => {
+    // L’aller-retour est la seule assertion indépendante du fuseau de la machine
+    // qui exécute les tests — et c’est exactement la propriété qui compte.
+    const stocke = fromLocalInput('2026-09-03T18:30');
+    expect(stocke).not.toBe(null);
+    expect(stocke).toMatch(/Z$/);
+    expect(toLocalInput(stocke as string)).toBe('2026-09-03T18:30');
+  });
+
+  it('un champ vidé retire l’échéance plutôt que d’écrire une date fausse', () => {
+    expect(fromLocalInput('')).toBe(null);
+    expect(fromLocalInput('   ')).toBe(null);
+    expect(fromLocalInput('pas une date')).toBe(null);
+    expect(toLocalInput('pas une date')).toBe('');
+  });
+
+  it('l’instant stocké ne bouge pas quand le fuseau d’affichage change', () => {
+    // Deux écritures du MÊME instant, l’une en UTC, l’autre décalée : le statut
+    // et le libellé doivent être identiques. C’est le critère « les échéances
+    // passent la frontière de fuseau ».
+    const utc = '2026-09-03T16:30:00.000Z';
+    const paris = '2026-09-03T18:30:00+02:00';
+    expect(Date.parse(utc)).toBe(Date.parse(paris));
+    expect(deadlineStatus(utc, t0)).toBe(deadlineStatus(paris, t0));
+    expect(toLocalInput(utc)).toBe(toLocalInput(paris));
   });
 });

@@ -6,7 +6,7 @@ import { supabase } from './supabase';
 import { useToast } from './toast';
 
 const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, created_at, updated_at';
+  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, due_at, created_at, updated_at';
 
 export interface ExtStore {
   ready: boolean;
@@ -185,7 +185,15 @@ export function useExtStore(userId: string): ExtStore {
       // de mise à jour, et restreint aux clés du patch.
       let before: TaskPatch | null = null;
       await persist<null>({
-        label: 'Modifier la tâche',
+        // Le popup n'a pas le `taskLabel` complet du web — il ne fait pas la
+        // moitié des gestes du produit. L'échéance mérite quand même son nom :
+        // « Modifier la tâche » ne dirait pas ce qu'on vient de perdre.
+        label:
+          'due_at' in patch
+            ? patch.due_at
+              ? 'Fixer l’échéance'
+              : 'Retirer l’échéance'
+            : 'Modifier la tâche',
         apply: () =>
           setTasks((ts) =>
             ts.map((t) => {

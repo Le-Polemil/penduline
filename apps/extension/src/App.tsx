@@ -4,13 +4,18 @@ import type { Session } from '@supabase/supabase-js';
 import {
   ALL,
   countOpen,
+  deadlineStatus,
   endPosition,
+  formatDeadline,
+  fromLocalInput,
   groupByUniverse,
+  isOverdue,
   PARK,
   partnerOf,
   planPairMove,
   positionBefore,
   QUADS,
+  toLocalInput,
   type Quadrant,
   type QuadrantKey,
   type Board,
@@ -24,6 +29,7 @@ import { getPending, type PendingCapture } from './pending-capture';
 import { Loader } from './Loader';
 import { useExtStore, type ExtStore } from './store';
 import { ToastProvider } from './toast';
+import { useNow } from './useNow';
 
 /**
  * Ouvre l'app web complète. Surchargée au build par `VITE_WEB_APP_URL` (`.env`
@@ -393,13 +399,29 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
   const [hoverGap, setHoverGap] = useState<{ quad: QuadrantKey; before: string } | null>(null);
   const [menuTask, setMenuTask] = useState<string | null>(null);
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
+  /** La tâche dont l'éditeur d'échéance est ouvert. Une seule à la fois (#19). */
+  const [dating, setDating] = useState<{ id: string; value: string } | null>(null);
 
+  const now = useNow();
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
 
+  /**
+   * ⚠️ Tri LOCAL, divergent de celui du web, et il doit le rester : le popup
+   * affiche une liste plate, sans zones ni interstices, donc rien ici ne dépend
+   * de l'ordre des `position` pour calculer une insertion.
+   *
+   * Le rang « en retard » s'intercale entre l'épinglage et la position — le même
+   * ordre de préséance que les trois zones du web (#19).
+   */
   function listFor(quad: QuadrantKey): Task[] {
     return boardTasks
       .filter((t) => t.quadrant === quad && !t.done && !t.deleted && !t.archived)
-      .sort((a, b) => Number(b.pinned) - Number(a.pinned) || a.position - b.position);
+      .sort(
+        (a, b) =>
+          Number(b.pinned) - Number(a.pinned) ||
+          Number(isOverdue(b, now)) - Number(isOverdue(a, now)) ||
+          a.position - b.position,
+      );
   }
 
   /**
@@ -592,7 +614,9 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                         <div className="gap__line" />
                       </div>
                       <div
-                        className={`task${t.pinned ? ' task--pinned' : ''}${isDrag ? ' task--dragging' : ''}`}
+                        className={`task${t.pinned ? ' task--pinned' : ''}${isDrag ? ' task--dragging' : ''}${
+                          deadlineStatus(t.due_at, now) ? ` task--${deadlineStatus(t.due_at, now)}` : ''
+                        }`}
                         style={{ viewTransitionName: `vt-${t.id}` } as CSSProperties}
                         draggable
                         onDragStart={(e: DragEvent) => {
@@ -632,6 +656,13 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                         ) : (
                           <span className="task__title">{t.title}</span>
                         )}
+                        {/* Le badge porte son texte, pas seulement sa couleur —
+                            même règle que le web (#19). */}
+                        {t.due_at && deadlineStatus(t.due_at, now) && (
+                          <time className={`due due--${deadlineStatus(t.due_at, now)}`} dateTime={t.due_at}>
+                            ⏰ {formatDeadline(t.due_at, now)}
+                          </time>
+                        )}
                         <button
                           className={`task__pin${t.pinned ? ' task__pin--on' : ''}`}
                           title={t.pinned ? 'Désépingler' : 'Épingler en haut'}
@@ -649,6 +680,46 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                           ⋯
                         </button>
                       </div>
+                      {/* L'éditeur d'échéance, sous la carte (#19). Il vit hors
+                          du menu : celui-ci se referme au choix de l'action, et
+                          la saisie doit survivre à sa fermeture. */}
+                      {dating?.id === t.id && (
+                        <form
+                          className="due-edit"
+                          onSubmit={(e: FormEvent) => {
+                            e.preventDefault();
+                            patchTask(t.id, { due_at: fromLocalInput(dating.value) });
+                            setDating(null);
+                          }}
+                        >
+                          <input
+                            className="due-edit__input"
+                            type="datetime-local"
+                            value={dating.value}
+                            autoFocus
+                            aria-label="Échéance"
+                            onChange={(e) => setDating({ id: t.id, value: e.target.value })}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') setDating(null);
+                            }}
+                          />
+                          <button className="due-edit__ok" type="submit">
+                            OK
+                          </button>
+                          {t.due_at && (
+                            <button
+                              className="due-edit__del"
+                              type="button"
+                              onClick={() => {
+                                patchTask(t.id, { due_at: null });
+                                setDating(null);
+                              }}
+                            >
+                              Retirer
+                            </button>
+                          )}
+                        </form>
+                      )}
                       {menuTask === t.id && (
                         <div className="task-menu">
                           <button
@@ -659,6 +730,15 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                             }}
                           >
                             Renommer
+                          </button>
+                          <button
+                            className="task-menu__action"
+                            onClick={() => {
+                              setDating({ id: t.id, value: t.due_at ? toLocalInput(t.due_at) : '' });
+                              setMenuTask(null);
+                            }}
+                          >
+                            ⏰ {t.due_at ? 'Modifier l’échéance' : 'Fixer une échéance'}
                           </button>
                           <div className="task-menu__label">Déplacer vers</div>
                           <div className="task-menu__grid">
