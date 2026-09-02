@@ -3,7 +3,7 @@ import type { Attachment, Board, Task, Universe } from './types';
 /**
  * Fabrique de tâches pour les tests.
  *
- * `Task` porte treize champs. Les écrire à la main dans chaque test noierait
+ * `Task` porte quinze champs. Les écrire à la main dans chaque test noierait
  * l'intention sous le bruit : ici, seul ce que le test fait varier apparaît.
  *
  * Volontairement NON exporté depuis `index.ts` — c'est de l'outillage de test,
@@ -28,6 +28,7 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     position: 0,
     pair_id: null,
     parent_id: null,
+    due_at: null,
     created_at: '2026-01-01T00:00:00.000Z',
     updated_at: '2026-01-01T00:00:00.000Z',
     /** Hors sélection par défaut : c'est l'état de presque toutes les tâches. */

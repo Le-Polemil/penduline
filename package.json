@@ -1,7 +1,7 @@
 {
   "name": "penduline",
   "private": true,
-  "version": "0.0.19",
+  "version": "0.0.21",
   "description": "Matrices d'Eisenhower par contexte — web + extension Chrome, comptes Supabase",
   "license": "MIT",
   "workspaces": [

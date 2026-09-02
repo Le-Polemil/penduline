@@ -276,6 +276,11 @@ export interface BoardGroup {
   board: Board;
   /** Lignes épinglées, à rendre en tête du groupe. */
   pinned: Task[][];
+  /**
+   * Lignes en retard (#19), à rendre juste après les épinglées : l'épinglage est
+   * un geste explicite qui veut déjà dire « en haut », il garde la préséance.
+   */
+  overdue: Task[][];
   rows: Task[][];
 }
 
@@ -307,12 +312,22 @@ export function groupTasksByBoard(
   boards: Board[],
   quad: QuadrantKey,
   pending?: string | null,
+  now: number = Date.now(),
 ): BoardGroup[] {
   const groups: BoardGroup[] = [];
   for (const board of boards) {
     const pinned = buildRows(pinnedTasks(tasks, board.id, quad, pending));
-    const rows = buildRows(visibleTasks(tasks, board.id, quad, pending));
-    if (pinned.length || rows.length) groups.push({ board, pinned, rows });
+    // Le découpage se fait matrice par matrice, comme le reste : une échéance
+    // est comparable d'une matrice à l'autre, mais `position` ne l'est pas, et
+    // c'est elle qui ordonne la zone manuelle. Regrouper reste la seule
+    // agrégation honnête.
+    const { overdue, rest } = splitOverdue(
+      buildRows(visibleTasks(tasks, board.id, quad, pending)),
+      now,
+    );
+    if (pinned.length || overdue.length || rest.length) {
+      groups.push({ board, pinned, overdue, rows: rest });
+    }
   }
   return groups;
 }
@@ -453,13 +468,27 @@ export interface ReorderPlan {
  * parmi les épinglées, une ordinaire parmi les ordinaires. Mélanger les deux
  * listes ferait sauter la tâche d'une zone à l'autre sans qu'on l'ait demandé.
  *
+ * ⚠️ Les dépassées (#19) forment une TROISIÈME zone, sur ce même précédent, avec
+ * une différence : leur rang y est dicté par l'échéance, pas par la personne. Un
+ * « monter d'un cran » n'y a donc aucun sens — on rend `null`, et l'appelant
+ * masque ses flèches. Une dépassée ÉPINGLÉE, elle, reste ordonnable parmi les
+ * épinglées : l'épinglage garde la préséance et sa zone n'est pas retriée.
+ *
  * Rend `null` aux extrémités — l'appelant en dérive l'état désactivé de ses
  * boutons sans avoir à connaître la structure.
  */
-export function planReorder(tasks: Task[], task: Task, dir: -1 | 1): ReorderPlan | null {
+export function planReorder(
+  tasks: Task[],
+  task: Task,
+  dir: -1 | 1,
+  now: number = Date.now(),
+): ReorderPlan | null {
+  if (!task.pinned && isOverdue(task, now)) return null;
   const siblings = task.pinned
     ? pinnedTasks(tasks, task.board_id, task.quadrant)
-    : visibleTasks(tasks, task.board_id, task.quadrant);
+    : // Zone 3 seule : la zone « en retard » est écartée du calcul, sinon
+      // `insertPosition` moyennerait des positions qui ne se suivent plus.
+      splitOverdue(buildRows(visibleTasks(tasks, task.board_id, task.quadrant)), now).rest.flat();
   const rows = buildRows(siblings);
   const from = rows.findIndex((r) => r.some((t) => t.id === task.id));
   const to = from + dir;
@@ -651,4 +680,153 @@ export const CAPTURE_TTL_MS = 5 * 60 * 1000;
 export function isFreshCapture(at: number, now: number = Date.now()): boolean {
   if (!Number.isFinite(at)) return false;
   return now - at <= CAPTURE_TTL_MS;
+}
+
+// ── Échéances (#19) ──────────────────────────────────────────────────────────
+
+/**
+ * En deçà de quel délai une échéance est-elle « bientôt » ?
+ *
+ * Vingt-quatre heures : l'horizon de « ce qui me tombe dessus aujourd'hui ou
+ * demain matin ». Plus court, l'avertissement arrive trop tard pour servir ;
+ * plus long, la moitié de la matrice s'allume et le signal ne veut plus rien
+ * dire.
+ */
+export const SOON_MS = 24 * 60 * 60 * 1000;
+
+/** Au-delà de ce délai, un écart relatif ne se lit plus : on affiche la date. */
+const ABSOLUTE_AFTER_MS = 7 * 24 * 60 * 60 * 1000;
+
+const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * HOUR_MS;
+
+/** L'état d'une échéance. `null` = pas d'échéance, l'immense majorité des tâches. */
+export type DeadlineStatus = 'neutral' | 'soon' | 'overdue';
+
+/**
+ * Où en est cette échéance, maintenant ?
+ *
+ * ⚠️ Rien de tout cela n'est stocké. Le statut est DÉRIVÉ à chaque rendu, parce
+ * qu'une colonne `overdue` serait fausse la minute suivante et qu'il faudrait
+ * quelqu'un pour la réécrire. Personne ne tourne encore côté serveur (#20), et
+ * cette story se livre sans lui.
+ *
+ * `now` en dernier paramètre, comme `isFreshCapture` : c'est ce qui rend la
+ * règle testable sans figer l'horloge du processus.
+ */
+export function deadlineStatus(
+  dueAt: string | null,
+  now: number = Date.now(),
+): DeadlineStatus | null {
+  if (!dueAt) return null;
+  const due = Date.parse(dueAt);
+  // Une date illisible — donnée d'un client tiers, colonne bricolée à la main —
+  // ne doit pas allumer la case en rouge. On la traite comme absente.
+  if (!Number.isFinite(due)) return null;
+  if (due <= now) return 'overdue';
+  return due - now <= SOON_MS ? 'soon' : 'neutral';
+}
+
+/** Cette tâche est-elle dans le rouge ? */
+export function isOverdue(t: Task, now: number = Date.now()): boolean {
+  return deadlineStatus(t.due_at, now) === 'overdue';
+}
+
+/**
+ * L'échéance dépassée la plus ancienne d'une LIGNE, ou `null` si aucune de ses
+ * cartes n'est dans le rouge. Clé de tri de la zone « en retard ».
+ */
+function rowDue(row: Task[], now: number): number | null {
+  const dues = row.filter((t) => isOverdue(t, now)).map((t) => Date.parse(t.due_at as string));
+  return dues.length ? Math.min(...dues) : null;
+}
+
+/**
+ * Sépare les lignes en retard du reste — le tri de #19.
+ *
+ * ⚠️ Travaille sur des LIGNES, donc s'applique APRÈS `buildRows`. Une paire dont
+ * une seule carte est dépassée doit rester entière : découper sur les cartes la
+ * ferait tomber à cheval sur deux zones, et elle s'afficherait fendue en deux —
+ * exactement l'invariant que #60 a coûté cher à établir.
+ *
+ * ⚠️ `rest` conserve l'ordre reçu, et ce n'est pas négociable. Cet ordre est
+ * celui des `position`, et `insertPosition` — qui moyenne les positions de deux
+ * lignes voisines — n'a de sens que sur une liste ainsi triée. C'est ce qui
+ * permet au glisser-déposer et à `Alt`+flèches de continuer à fonctionner sans
+ * une ligne de changement : on ne leur passe QUE `rest`.
+ *
+ * Les dépassées, elles, sont triées par échéance croissante : la plus vieille
+ * dette en premier. Leur rang n'appartient donc plus à l'utilisateur — c'est la
+ * contrepartie assumée de « elles remontent d'office », et la raison pour
+ * laquelle `planReorder` les refuse.
+ */
+export function splitOverdue(
+  rows: Task[][],
+  now: number = Date.now(),
+): { overdue: Task[][]; rest: Task[][] } {
+  const late: { row: Task[]; due: number }[] = [];
+  const rest: Task[][] = [];
+  for (const row of rows) {
+    const due = rowDue(row, now);
+    if (due === null) rest.push(row);
+    else late.push({ row, due });
+  }
+  late.sort((a, b) => a.due - b.due);
+  return { overdue: late.map((o) => o.row), rest };
+}
+
+/**
+ * Le libellé d'une échéance, relatif tant qu'il se lit d'un coup d'œil.
+ *
+ * « dans 3 h » se comprend sans calcul ; « le 14 mars » demande de savoir quel
+ * jour on est. Mais au-delà d'une semaine l'écart relatif cesse d'informer —
+ * « dans 23 j » n'aide personne à s'organiser — et la date absolue reprend la
+ * main.
+ *
+ * Le badge porte AUSSI ce texte, pas seulement une couleur : le rouge seul
+ * n'informerait pas un daltonien.
+ */
+export function formatDeadline(dueAt: string, now: number = Date.now()): string {
+  const due = Date.parse(dueAt);
+  if (!Number.isFinite(due)) return '';
+  const delta = due - now;
+  if (delta <= 0) return 'en retard';
+  if (delta < HOUR_MS) return `dans ${Math.max(1, Math.round(delta / 60_000))} min`;
+  if (delta < DAY_MS) return `dans ${Math.round(delta / HOUR_MS)} h`;
+  if (delta < 2 * DAY_MS) return 'demain';
+  if (delta < ABSOLUTE_AFTER_MS) return `dans ${Math.round(delta / DAY_MS)} j`;
+  return `le ${new Date(due).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`;
+}
+
+/**
+ * Instant UTC → valeur d'un `<input type="datetime-local">`, dans le fuseau du
+ * navigateur.
+ *
+ * ⚠️ Surtout pas `toISOString().slice(0, 16)` : ce serait l'heure UTC posée dans
+ * un champ qui, lui, affiche du local. Une échéance à 20 h à Paris se
+ * réafficherait à 18 h, et perdrait deux heures à chaque aller-retour dans le
+ * formulaire. D'où les accesseurs locaux, un par un.
+ */
+export function toLocalInput(dueAt: string): string {
+  const d = new Date(dueAt);
+  if (!Number.isFinite(d.getTime())) return '';
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+/**
+ * Valeur d'un `<input type="datetime-local">` → instant UTC, ou `null` si le
+ * champ est vide (l'utilisateur retire son échéance).
+ *
+ * `new Date('2026-09-03T18:30')` — sans `Z` ni décalage — est interprété par la
+ * norme comme une heure LOCALE. C'est exactement ce qu'on veut : la personne a
+ * saisi 18 h 30 chez elle, et `toISOString()` en fait l'instant UTC
+ * correspondant. Le stockage reste en UTC, l'affichage redevient local, et
+ * traverser un fuseau ne déplace pas l'échéance.
+ */
+export function fromLocalInput(value: string): string | null {
+  const v = value.trim();
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
 }

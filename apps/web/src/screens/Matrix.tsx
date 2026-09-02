@@ -19,6 +19,7 @@ import {
   planReorder,
   planRestore,
   quadrant,
+  splitOverdue,
   subtasksOf,
   visibleTasks,
   type QuadrantKey,
@@ -34,6 +35,7 @@ import { BinModal } from '../components/BinModal';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
 import { useBinCount } from '../data/useBinCount';
+import { useNow } from '../data/useNow';
 import { ordinal, useAnnounce } from '../a11y/announce';
 import type { Scope } from './Global';
 
@@ -120,7 +122,12 @@ export function MatrixScreen({
   const [delAsk, setDelAsk] = useState<Task | null>(null);
   /** La tâche dont le champ « attacher un lien » est ouvert. Une seule à la fois. */
   const [linking, setLinking] = useState<string | null>(null);
+  /** La tâche dont l'éditeur d'échéance est ouvert. Une seule à la fois (#19). */
+  const [dating, setDating] = useState<string | null>(null);
 
+  // L'heure courante, rafraîchie toute seule : sans elle, « dans 2 h » resterait
+  // affiché à midi passé sur une matrice ouverte depuis le matin (#19).
+  const now = useNow();
   const { onCheck, pending } = useCompletion(tasks, patchTask);
 
   // Recalculés à chaque rendu, exprès : l'application peut rester ouverte toute
@@ -247,7 +254,7 @@ export function MatrixScreen({
    * relire la case entière pour savoir où l'on en est.
    */
   function reorderTask(t: Task, dir: -1 | 1) {
-    const plan = planReorder(tasks, t, dir);
+    const plan = planReorder(tasks, t, dir, now);
     if (!plan) return;
     withVT(() => apply(`Déplacée en ${ordinal(plan.index)} position`, plan.writes));
     announce(`« ${t.title} » déplacée en ${ordinal(plan.index)} position sur ${plan.total}.`);
@@ -317,7 +324,13 @@ export function MatrixScreen({
     const rest = visibleTasks(tasks, board.id, quad).filter(
       (t) => t.id !== task.id && t.id !== mate?.id,
     );
-    const pos = insertPosition(buildRows(rest), rowIndex);
+    // ⚠️ `rowIndex` vient des interstices, et les interstices ne sont rendus que
+    // dans la ZONE MANUELLE. On écarte donc les lignes en retard avant de
+    // compter : les inclure décalerait l'insertion d'autant de dépassées, et
+    // `insertPosition` moyennerait au passage des positions qui ne se suivent
+    // plus (#19).
+    const manuel = splitOverdue(buildRows(rest), now).rest;
+    const pos = insertPosition(manuel, rowIndex);
     withVT(() => apply(`Déplacée vers « ${quadrant(quad).label} »`, planPairMove(tasks, task, { quadrant: quad }, pos)));
     setDrag(null);
     setHover(null);
@@ -388,6 +401,16 @@ export function MatrixScreen({
           onCancelAdd: () => setLinking(null),
           onAdd: (url) => store.addAttachment(t.id, url),
           onRemove: (a) => void store.removeAttachment(a.id),
+        }}
+        deadline={{
+          now,
+          editing: dating === t.id,
+          onStartEdit: () => setDating(t.id),
+          onCancelEdit: () => setDating(null),
+          onSet: (dueAt) =>
+            store.group('Échéance fixée', () => void patchTask(t.id, { due_at: dueAt })),
+          onClear: () =>
+            store.group('Échéance retirée', () => void patchTask(t.id, { due_at: null })),
         }}
         subtasks={{
           open: ouvertes.has(t.id),
@@ -571,7 +594,13 @@ export function MatrixScreen({
       <div className="grid">
         {ALL.map((q) => {
           const pinnedRows = buildRows(pinnedTasks(tasks, board.id, q.key, pending));
-          const rows = buildRows(visibleTasks(tasks, board.id, q.key, pending));
+          // Trois zones (#19) : épinglées, en retard, ordre manuel. Seule la
+          // dernière porte des interstices — les deux premières ont un ordre
+          // qui n'appartient pas à l'utilisateur.
+          const { overdue: lateRows, rest: rows } = splitOverdue(
+            buildRows(visibleTasks(tasks, board.id, q.key, pending)),
+            now,
+          );
           const focused = focusQuad === q.key;
           const draft = drafts[q.key] ?? '';
           return (
@@ -611,6 +640,16 @@ export function MatrixScreen({
                   {cards.map((t) => card(t, q, cards.length === 1, true, i, pinnedRows.length))}
                 </div>
               ))}
+
+              {/* Zone « en retard » : pas d'interstice, pas de flèches ↑/↓. Son
+                  ordre est celui des échéances, et `rowCount` vaut 1 pour que
+                  `card()` n'offre aucun déplacement. */}
+              {lateRows.map((cards, i) => (
+                <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`late-${i}`}>
+                  {cards.map((t) => card(t, q, cards.length === 1, false, 0, 1))}
+                </div>
+              ))}
+              {lateRows.length > 0 && rows.length > 0 && <div className="zone-split" />}
 
               {rows.map((cards, i) => {
                 const gapActive = hover?.type === 'gap' && hover.quad === q.key && hover.row === i;
