@@ -4,6 +4,8 @@ import {
   ALL,
   deleteLabel,
   endPosition,
+  focusRefusal,
+  localDay,
   groupTasksByBoard,
   isOpenRow,
   orderedBoards,
@@ -23,6 +25,7 @@ import {
   type TaskWrite,
 } from '@penduline/shared';
 import type { Store } from '../data/store';
+import { readFocusLimit } from '../data/focusPrefs';
 import { BinModal } from '../components/BinModal';
 import { Confirm } from '../components/Confirm';
 import { TaskCard } from '../components/TaskCard';
@@ -90,6 +93,11 @@ export function GlobalScreen({
   const [linking, setLinking] = useState<string | null>(null);
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
+
+  // Recalculés à chaque rendu, exprès : l'application peut rester ouverte toute
+  // la nuit, et le jour doit alors changer sous elle (#49).
+  const focusDay = localDay();
+  const focusLimit = readFocusLimit();
 
   // Garde-fou : l'univers choisi comme portée peut avoir été supprimé ailleurs
   // (autre onglet, autre appareil). On retombe sur « toutes les matrices »
@@ -249,6 +257,20 @@ export function GlobalScreen({
         onTogglePin={() => togglePin(t)}
         onUnpair={() => unpair(t)}
         onDelete={() => askRemoveTask(t)}
+        // L'engagement du jour (#49). La sélection se lit dans `store.tasks`,
+        // qui contient toutes les tâches OUVERTES : une tâche déjà cochée ne
+        // s'affiche plus ici, donc le compte y est juste.
+        focus={{
+          on: t.focus_day === focusDay,
+          refusal: focusRefusal(tasks, focusDay, focusLimit),
+          toggle: () => {
+            const dedans = t.focus_day === focusDay;
+            store.group(dedans ? "Retirée d'aujourd'hui" : "Ajoutée à aujourd'hui", () =>
+              void patchTask(t.id, { focus_day: dedans ? null : focusDay }),
+            );
+            setMenuTask(null);
+          },
+        }}
         // Les liens suivent la tâche partout, contrairement aux étapes : un lien
         // qualifie la tâche elle-même, une étape la décompose — et décomposer
         // n'a pas de sens dans une vue qui agrège des matrices.

@@ -44,6 +44,21 @@ export interface CardReorder {
   down: (() => void) | null;
 }
 
+/**
+ * L'engagement du jour (#49). Absent, le geste n'existe pas — comme `drag`.
+ *
+ * `refusal` porte la RAISON d'un refus au lieu d'un simple booléen : l'entrée se
+ * désactive en affichant son motif, plutôt que de disparaître. Un blocage muet se
+ * lit comme un bug, un blocage expliqué se lit comme une intention.
+ */
+export interface CardFocus {
+  /** La tâche est-elle déjà dans la sélection du jour ? */
+  on: boolean;
+  /** `null` = on peut ajouter. Sinon, le motif à afficher. Ignoré si `on`. */
+  refusal: string | null;
+  toggle: () => void;
+}
+
 /** Le renommage en place, dont l'état vit chez l'appelant (une seule carte à la fois). */
 export interface CardRename {
   /** `null` = titre affiché ; une chaîne = saisie en cours. */
@@ -78,6 +93,7 @@ export function TaskCard({
   onTogglePin,
   onUnpair,
   onDelete,
+  focus,
   drag,
   split,
   reorder,
@@ -101,6 +117,8 @@ export function TaskCard({
   onTogglePin: () => void;
   onUnpair: () => void;
   onDelete: () => void;
+  /** Absent = la carte ne propose pas l'engagement du jour (#49). */
+  focus?: CardFocus;
   drag?: CardDrag;
   split?: CardSplit;
   /** Absent = ni entrées de menu, ni raccourci. */
@@ -355,6 +373,23 @@ export function TaskCard({
               </div>
             </>
           )}
+          {focus &&
+            (focus.on || !focus.refusal ? (
+              <button className="task-menu__action task-menu__action--focus" onClick={focus.toggle}>
+                {focus.on ? "Retirer d'aujourd'hui" : "◷ Faire aujourd'hui"}
+              </button>
+            ) : (
+              // Désactivée avec son motif, et non masquée : c'est la limite qui
+              // fait la valeur du mode, elle doit se voir (#49).
+              <span
+                className="task-menu__action task-menu__action--off"
+                role="button"
+                aria-disabled="true"
+              >
+                ◷ Faire aujourd'hui
+                <span className="task-menu__why">{focus.refusal}</span>
+              </span>
+            ))}
           {quad.key !== 'parking' && (
             <button className="task-menu__action task-menu__action--pin" onClick={onTogglePin}>
               {task.pinned ? 'Désépingler' : '⚑ Épingler en haut'}

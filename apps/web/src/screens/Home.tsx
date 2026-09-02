@@ -103,10 +103,12 @@ export function Home({
   store,
   onOpen,
   onGlobal,
+  onFocus,
 }: {
   store: Store;
   onOpen: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
+  onFocus: () => void;
 }) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
   const [draft, setDraft] = useState<string | null>(null);
@@ -362,10 +364,16 @@ export function Home({
           matrice de plus. Masquée tant qu'aucune matrice n'existe : il n'y
           aurait rien à voir d'ensemble. */}
       {store.boards.length > 0 && (
-        <button className="home-global" onClick={() => onGlobal({ kind: 'all' })}>
-          Vue globale
-          <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
-        </button>
+        <div className="home-lenses">
+          <button className="home-global" onClick={() => onGlobal({ kind: 'all' })}>
+            Vue globale
+            <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
+          </button>
+          <button className="home-global home-global--focus" onClick={onFocus}>
+            Aujourd'hui
+            <span className="home-global__hint">ce sur quoi vous vous engagez</span>
+          </button>
+        </div>
       )}
 
       {store.boards.length === 0 && !grouped ? (
