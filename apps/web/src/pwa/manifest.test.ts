@@ -69,11 +69,32 @@ describe('manifest.webmanifest', () => {
     });
 
     // Sans variante masquée, Android rogne l'icône dans un cercle et décapite le nid.
+    //
+    // Les fichiers `maskable` respectent la zone de sécurité des icônes adaptatives :
+    // l'art est réduit aux **2/3 centraux** du canevas (72 dp visibles sur 108 dp) et
+    // posé sur un fond opaque `#f5ead8`, là où les `any` sont transparents avec l'art
+    // à pleine hauteur. Toute nouvelle taille doit reprendre cette géométrie, sinon
+    // l'icône change d'aspect d'une densité d'écran à l'autre.
     it('fournit une variante masquée', () => {
       const maskable = manifest.icons.filter((icon) => icon.purpose === 'maskable');
       expect(maskable.map((icon) => icon.sizes)).toEqual(
-        expect.arrayContaining(['192x192', '512x512']),
+        expect.arrayContaining(['192x192', '512x512', '1024x1024']),
       );
+    });
+
+    // Le 1024 n'est pas du zèle : c'est ce qui rend le splash net. Google forge un
+    // WebAPK à l'installation et y grave une icône adaptative dérivée du `maskable`,
+    // dont seuls les 2/3 centraux sont visibles — sur un 512, il ne reste que ~341 px
+    // d'art. Le splash Android 12+ les dessine à ~160 dp, soit 480 px sur un écran à
+    // DPR 3 : un agrandissement de 1,4× qui fait baver les aplats. Le 1024 double la
+    // source et absorbe l'agrandissement.
+    //
+    // Corollaire : le WebAPK est gravé une fois pour toutes. Vérifier le correctif
+    // demande de désinstaller puis réinstaller l'app — modifier ce manifeste ne
+    // touche pas l'icône déjà posée sur l'écran d'accueil.
+    it('fournit une source 1024 dans les deux variantes', () => {
+      const sizes1024 = manifest.icons.filter((icon) => icon.sizes === '1024x1024');
+      expect(sizes1024.map((icon) => icon.purpose).sort()).toEqual(['any', 'maskable']);
     });
   });
 
