@@ -60,6 +60,14 @@ export interface Task {
   parent_id: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * Le jour pour lequel la tâche a été choisie (#49). `null` = hors sélection.
+   *
+   * Date LOCALE, écrite par le client, jamais convertie par la base. La
+   * sélection n'expire pas : elle cesse de correspondre au jour courant. Et la
+   * valeur de la veille survit exprès — c'est elle qui permet le bilan du soir.
+   */
+  focus_day: string | null;
 }
 
 /**
@@ -82,6 +90,8 @@ export type TaskPatch = Partial<
     | 'position'
     | 'pair_id'
     | 'parent_id'
+    /** Entrer dans la sélection du jour, ou en sortir (#49). */
+    | 'focus_day'
   >
 >;
 
