@@ -58,6 +58,16 @@ export interface Task {
    * classement urgent/important appartient à son parent (#50).
    */
   parent_id: string | null;
+  /**
+   * Échéance, en UTC (#19). `null` = pas de date, l'état de très loin le plus
+   * courant — la matrice reste utilisable sans jamais en poser une.
+   *
+   * Aucun statut n'accompagne cette colonne : « bientôt » et « dans le rouge »
+   * se déduisent d'elle et de l'heure courante à chaque rendu
+   * (`deadlineStatus`). Les stocker obligerait quelqu'un à les réécrire au fil
+   * du temps, et personne ne tourne côté serveur.
+   */
+  due_at: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -82,6 +92,7 @@ export type TaskPatch = Partial<
     | 'position'
     | 'pair_id'
     | 'parent_id'
+    | 'due_at'
   >
 >;
 

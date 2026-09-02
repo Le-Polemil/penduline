@@ -1,5 +1,7 @@
 import type { CSSProperties, DragEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
+  deadlineStatus,
+  formatDeadline,
   partnerOf,
   QUADS,
   type Attachment,
@@ -9,6 +11,7 @@ import {
   type Task,
 } from '@penduline/shared';
 import { Attachments } from './Attachments';
+import { Deadline } from './Deadline';
 import { Subtasks } from './Subtasks';
 
 /** Le déplacement au doigt/à la souris. Absent, la carte n'est pas déplaçable. */
@@ -84,6 +87,7 @@ export function TaskCard({
   flash,
   subtasks,
   attachments,
+  deadline,
 }: {
   task: Task;
   quad: Quadrant;
@@ -135,9 +139,26 @@ export function TaskCard({
     onAdd: (url: string) => Promise<boolean>;
     onRemove: (a: Attachment) => void;
   };
+  /**
+   * L'échéance de cette tâche (#19). Absent = ni badge ni entrée de menu.
+   *
+   * `now` est FOURNI par l'appelant plutôt que relu ici : le statut doit se
+   * rafraîchir tout seul (l'app reste ouverte des heures), et c'est l'écran qui
+   * tient le minuteur — une carte qui lirait `Date.now()` au rendu resterait
+   * figée jusqu'au prochain rendu déclenché par autre chose.
+   */
+  deadline?: {
+    now: number;
+    editing: boolean;
+    onStartEdit: () => void;
+    onCancelEdit: () => void;
+    onSet: (dueAt: string) => void;
+    onClear: () => void;
+  };
 }) {
   const renaming = rename.value !== null;
   const splitActive = !!split?.ok && !!split.active;
+  const statut = deadline ? deadlineStatus(task.due_at, deadline.now) : null;
   const cls = [
     'task',
     pinnedCard ? 'task--pinned' : '',
@@ -145,6 +166,7 @@ export function TaskCard({
     splitActive ? 'task--split' : '',
     task.done ? 'task--done' : '',
     flash ? 'task--flash' : '',
+    statut ? `task--${statut}` : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -242,6 +264,14 @@ export function TaskCard({
         ) : (
           <span className={`task__title${task.done ? ' task__title--done' : ''}`}>{task.title}</span>
         )}
+        {/* Le badge porte SON TEXTE, pas seulement sa couleur : le rouge seul
+            n'informerait pas un daltonien. `<time>` garde la date brute lisible
+            par les technologies d'assistance derrière le libellé relatif. */}
+        {statut && task.due_at && (
+          <time className={`due due--${statut}`} dateTime={task.due_at}>
+            ⏰ {formatDeadline(task.due_at, deadline?.now)}
+          </time>
+        )}
         {/* Le glyphe seul nommait ce bouton « ⋯ » dans l'arbre d'accessibilité :
             autant de boutons identiques et anonymes qu'il y a de tâches. */}
         <button
@@ -263,6 +293,15 @@ export function TaskCard({
           onCancelAdd={attachments.onCancelAdd}
           onAdd={attachments.onAdd}
           onRemove={attachments.onRemove}
+        />
+      )}
+      {deadline && !renaming && (
+        <Deadline
+          task={task}
+          editing={deadline.editing}
+          onCancel={deadline.onCancelEdit}
+          onSet={deadline.onSet}
+          onClear={deadline.onClear}
         />
       )}
       {/* Sous la carte, jamais dedans : une étape n'est pas une demi-tâche, elle
@@ -324,6 +363,19 @@ export function TaskCard({
               }}
             >
               ↗ Attacher un lien
+            </button>
+          )}
+          {/* Avec les liens, dans le groupe des gestes qui ENRICHISSENT la
+              tâche — avant « Déplacer vers », qui la range. */}
+          {deadline && (
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                deadline.onStartEdit();
+                onMenu(false);
+              }}
+            >
+              ⏰ {task.due_at ? 'Modifier l’échéance' : 'Fixer une échéance'}
             </button>
           )}
           <div className="task-menu__label">Déplacer vers</div>

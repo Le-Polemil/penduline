@@ -32,6 +32,12 @@ penduline/
   elle n'a pas de case à elle *(elle hérite de celle du parent)*, et elle ne
   compte dans aucun compteur. Elle ne se déplace pas, ne s'épingle pas, ne
   s'appaire pas : elle se coche et se supprime, rien d'autre.
+- **Une tâche peut porter une échéance** (`tasks.due_at`, en UTC). Une seule, d'où
+  une colonne et pas une table. Aucun statut n'est stocké : « bientôt » (moins de
+  24 h) et « dans le rouge » sont **dérivés** de `due_at` et de l'heure courante à
+  chaque rendu, sans quoi il faudrait quelqu'un pour les réécrire au fil du temps.
+  Une tâche dépassée remonte en tête de sa case, dans une zone à elle — son rang
+  y appartient à son échéance, plus à l'ordre manuel.
 - **Les matrices peuvent être regroupées en univers** (Perso, Boulot, Maison…),
   et ce niveau est **facultatif de bout en bout** : on peut n'en créer aucun, et
   une matrice peut n'appartenir à aucun. Supprimer un univers ne supprime pas ses

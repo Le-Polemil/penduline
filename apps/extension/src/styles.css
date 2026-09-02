@@ -242,6 +242,31 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .task__pin:hover { transform: scale(1.2); opacity: 1; }
 .task__pin--on { color: var(--color-accent); opacity: 1; }
 
+/* ── Échéances (#19) ──────────────────────────────────────────────────────────
+   Mêmes classes et mêmes teintes que le web, en plus compact : le popup fait
+   376 px de large et le badge ne doit pas manger le titre. */
+.due {
+  flex: none; font: 600 9.5px/1 var(--font-body); white-space: nowrap;
+  padding: 3px 7px; border-radius: 999px;
+  background: var(--color-neutral-100); color: var(--color-neutral-700);
+}
+.due--soon { background: var(--color-accent-100); color: var(--color-accent-800); }
+.due--overdue { background: #f7e4e0; color: #a63d2a; }
+.task--overdue { border-color: #a63d2a; }
+
+.due-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 0 0 23px; }
+.due-edit__input {
+  font: 11px var(--font-body); color: var(--color-text);
+  background: var(--color-neutral-100); border: 1.5px solid var(--color-accent);
+  border-radius: 7px; padding: 3px 6px; outline: none; min-width: 0;
+}
+.due-edit__ok, .due-edit__del {
+  font: 600 10px/1 var(--font-body); border: none; border-radius: 999px;
+  padding: 5px 10px; cursor: pointer;
+}
+.due-edit__ok { background: var(--color-accent); color: #fff; }
+.due-edit__del { background: none; color: #a63d2a; text-decoration: underline; padding-left: 3px; }
+
 /* ── Menu d'actions d'une tâche ───────────────────────────────────────────────
    Le ⋯ ne s'affiche qu'au survol : la carte fait 376 px et porte déjà la case, le
    titre et l'épingle — un bouton permanent rognerait le titre, seul contenu utile
