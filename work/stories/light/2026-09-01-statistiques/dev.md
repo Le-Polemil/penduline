@@ -208,3 +208,50 @@ graphique. À revoir si le cas se présente vraiment.
 
 **Cibles tactiles** — sous émulation tactile réelle : boutons de période à 44 px, aucun
 débordement horizontal, aucune cible sous 44 px dans l'écran.
+
+### 2026-09-03 : rebase sur `main` — une collision de noms invisible pour git
+
+**Statut** : Terminé
+
+La branche avait pris quatre PR de retard (#97 échéances, #100 revue périodique,
+#102 panneau latéral, plus deux bumps de version). Rebasée sur `main`.
+
+**Conflits textuels** — quatre fichiers, tous du type « chaque côté ajoute un
+frère », donc résolus en gardant les deux :
+
+- `packages/shared/src/index.ts` — `export * from './review'` **et** `'./stats'`.
+- `apps/web/src/App.tsx` — cinq points d'intégration (import, union `View`,
+  relecture `sessionStorage`, routage, props de `Home`).
+- `apps/web/src/screens/Home.tsx` — la revue avait introduit le conteneur
+  `.home-lenses` ; la rétrospective y devient la **troisième** lentille.
+- `apps/web/src/styles.css` — les deux blocs déclaraient `.home-lenses` et sa
+  bascule en colonne. Doublons retirés côté rétrospective, avec un renvoi vers
+  le bloc de la revue qui les porte désormais seul.
+
+**⚠️ Le vrai conflit, que git ne pouvait pas voir.** `review.ts` (arrivé par
+#100) et `stats.ts` exportaient tous deux un type **`BoardStat`**. Aucun
+chevauchement textuel, donc aucun marqueur de conflit — mais deux `export *`
+homonymes dans `index.ts` rendent le nom ambigu, et TypeScript ne se contente
+pas d'écarter le type : il **fait sauter le re-export du module entier**.
+`@penduline/shared` cessait donc d'exposer *tous* les symboles de statistiques,
+et l'erreur utile (`TS2308`) se noyait dans une trentaine de `TS2305` et
+`TS7006` en cascade.
+
+Renommé **côté rétrospective** en `BoardCompletionStat` : `review.BoardStat` est
+déjà sur `main` et consommé par `useReview.ts`, le renommer aurait touché du code
+livré. Le type s'écarte ainsi de ses voisines `QuadrantStat` et `WeekStat` — la
+raison est écrite au-dessus de sa déclaration, sans quoi le nom long passerait
+pour une inconséquence.
+
+Corrigé **dans le commit qui introduit `stats.ts`**, pas en bout de série : sinon
+les commits 2 à 4 ne compilaient pas et la série cessait d'être bissectable.
+Vérifié commit par commit — `typecheck` à zéro erreur et tests verts à chacun.
+
+**Relevé sans y toucher** : `.home-global--review` et `.home-global--stats`
+portent maintenant la **même teinte** (`--color-accent-2-800`). Le commentaire de
+la revue dit « elle se distingue par sa teinte, pas par sa forme » — la
+distinction est donc perdue entre les deux. C'est une décision de design, pas de
+résolution de conflit.
+
+**Vérifications** : `typecheck` sur les trois workspaces, 201 tests partagés +
+27 web, `npm run build` (web et extension).
