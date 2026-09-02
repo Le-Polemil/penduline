@@ -70,6 +70,21 @@ export interface Task {
   due_at: string | null;
   created_at: string;
   updated_at: string;
+  /**
+   * Dernier changement de CASE — et rien d'autre (#47).
+   *
+   * `updated_at` ne pouvait pas jouer ce rôle : son trigger l'écrase à chaque
+   * update, quelle que soit la colonne touchée. Une tâche renommée et une tâche
+   * déplacée y sont indiscernables, or la revue doit signaler la première et
+   * taire la seconde.
+   *
+   * ⚠️ Ne dit rien de l'avant-migration : l'existant a été initialisé à la date
+   * de migration, pas à `created_at`. Une tâche déplacée la veille rapporte donc
+   * « changée à la migration ». C'est délibéré — remplir avec `created_at`
+   * aurait fait passer pour oubliée toute tâche jamais déplacée, ce qui est un
+   * faux positif, quand ceci n'est qu'une absence.
+   */
+  quadrant_changed_at: string;
 }
 
 /**
@@ -93,6 +108,13 @@ export type TaskPatch = Partial<
     | 'pair_id'
     | 'parent_id'
     | 'due_at'
+    /**
+     * Jamais écrit en avant — la base le tient elle-même par trigger. Il n'est
+     * ici que pour l'INVERSE d'annulation : une annulation étant elle-même un
+     * changement de case, le trigger y remettrait `now()` et `Ctrl+Z` rendrait
+     * la tâche à sa case sans lui rendre son ancienneté (#47).
+     */
+    | 'quadrant_changed_at'
   >
 >;
 
