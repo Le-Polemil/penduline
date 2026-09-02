@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { endPosition, isSafeUrl, normalizeUrl, type Board, type Task } from '@penduline/shared';
-import { clearPending, setPending, type PendingCapture } from './pending-capture';
+import { clearPending, type PendingCapture } from './pending-capture';
 
 /**
  * Le formulaire de capture (#78).
@@ -9,10 +9,17 @@ import { clearPending, setPending, type PendingCapture } from './pending-capture
  * était en base. On ne voyait pas ce qui avait été retenu et on ne pouvait rien
  * corriger. Ici on relit avant d'écrire.
  *
- * ⚠️ Chaque frappe est reportée dans `chrome.storage.session`. Le popup d'action
- * se ferme dès qu'il perd le focus — cliquer dans la page pour relire un titre
- * suffit à le faire disparaître. Sans cette écriture continue, la saisie serait
- * perdue exactement au moment où l'utilisateur va la chercher.
+ * ⚠️ **L'écriture à chaque frappe n'a plus lieu d'être, et elle a été retirée.**
+ * Elle compensait la fermeture au blur du popup d'action : cliquer dans la page pour
+ * relire un titre suffisait à le faire disparaître, et la saisie était perdue
+ * exactement au moment où l'utilisateur allait la chercher. Le panneau latéral
+ * ne se ferme plus — le geste qu'elle protégeait est devenu sans danger.
+ *
+ * Reste une écriture **au départ du formulaire** (validation ou annulation), qui
+ * n'est pas de la sauvegarde mais du nettoyage : `clearPending` retire la
+ * capture du stockage pour qu'elle ne rouvre pas le formulaire à la prochaine
+ * ouverture. `pending-capture.ts` reste donc le canal entre le service worker et
+ * le panneau ; seule sa cadence d'écriture s'allège.
  */
 export function Capture({
   pending,
@@ -39,17 +46,6 @@ export function Capture({
   useEffect(() => {
     if (!boards.some((b) => b.id === boardId) && boards[0]) setBoardId(boards[0].id);
   }, [boards, boardId]);
-
-  /**
-   * Reporte le brouillon ENTIER, jamais un champ seul.
-   *
-   * Une écriture partielle devrait relire l'état courant, et deux frappes
-   * rapprochées dans deux champs différents liraient la même version : la
-   * seconde effacerait la première. Écrire le tout supprime la course.
-   */
-  function retenir(patch: Partial<PendingCapture>) {
-    void setPending({ ...pending, title, url, boardId, ...patch, at: pending.at });
-  }
 
   const urlValide = !url.trim() || isSafeUrl(normalizeUrl(url));
   const pret = title.trim().length > 0 && boardId !== '' && urlValide && !busy;
@@ -83,10 +79,7 @@ export function Capture({
         autoFocus
         rows={2}
         maxLength={500}
-        onChange={(e) => {
-          setTitle(e.target.value);
-          retenir({ title: e.target.value });
-        }}
+        onChange={(e) => setTitle(e.target.value)}
       />
 
       <label className="cap__label" htmlFor="cap-url">
@@ -99,10 +92,7 @@ export function Capture({
         maxLength={2048}
         placeholder="https://…"
         aria-invalid={!urlValide}
-        onChange={(e) => {
-          setUrl(e.target.value);
-          retenir({ url: e.target.value });
-        }}
+        onChange={(e) => setUrl(e.target.value)}
       />
       {!urlValide && (
         <span className="cap__error" role="alert">
@@ -119,10 +109,7 @@ export function Capture({
         id="cap-board"
         className="cap__input"
         value={boardId}
-        onChange={(e) => {
-          setBoardId(e.target.value);
-          retenir({ boardId: e.target.value });
-        }}
+        onChange={(e) => setBoardId(e.target.value)}
       >
         {boards.map((b) => (
           <option key={b.id} value={b.id}>

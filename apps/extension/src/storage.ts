@@ -1,6 +1,6 @@
 /**
  * Adaptateur de stockage pour que supabase-js persiste la session dans
- * chrome.storage.local (disponible dans le popup ET le service worker MV3, où
+ * chrome.storage.local (disponible dans le panneau ET le service worker MV3, où
  * localStorage n'existe pas). Repli sur localStorage quand les API chrome ne
  * sont pas là (aperçu dans un onglet normal, tests).
  */

@@ -29,12 +29,12 @@ export interface ExtStore {
 }
 
 /**
- * Le déroulé commun aux écritures, version popup.
+ * Le déroulé commun aux écritures, version panneau.
  *
  * Miroir réduit de `apps/web/src/data/persist.ts` : il partage la
  * classification (`classifyWriteFailure`, dans `@penduline/shared`) mais pas le
  * code, l'extension n'ayant ni pile de toasts ni vue à mémoriser. Les trois
- * écritures du popup sont trop peu nombreuses pour valoir un paquet commun de
+ * écritures du panneau sont trop peu nombreuses pour valoir un paquet commun de
  * plus, et une abstraction partagée aurait dû porter les deux hôtes.
  */
 interface ExtWriteOp<T> {
@@ -63,7 +63,7 @@ function usePersist() {
       const failure = classifyWriteFailure(error, status, op.label);
       console.error(`[penduline] ${op.label}`, status, error.code, error.message);
 
-      // Pas de mémorisation de contexte ici, contrairement au web : le popup
+      // Pas de mémorisation de contexte ici, contrairement au web : le panneau
       // n'a qu'un écran de reprise, déjà géré par `getActiveBoard`.
       if (failure.kind === 'session') void supabase.auth.signOut({ scope: 'local' });
 
@@ -94,10 +94,10 @@ export function useExtStore(userId: string): ExtStore {
         supabase.from('universes').select('*').order('position'),
         supabase.from('boards').select('*').order('position'),
         // `parent_id is null` : une étape n'est pas une ligne de liste (#50).
-        // Le popup n'a pas de corbeille : il filtre déjà `!t.done && !t.deleted`
+        // Le panneau n'a pas de corbeille : il filtre déjà `!t.done && !t.deleted`
         // à l'affichage. Ne charger que ça est donc sans conséquence ici — et
         // c'est là que le gain est le plus sensible, ce chargement étant le
-        // premier travail à l'ouverture du popup (#40).
+        // premier travail à l'ouverture du panneau (#40).
         supabase
           .from('tasks')
           .select(TASK_COLS)

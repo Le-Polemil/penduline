@@ -1,5 +1,5 @@
 /**
- * La capture en attente, partagée entre le service worker et le popup (#78).
+ * La capture en attente, partagée entre le service worker et le panneau (#78).
  *
  * ⚠️ `chrome.storage.session` et pas `local` : ce qu'on capture est un brouillon
  * de l'instant, pas une donnée. Il ne doit pas survivre à la fermeture du
@@ -50,6 +50,47 @@ export async function getPending(): Promise<PendingCapture | null> {
   }
 }
 
+/**
+ * Prévient d'une capture déposée **après** le montage de l'interface.
+ *
+ * Deux situations, un seul mécanisme :
+ *
+ * 1. **La course d'ouverture.** `chrome.sidePanel.open()` exige un geste
+ *    utilisateur et doit donc être appelé AVANT tout `await` (voir
+ *    `background.ts`) : le panneau peut se monter avant que la capture ne soit
+ *    écrite ici. `getPending()` au montage lirait alors du vide.
+ *
+ * 2. **Le panneau déjà ouvert.** Cas impossible du temps du popup, qui se
+ *    fermait au premier clic dans la page. Le panneau, lui, reste : une capture
+ *    peut arriver sur une interface montée depuis dix minutes.
+ *
+ * L'abonnement vit ici et non dans le composant, parce que la clé de stockage
+ * appartient à ce module — la faire fuir ailleurs, c'est se garantir deux
+ * endroits à corriger le jour où elle change.
+ *
+ * Rend la fonction de désabonnement. Sans `chrome.storage` (aperçu web), rend
+ * une fonction vide plutôt que de lever.
+ */
+export function watchPending(onChange: (c: PendingCapture | null) => void): () => void {
+  const listener = (
+    changes: Record<string, chrome.storage.StorageChange>,
+    area: chrome.storage.AreaName,
+  ) => {
+    if (area !== 'session' || !(KEY in changes)) return;
+    const c = changes[KEY].newValue as PendingCapture | undefined;
+    // Même péremption qu'à la lecture : un brouillon d'hier n'a pas à rouvrir
+    // un formulaire, quel que soit le chemin par lequel il arrive.
+    onChange(c && isFreshCapture(c.at) ? c : null);
+  };
+
+  try {
+    chrome.storage.onChanged.addListener(listener);
+    return () => chrome.storage.onChanged.removeListener(listener);
+  } catch {
+    return () => {};
+  }
+}
+
 export async function clearPending(): Promise<void> {
   try {
     await chrome.storage.session.remove(KEY);
@@ -62,11 +103,14 @@ export async function clearPending(): Promise<void> {
  * ⚠️ Il n'y a PAS de `patchPending` ici, et c'est délibéré.
  *
  * Une mise à jour partielle suppose de lire l'état courant avant d'écrire. Or le
- * stockage est asynchrone : deux frappes rapprochées dans deux champs
- * différents lisent toutes deux la MÊME version, et la seconde écriture écrase
- * le champ modifié par la première. Constaté au navigateur — le titre corrigé
- * disparaissait dès qu'on touchait ensuite au lien.
+ * stockage est asynchrone : deux écritures rapprochées lisent toutes deux la
+ * MÊME version, et la seconde écrase le champ modifié par la première. Constaté
+ * au navigateur du temps où le formulaire écrivait à chaque frappe — le titre
+ * corrigé disparaissait dès qu'on touchait ensuite au lien.
  *
- * Le formulaire tient déjà le brouillon entier : il écrit l'objet complet à
- * chaque frappe, par `setPending`, et la course n'existe plus.
+ * Cette écriture continue a disparu avec le passage au panneau latéral (voir
+ * `Capture.tsx`) : le brouillon n'a plus besoin de survivre à une fermeture qui
+ * n'a plus lieu. La course est donc doublement écartée — plus d'écriture
+ * partielle, et plus d'écritures rapprochées du tout. Ne pas rouvrir la porte en
+ * ajoutant un `patchPending` « pour la commodité ».
  */
