@@ -21,6 +21,7 @@
 import { supabase, isConfigured } from './supabase';
 import { getActiveBoard } from './active-board';
 import { clearPending, setPending } from './pending-capture';
+import { listenForSharedSession } from './session-bridge';
 
 /** Liste des matrices, alimentée par le panneau. */
 const BOARDS_KEY = 'penduline-boards-cache';
@@ -209,6 +210,18 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; boards?: CachedBoard
     await buildMenus();
   })();
 });
+
+/**
+ * L'app web nous transmet sa session : se connecter d'un côté connecte l'autre.
+ *
+ * Posé au niveau du module, comme les autres branchements du worker : MV3 exige
+ * que les écouteurs soient enregistrés au premier tour de boucle, sinon
+ * l'événement qui réveille le worker se perd avant que quiconque l'écoute.
+ *
+ * Le retrait renvoyé n'a pas d'usage ici — un service worker ne se démonte pas,
+ * il est tué. C'est le panneau qui s'en sert (`App.tsx`).
+ */
+listenForSharedSession();
 
 /**
  * Le clic sur une entrée de menu ouvre le formulaire (#78).

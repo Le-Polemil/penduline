@@ -27,6 +27,12 @@
     "contextMenus",
     "sidePanel"
   ],
+  "externally_connectable": {
+    "matches": [
+      "https://penduline.polemil.dev/*",
+      "http://localhost/*"
+    ]
+  },
   "background": {
     "service_worker": "background.js",
     "type": "module"

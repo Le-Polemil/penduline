@@ -30,13 +30,8 @@ import { Loader } from './Loader';
 import { useExtStore, type ExtStore } from './store';
 import { ToastProvider } from './toast';
 import { useNow } from './useNow';
-
-/**
- * Ouvre l'app web complète. Surchargée au build par `VITE_WEB_APP_URL` (`.env`
- * racine) ; le défaut reste le serveur de dev, pour ne pas casser le local.
- */
-const WEB_APP_URL =
-  (import.meta.env.VITE_WEB_APP_URL as string | undefined) ?? 'http://localhost:5173';
+import { listenForSharedSession } from './session-bridge';
+import { WEB_APP_URL } from './web-app';
 
 /**
  * « À trier » n'a pas de fond propre : `PARK.bg` vaut `'transparent'`
@@ -110,7 +105,17 @@ export function App() {
       setReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => sub.subscription.unsubscribe();
+
+    // Le panneau peut être ouvert AU MOMENT où l'app web pousse sa session. Son
+    // client est une instance distincte de celle du service worker : sans cet
+    // écouteur, il resterait sur l'écran de connexion jusqu'au prochain montage.
+    // Le `setSession` qui suit fait repasser `onAuthStateChange` ci-dessus.
+    const unlisten = listenForSharedSession();
+
+    return () => {
+      sub.subscription.unsubscribe();
+      unlisten();
+    };
   }, []);
 
   return (
