@@ -52,7 +52,15 @@ function usePersist() {
   return useCallback(
     async function persist<T>(op: ExtWriteOp<T>): Promise<{ ok: boolean; data: T | null }> {
       op.apply?.();
-      const { data, error, status } = await op.write();
+      let { data, error, status } = await op.write();
+
+      // Même raisonnement que côté web (`apps/web/src/data/persist.ts`), et le
+      // panneau y est encore plus exposé : il reste ouvert des heures, sans
+      // aucun `visibilitychange` pour réveiller le renouvellement automatique.
+      if (error && classifyWriteFailure(error, status, op.label).kind === 'session') {
+        const { error: refus } = await supabase.auth.refreshSession();
+        if (!refus) ({ data, error, status } = await op.write());
+      }
 
       if (!error) {
         if (data !== null) op.commit?.(data);

@@ -112,6 +112,41 @@ inscrit si l'envoi ne fonctionnait pas.
 Les comptes existants ont tous été créés en autoconfirm : ils restent confirmés
 et connectables. Aucune migration n'est nécessaire.
 
+## Durée de connexion : la rotation des refresh tokens est DÉSACTIVÉE
+
+`apps/supabase/config.toml` ne pilote que le Supabase **local** : le réglage doit
+être repris à la main sur le service `supabase-auth`, sans quoi la production
+garde l'ancien comportement.
+
+```
+GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=false
+```
+
+**Ce que ça corrige.** Une session Supabase n'expire pas — ni `timebox` ni
+`inactivity_timeout` ne sont posés. Les déconnexions constatées après une absence
+ne venaient donc pas d'une durée trop courte, mais de la rotation : elle révoque
+la famille de jetons dès qu'un jeton déjà échangé est représenté hors de sa
+fenêtre de tolérance. Or l'app web et la PWA installée partagent le **même**
+`localStorage` — deux contextes, un seul jeton, et un réveil de machine suffit à
+les faire rafraîchir de concert. Le refresh échoue, auth-js purge la session, et
+l'app repart sur l'écran de connexion.
+
+C'est aussi ce qui rend possible le partage de session vers l'extension : le même
+refresh token y vit dans deux stockages distincts, qui dérivent l'un de l'autre.
+
+**Le coût, assumé.** Un refresh token volé reste valide jusqu'à la déconnexion —
+il n'y a plus de détection de rejeu pour l'invalider. La contrepartie était une
+déconnexion régulière sur un usage parfaitement légitime.
+
+**`GOTRUE_JWT_EXP` reste à 3600, volontairement.** L'allonger était le réflexe,
+c'est une fausse piste : PostgREST valide un JWT hors ligne, sur sa seule
+signature, sans aucun moyen de savoir qu'il a été révoqué. La durée du JWT est
+donc exactement la fenêtre pendant laquelle une déconnexion globale reste sans
+effet. Rotation désactivée, renouveler toutes les heures ne coûte rien.
+
+`GOTRUE_SECURITY_REFRESH_TOKEN_REUSE_INTERVAL` devient sans objet et a été retiré
+de `config.toml` : l'intervalle de tolérance n'existe que pour la rotation.
+
 ## La machine est le facteur limitant
 
 4 Go de RAM, 2 vCPU, avec Supabase auto-hébergé (14 conteneurs), Coolify et
