@@ -1,5 +1,5 @@
 /**
- * Dernière matrice ouverte — reprise dans le popup, destination par défaut de la
+ * Dernière matrice ouverte — reprise dans le panneau, destination par défaut de la
  * capture contextuelle.
  *
  * Module SÉPARÉ de `store.ts` à dessein : le service worker a besoin de ces deux

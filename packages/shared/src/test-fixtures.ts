@@ -33,6 +33,9 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     updated_at: '2026-01-01T00:00:00.000Z',
     /** Hors sélection par défaut : c'est l'état de presque toutes les tâches. */
     focus_day: null,
+    // Aligné sur `created_at` par défaut : une tâche fraîchement créée n'a jamais
+    // changé de case. Un test de revue qui veut le contraire le dit (#47).
+    quadrant_changed_at: '2026-01-01T00:00:00.000Z',
     ...partial,
   };
 }

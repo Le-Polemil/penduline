@@ -1,8 +1,14 @@
 # Publier l'extension sur le Chrome Web Store
 
 Paquet produit par `npm run build:ext` puis un zip du contenu de
-`apps/extension/dist`. Version courante : **1.1.0** (voir les notes de publication
-plus bas) ; la 1.0.0 reste décrite ici pour l'historique des arbitrages.
+`apps/extension/dist`. Version courante : **1.3.0** (voir les notes de publication
+plus bas) ; les versions antérieures restent décrites ici pour l'historique des
+arbitrages.
+
+> ⚠️ La **1.2.0** n'a pas de notes dans ce document : elle a été bumpée sans
+> passer par ici. Si elle n'a jamais été soumise, la 1.3.0 emporte ses
+> changements ; sinon, ses notes sont à reconstituer depuis l'historique git
+> avant la prochaine soumission.
 
 ## Corrections faites pour la publication
 
@@ -47,8 +53,13 @@ l'extension gérant des comptes et du contenu utilisateur.
 ## Captures d'écran
 
 `apps/extension/store/01-liste.png` et `02-matrice.png`, 1280×800, le format
-attendu. Le popup y est composé à ses dimensions réelles (400×600) dans un cadre,
-avec une accroche à gauche.
+attendu. L'interface y est composée dans un cadre, avec une accroche à gauche.
+
+> ⚠️ **À refaire pour la 1.3.0.** Les captures actuelles montrent le popup à ses
+> dimensions d'alors (400×600). L'extension vit désormais dans le panneau
+> latéral : la composer à une largeur de panneau plausible (~400 px) *le long du
+> bord droit d'une fenêtre de navigateur*, et non en vignette flottante — c'est
+> la différence que la fiche doit montrer.
 
 **Elles utilisent du contenu de démonstration neutre, volontairement.** Les vraies
 tâches du compte de test nommaient des projets clients — les publier sur le Store
@@ -65,7 +76,7 @@ coup.
 **Justification de la permission `storage`**
 
 > L'extension conserve deux choses dans le stockage local : le jeton de session,
-> pour éviter à l'utilisateur de se reconnecter à chaque ouverture du popup, et
+> pour éviter à l'utilisateur de se reconnecter à chaque ouverture du panneau, et
 > l'identifiant de la dernière matrice consultée, afin de la rouvrir directement
 > pendant deux heures. Rien n'est transmis à un tiers.
 
@@ -78,10 +89,19 @@ coup.
 > l'utilisateur a lui-même sélectionné, et seulement au moment où il clique sur
 > l'entrée.
 
+**Justification de la permission `sidePanel`** *(nouveau en 1.3.0)*
+
+> L'extension affiche son interface dans le panneau latéral du navigateur plutôt
+> que dans une fenêtre surgissante, afin que l'utilisateur puisse consulter ses
+> tâches tout en naviguant. Cette permission sert uniquement à afficher ce
+> panneau. Elle n'accorde aucun accès au contenu des pages et ne change rien aux
+> données manipulées.
+
 **Autorisation d'hôte** — il n'y en a toujours pas. Rien à justifier, et pas
 d'examen approfondi. L'extension joint son API par un `fetch` cross-origin
-classique, autorisé par les en-têtes CORS du serveur. À noter : `contextMenus`
-n'affiche **aucun avertissement à l'installation** — le manifeste reste sobre.
+classique, autorisé par les en-têtes CORS du serveur. À noter : ni `contextMenus`
+ni `sidePanel` n'affichent **d'avertissement à l'installation** — le manifeste
+reste sobre. La ligne à ne pas franchir est `host_permissions`, et elle seule.
 
 **Code distant** — répondre non : le paquet ne charge ni script ni ressource
 externe.
@@ -167,6 +187,44 @@ d'usage des données (voir plus haut). Les six autres changements sont internes.
 > Nouveau : ajoutez une tâche depuis n'importe quelle page par un clic droit,
 > créez et renommez directement dans l'extension, et déplacez vos tâches d'une
 > matrice à l'autre. La case « À trier » s'affiche désormais correctement.
+
+## Version 1.3.0 — notes de publication
+
+**L'extension passe du popup au panneau latéral.** Aucune fonctionnalité ne
+change : mêmes écrans, mêmes gestes, mêmes données. C'est l'hôte qui bouge.
+
+**Ce que ça débloque**
+
+- Le panneau **ne se ferme plus quand on clique dans la page**. C'était la
+  contrainte structurante du popup : relire un article pendant qu'on corrige le
+  titre de la tâche qu'on vient d'en tirer était impossible, alors que c'est
+  exactement le geste pour lequel le formulaire de capture existe.
+- Il **reste ouvert en changeant d'onglet** : la matrice devient consultable
+  pendant qu'on travaille.
+- Il occupe **toute la hauteur** de la fenêtre et se **redimensionne** — la mise
+  en page est passée en fluide, testée de 240 px (minimum imposé par Chrome) à
+  plusieurs centaines.
+
+**Ce qui touche la fiche du Store**
+
+- **Permission `sidePanel`** ajoutée (justification plus haut). Aucun
+  avertissement à l'installation, revue standard : `host_permissions` reste
+  absent.
+- **`minimum_chrome_version: "116"`**. L'API `chrome.sidePanel` date de Chrome
+  114, mais `sidePanel.open()` — dont dépend l'ouverture depuis le menu
+  contextuel — n'arrive qu'en 116. Déclarer 114 laisserait installer l'extension
+  sur des versions où la capture par clic droit retomberait systématiquement sur
+  l'écriture directe, sans formulaire.
+- **`action.default_popup` retiré du manifeste.** Ce n'est pas un détail
+  d'écriture : tant qu'il est là, il gagne sur `setPanelBehavior`, et le clic sur
+  l'icône continuerait d'ouvrir une fenêtre surgissante. Ne pas le remettre.
+- Les **captures d'écran de la fiche** sont à refaire : elles montrent un popup.
+
+**Texte court pour la fiche :**
+
+> Penduline s'installe désormais dans le panneau latéral : vos matrices restent
+> sous les yeux pendant que vous naviguez, et la fenêtre ne se referme plus au
+> premier clic dans la page.
 
 ## Le point à peser avant de publier
 

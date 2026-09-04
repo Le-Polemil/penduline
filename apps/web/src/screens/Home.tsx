@@ -6,6 +6,7 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import {
+  ageInDays,
   countOpen,
   isOpenRow,
   groupByUniverse,
@@ -16,6 +17,7 @@ import {
   type UniverseSummary,
 } from '@penduline/shared';
 import type { Store } from '../data/store';
+import { readLastReview } from '../data/reviewPrefs';
 import { Confirm } from '../components/Confirm';
 import { dropTarget, gapIndexAt } from '../dnd/gap';
 import { ordinal, useAnnounce } from '../a11y/announce';
@@ -104,11 +106,15 @@ export function Home({
   onOpen,
   onGlobal,
   onFocus,
+  onReview,
+  onStats,
 }: {
   store: Store;
   onOpen: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
   onFocus: () => void;
+  onReview: () => void;
+  onStats: () => void;
 }) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
   const [draft, setDraft] = useState<string | null>(null);
@@ -163,6 +169,21 @@ export function Home({
    * comptes au lendemain de la migration — il doit rester impeccable.
    */
   const grouped = store.universes.length > 0;
+  /**
+   * Le repère « dernière revue ». Calculé au rendu et non mémorisé : il change
+   * de jour en jour, et l'accueil se re-rend bien plus souvent que ça.
+   *
+   * Arrondi au jour plein, et « aujourd'hui » plutôt que « il y a 0 jour ».
+   */
+  const reviewHint = (() => {
+    const last = readLastReview();
+    if (!last) return 'ce qui stagne, ce qui n’a jamais bougé';
+    const days = ageInDays(last, Date.now());
+    if (days === null) return 'ce qui stagne, ce qui n’a jamais bougé';
+    const d = Math.floor(days);
+    if (d <= 0) return 'consultée aujourd’hui';
+    return `dernière consultation il y a ${d} jour${d > 1 ? 's' : ''}`;
+  })();
   /**
    * Les univers dans l'ordre affiché — la liste que le glisser réordonne.
    *
@@ -369,9 +390,23 @@ export function Home({
             Vue globale
             <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
           </button>
+          {/* La lentille tournée vers le jour même : ce sur quoi on s'est
+              engagé, par opposition à tout ce qu'il y aurait à faire (#49). */}
           <button className="home-global home-global--focus" onClick={onFocus}>
             Aujourd'hui
             <span className="home-global__hint">ce sur quoi vous vous engagez</span>
+          </button>
+          {/* Le seul rappel du produit, et il est passif : un repère, pas une
+              relance. Un outil qui harcèle finit désinstallé (#47). */}
+          <button className="home-global home-global--review" onClick={onReview}>
+            Revue
+            <span className="home-global__hint">{reviewHint}</span>
+          </button>
+          {/* Quatrième lentille, et la seule tournée vers le passé : la revue
+              dit ce qui stagne, la rétrospective où le temps est passé (#48). */}
+          <button className="home-global home-global--stats" onClick={onStats}>
+            Rétrospective
+            <span className="home-global__hint">dans quelle case passe votre temps</span>
           </button>
         </div>
       )}

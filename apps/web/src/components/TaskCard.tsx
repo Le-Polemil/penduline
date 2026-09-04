@@ -244,15 +244,21 @@ export function TaskCard({
             qu'un rappel décoratif du glisser. D'où le traitement inverse : l'un
             est nommé, l'autre masqué. Sans quoi un lecteur d'écran énonce les
             points braille de « ⠿ » sur chaque carte. */}
+        {/* La poignée est conditionnée à `drag`, comme le geste qu'elle annonce.
+            Sans cette garde, la revue (#47) — premier écran à ne pas passer
+            `drag` — affichait une poignée sur des cartes portant
+            `draggable="false"` : une affordance qui ne mène à rien. Aucun effet
+            sur l'écran matrice ni sur la vue globale, qui passent tous deux
+            `drag`. */}
         {pinnedCard ? (
           <span className="task__flag" role="img" aria-label="Épinglée">
             ⚑
           </span>
-        ) : (
+        ) : drag ? (
           <span className="task__grip" aria-hidden="true">
             ⠿
           </span>
-        )}
+        ) : null}
         <button
           className={`task__check${task.done ? ' task__check--done' : ''}`}
           onClick={onCheck}

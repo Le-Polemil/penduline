@@ -7,6 +7,8 @@ import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
 import { GlobalScreen, type Scope } from './screens/Global';
 import { FocusScreen } from './screens/Focus';
+import { ReviewScreen } from './screens/Review';
+import { StatsScreen } from './screens/Stats';
 import { AnnounceProvider } from './a11y/announce';
 import { ToastProvider } from './components/Toast';
 import { Search, type SearchHit } from './components/Search';
@@ -108,7 +110,11 @@ type View =
   | { kind: 'board'; id: string; focusTask?: string; openBin?: boolean }
   | { kind: 'global'; scope: Scope }
   /** Le mode « aujourd'hui » (#49). Sans portée : il regarde tout le compte. */
-  | { kind: 'focus' };
+  | { kind: 'focus' }
+  /** La revue périodique (#47). Sans portée : elle regarde tout le compte. */
+  | { kind: 'review' }
+  /** La rétrospective (#48). Sans portée : elle regarde tout le compte. */
+  | { kind: 'stats' };
 
 const HOME: View = { kind: 'home' };
 
@@ -138,6 +144,8 @@ function readView(): View {
     if (v.kind === 'board' && typeof v.id === 'string') return v;
     if (v.kind === 'global' && (v.scope?.kind === 'all' || typeof v.scope?.id === 'string')) return v;
     if (v.kind === 'focus') return v;
+    if (v.kind === 'review') return v;
+    if (v.kind === 'stats') return v;
     return HOME;
   } catch {
     // `sessionStorage` peut lever (navigation privée verrouillée), et le JSON
@@ -249,12 +257,18 @@ function Workspace({ userId }: { userId: string }) {
         />
       ) : view.kind === 'focus' ? (
         <FocusScreen store={store} />
+      ) : view.kind === 'review' ? (
+        <ReviewScreen store={store} onOpenBoard={(id) => setView({ kind: 'board', id })} />
+      ) : view.kind === 'stats' ? (
+        <StatsScreen store={store} />
       ) : (
         <Home
           store={store}
           onOpen={(id) => setView({ kind: 'board', id })}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
           onFocus={() => setView({ kind: 'focus' })}
+          onReview={() => setView({ kind: 'review' })}
+          onStats={() => setView({ kind: 'stats' })}
         />
       )}
     </>

@@ -1074,13 +1074,229 @@ button.uni-head__name:focus-visible {
   .task--flash { animation: none; box-shadow: 0 0 0 3px var(--color-accent-600); }
 }
 
-/* ── Mode « aujourd'hui » (#49) ───────────────────────────────────────────── */
+/* ── Revue périodique (#47) ───────────────────────────────────────────────── */
 
-/* Même conteneur que la revue (#47) et la rétrospective (#48) : les trois
-   tickets ajoutent un bouton frère ici, et partager le nom rend leur fusion
-   triviale. */
+/* Les lectures de l'accueil, côte à côte. En ligne plutôt qu'empilées : ce sont
+   des entrées de même rang, et les empiler aurait repoussé les matrices d'une
+   hauteur de bouton pour rien. */
 .home-lenses { display: flex; gap: 10px; margin: 0 0 18px; flex-wrap: wrap; }
 .home-lenses .home-global { flex: 1 1 240px; margin: 0; }
+/* La revue se distingue par sa teinte, pas par sa forme : même rang, autre nature. */
+.home-global--review { color: var(--color-accent-2-800); }
+.home-global--review:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+
+.review { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
+.review-head { margin-bottom: 26px; }
+.review-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
+.review-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-700); margin: 8px 0 10px; }
+.review-total { font: 600 12.5px var(--font-body); color: var(--color-neutral-700); }
+
+.review-signals { display: flex; flex-direction: column; gap: 14px; }
+
+.review-signal {
+  background: var(--card-warm); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); padding: 14px 16px 12px;
+}
+/* Un signal satisfait s'affiche, il ne se masque pas — mais il s'efface : le
+   regard doit tomber sur ce qui demande une décision. */
+.review-signal--clear { box-shadow: none; background: none; border: 1.5px dashed var(--color-neutral-300); }
+
+.review-signal__head { display: flex; align-items: center; gap: 10px; }
+.review-signal__toggle {
+  flex: 1; display: flex; align-items: center; gap: 8px;
+  background: none; border: none; padding: 0; cursor: pointer; text-align: left;
+  font: 400 19px/1.25 var(--font-heading); color: var(--color-text);
+}
+.review-signal__caret { flex: none; font-size: 12px; color: var(--color-neutral-700); }
+.review-signal__count {
+  flex: none; font: 700 14px var(--font-body); color: var(--color-accent-800);
+  background: var(--color-accent-100); border-radius: 999px; padding: 2px 11px;
+}
+.review-signal--clear .review-signal__count { color: var(--color-neutral-700); background: var(--color-neutral-100); }
+
+.review-signal__hint { font: 13px/1.45 var(--font-body); color: var(--color-neutral-700); margin: 4px 0 0 20px; }
+.review-signal__empty { font: 13.5px var(--font-body); color: var(--color-neutral-700); margin: 12px 0 0 20px; }
+.review-signal__empty--failed { color: var(--color-accent-700); }
+/* La réserve sur une mesure encore jeune. Discrète, mais dite : un signal vide
+   sans elle passerait pour un bilan. */
+.review-signal__note {
+  font: italic 12px/1.4 var(--font-body); color: var(--color-neutral-700);
+  margin: 12px 0 0 20px;
+}
+.review-signal__foot { margin: 12px 0 0 20px; }
+.review-signal__tune {
+  font: 600 12px var(--font-body); color: var(--color-neutral-700);
+  background: var(--color-neutral-100); border: none; border-radius: 999px;
+  padding: 4px 11px; cursor: pointer;
+}
+.review-signal__tune:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+.review-tune { display: inline-flex; align-items: center; gap: 8px; font: 600 12px var(--font-body); color: var(--color-neutral-700); }
+.review-tune input {
+  width: 72px; font: 600 13px var(--font-body); padding: 4px 8px;
+  border: 1.5px solid var(--color-neutral-400); border-radius: 8px; background: var(--card-warm);
+  color: var(--color-text);
+}
+
+.review-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 0; }
+.review-card { display: flex; flex-direction: column; gap: 3px; }
+/* La matrice d'origine : la revue agrège, donc sans elle on ne sait pas de quel
+   contexte la tâche parle. */
+.review-card__board {
+  font: 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--color-neutral-700); padding-left: 2px;
+}
+
+.review-board {
+  display: flex; align-items: baseline; gap: 10px; width: 100%;
+  background: var(--color-neutral-100); border: none; border-radius: 10px;
+  padding: 11px 14px; cursor: pointer; text-align: left;
+  font: 600 14px var(--font-body); color: var(--color-text);
+  transition: background 0.15s;
+}
+.review-board:hover { background: var(--color-accent-100); }
+.review-board__name { flex: 1; }
+.review-board__detail { flex: none; font: 400 12px var(--font-body); color: var(--color-neutral-700); }
+
+@media (max-width: 720px) {
+  .review { padding: 28px 16px 48px; }
+  .review-title { font-size: 28px; }
+  /* Une seule colonne : deux boutons à 240px ne tiennent pas côte à côte, et un
+     flex-wrap qui casse à mi-largeur est pire que l'empilement franc. */
+  .home-lenses { flex-direction: column; }
+  /* ⚠️ La base de `flex: 1 1 240px` porte sur l'axe PRINCIPAL : en colonne, elle
+     devient une HAUTEUR de 240px. Sans cette remise à zéro, chaque bouton
+     mesurait 240px de haut et l'accueil était illisible en mobile. */
+  .home-lenses .home-global { flex: 0 0 auto; }
+  /* Les retraits de 20px alignaient le texte sous le titre ; à cette largeur ils
+     ne coûtent que de la place. */
+  .review-signal__hint,
+  .review-signal__empty,
+  .review-signal__note,
+  .review-signal__foot { margin-left: 0; }
+}
+
+/* Cible tactile. `min-height` explicite plutôt qu'un calcul de marges : une
+   marge suffisante aujourd'hui cesse de l'être dès qu'on touche à la police, et
+   personne ne le remarque. 44px est le minimum des deux plateformes.
+
+   Ne couvre QUE les éléments propres à la revue. La case à cocher et le `⋯` des
+   cartes font 18px et sont partagés avec l'écran matrice et la vue globale :
+   c'est un défaut préexistant, et il appartient à #89. */
+@media (hover: none) {
+  .review-signal__toggle { min-height: 44px; }
+  .review-signal__tune { min-height: 44px; padding: 0 16px; }
+  .review-tune input { min-height: 44px; }
+  .review-board { min-height: 44px; padding: 12px 14px; }
+}
+
+/* ── Rétrospective (#48) ──────────────────────────────────────────────────── */
+
+/* `.home-lenses` est défini par la revue (#47), juste au-dessus : les deux
+   tickets ajoutent un bouton frère dans le même conteneur, et c'est elle qui
+   l'a introduit. Ne pas le redéclarer ici. */
+.home-global--stats { color: var(--color-accent-2-800); }
+.home-global--stats:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+
+.stats { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
+.stats-head { margin-bottom: 22px; }
+.stats-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
+.stats-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-700); margin: 8px 0 14px; }
+
+.stats-periods { display: flex; gap: 6px; flex-wrap: wrap; }
+.stats-period {
+  font: 600 13px var(--font-body); color: var(--color-neutral-700);
+  background: none; border: 1.5px solid var(--color-neutral-400); border-radius: 999px;
+  padding: 6px 14px; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.stats-period:hover { background: var(--color-accent-100); }
+.stats-period--on {
+  color: var(--color-accent-800); background: var(--color-accent-100);
+  border-color: var(--color-accent-600);
+}
+
+.stats-empty { font: 15px/1.6 var(--font-body); color: var(--color-neutral-700); margin: 24px 0; }
+
+/* La phrase avant les graphiques : c'est elle qu'on retient, et elle doit être
+   lue avant ce qui la fonde. */
+.stats-sentence {
+  font: 400 19px/1.5 var(--font-heading); color: var(--color-text);
+  background: var(--card-warm); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); padding: 18px 20px; margin: 0 0 20px;
+}
+
+.stats-fig {
+  margin: 0 0 18px; padding: 16px 18px 14px;
+  background: var(--card-warm); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.stats-fig__head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.stats-fig__title { font: 400 19px/1.25 var(--font-heading); color: var(--color-text); }
+.stats-fig__hint { font: 12.5px var(--font-body); color: var(--color-neutral-700); }
+.stats-note { font: italic 12px/1.45 var(--font-body); color: var(--color-neutral-700); margin: 12px 0 0; }
+
+/* ── Barres horizontales ─────────────────────────────────────────────────── */
+/* Horizontales et non verticales : les libellés de case tiennent en clair à côté
+   de leur barre, à toute largeur. En colonnes, ils basculeraient à la verticale
+   dès le mobile. */
+.bars { display: flex; flex-direction: column; gap: 9px; }
+.bar { display: grid; grid-template-columns: 5.5rem 1fr auto; align-items: center; gap: 10px; }
+.bar__label { font: 600 13px var(--font-body); color: var(--color-text); }
+/* Piste discrète : c'est le fond de l'échelle, pas une donnée. */
+.bar__track { height: 14px; background: var(--color-neutral-200); border-radius: 4px; overflow: hidden; }
+/* Extrémité arrondie de 4 px, ancrée à la ligne de base à gauche : la barre
+   part du zéro, elle ne flotte pas. */
+.bar__fill { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--color-neutral-500); min-width: 3px; }
+/* La valeur est TOUJOURS écrite : jamais de lecture qui dépende de la couleur. */
+.bar__value { font: 600 13px var(--font-body); color: var(--color-text); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bar__share { font: 400 12px var(--font-body); color: var(--color-neutral-700); }
+.bar__dot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+
+/* ── Petits multiples de la tendance ─────────────────────────────────────── */
+/* Un panneau par case, à échelle commune. Voir l'en-tête de `Stats.tsx` : la
+   palette des quadrants échoue comme série catégorielle, on change donc de forme
+   plutôt que de couleurs. */
+.spark-set { display: flex; flex-direction: column; gap: 12px; }
+.spark { display: grid; grid-template-columns: 5.5rem 1fr; align-items: end; gap: 10px; }
+.spark__name { font: 600 12px var(--font-body); }
+.spark__plot {
+  display: flex; align-items: flex-end; gap: 2px; height: 46px;
+  /* La série défile dans SON conteneur plutôt que d'élargir la page : douze mois
+     font 52 semaines, et aucune largeur d'écran ne les tient. */
+  overflow-x: auto; overflow-y: hidden;
+}
+.spark__col { flex: 1 0 6px; height: 100%; display: flex; align-items: flex-end; }
+/* Une semaine à zéro reste plate — c'est l'information, pas un trou. */
+.spark__bar { width: 100%; border-radius: 3px 3px 0 0; }
+.spark-axis {
+  display: flex; justify-content: space-between;
+  font: 11px var(--font-body); color: var(--color-neutral-700);
+  margin-left: calc(5.5rem + 10px);
+}
+
+@media (max-width: 720px) {
+  .stats { padding: 28px 16px 48px; }
+  .stats-title { font-size: 28px; }
+  .stats-sentence { font-size: 17px; padding: 15px 16px; }
+  /* `.home-lenses` passe en colonne dans le bloc de la revue (#47) plus haut,
+     qui porte aussi la mise en garde sur `flex: 1 1 240px`. Pas de doublon. */
+  /* Les libellés passent au-dessus de leur barre : à 390 px, 5,5 rem de gouttière
+     ne laissent plus de place à la barre elle-même. */
+  .bar { grid-template-columns: 1fr auto; grid-template-areas: "label value" "track track"; row-gap: 4px; }
+  .bar__label { grid-area: label; }
+  .bar__value { grid-area: value; }
+  .bar__track { grid-area: track; }
+  .spark { grid-template-columns: 1fr; align-items: stretch; }
+  .spark-axis { margin-left: 0; }
+}
+
+@media (hover: none) {
+  .stats-period { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; }
+}
+
+/* ── Mode « aujourd'hui » (#49) ───────────────────────────────────────────── */
+
+/* `.home-lenses` est défini par la revue (#47), plus haut : les trois lentilles
+   ajoutent un bouton frère dans le même conteneur, et c'est elle qui l'a
+   introduit. Ne pas le redéclarer ici. */
 .home-global--focus { color: var(--color-accent-800); border-style: solid; }
 .home-global--focus:hover { background: var(--color-accent-100); border-color: var(--color-accent-600); }
 
@@ -1159,10 +1375,8 @@ button.uni-head__name:focus-visible {
 @media (max-width: 720px) {
   .focus { padding: 28px 16px 48px; }
   .focus-title { font-size: 28px; }
-  /* ⚠️ La base de `flex: 1 1 240px` porte sur l'axe PRINCIPAL : en colonne elle
-     devient une HAUTEUR, et chaque bouton mesurerait 240 px de haut. */
-  .home-lenses { flex-direction: column; }
-  .home-lenses .home-global { flex: 0 0 auto; }
+  /* `.home-lenses` passe en colonne dans le bloc de la revue (#47), qui porte
+     aussi la mise en garde sur `flex: 1 1 240px`. Pas de doublon. */
 }
 
 @media (hover: none) {
