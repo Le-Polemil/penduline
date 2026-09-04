@@ -105,12 +105,14 @@ export function Home({
   store,
   onOpen,
   onGlobal,
+  onFocus,
   onReview,
   onStats,
 }: {
   store: Store;
   onOpen: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
+  onFocus: () => void;
   onReview: () => void;
   onStats: () => void;
 }) {
@@ -388,13 +390,19 @@ export function Home({
             Vue globale
             <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
           </button>
+          {/* La lentille tournée vers le jour même : ce sur quoi on s'est
+              engagé, par opposition à tout ce qu'il y aurait à faire (#49). */}
+          <button className="home-global home-global--focus" onClick={onFocus}>
+            Aujourd'hui
+            <span className="home-global__hint">ce sur quoi vous vous engagez</span>
+          </button>
           {/* Le seul rappel du produit, et il est passif : un repère, pas une
               relance. Un outil qui harcèle finit désinstallé (#47). */}
           <button className="home-global home-global--review" onClick={onReview}>
             Revue
             <span className="home-global__hint">{reviewHint}</span>
           </button>
-          {/* Troisième lentille, et la seule tournée vers le passé : la revue
+          {/* Quatrième lentille, et la seule tournée vers le passé : la revue
               dit ce qui stagne, la rétrospective où le temps est passé (#48). */}
           <button className="home-global home-global--stats" onClick={onStats}>
             Rétrospective

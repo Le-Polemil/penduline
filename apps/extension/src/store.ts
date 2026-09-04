@@ -6,7 +6,7 @@ import { supabase } from './supabase';
 import { useToast } from './toast';
 
 const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, due_at, created_at, updated_at';
+  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, due_at, focus_day, created_at, updated_at';
 
 export interface ExtStore {
   ready: boolean;

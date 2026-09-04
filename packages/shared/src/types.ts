@@ -71,6 +71,14 @@ export interface Task {
   created_at: string;
   updated_at: string;
   /**
+   * Le jour pour lequel la tâche a été choisie (#49). `null` = hors sélection.
+   *
+   * Date LOCALE, écrite par le client, jamais convertie par la base. La
+   * sélection n'expire pas : elle cesse de correspondre au jour courant. Et la
+   * valeur de la veille survit exprès — c'est elle qui permet le bilan du soir.
+   */
+  focus_day: string | null;
+  /**
    * Dernier changement de CASE — et rien d'autre (#47).
    *
    * `updated_at` ne pouvait pas jouer ce rôle : son trigger l'écrase à chaque
@@ -108,6 +116,8 @@ export type TaskPatch = Partial<
     | 'pair_id'
     | 'parent_id'
     | 'due_at'
+    /** Entrer dans la sélection du jour, ou en sortir (#49). */
+    | 'focus_day'
     /**
      * Jamais écrit en avant — la base le tient elle-même par trigger. Il n'est
      * ici que pour l'INVERSE d'annulation : une annulation étant elle-même un

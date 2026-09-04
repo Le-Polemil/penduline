@@ -1076,9 +1076,9 @@ button.uni-head__name:focus-visible {
 
 /* ── Revue périodique (#47) ───────────────────────────────────────────────── */
 
-/* Les deux lectures de l'accueil, côte à côte. En ligne plutôt qu'empilées :
-   ce sont deux entrées de même rang, et les empiler aurait repoussé les
-   matrices d'une hauteur de bouton pour rien. */
+/* Les lectures de l'accueil, côte à côte. En ligne plutôt qu'empilées : ce sont
+   des entrées de même rang, et les empiler aurait repoussé les matrices d'une
+   hauteur de bouton pour rien. */
 .home-lenses { display: flex; gap: 10px; margin: 0 0 18px; flex-wrap: wrap; }
 .home-lenses .home-global { flex: 1 1 240px; margin: 0; }
 /* La revue se distingue par sa teinte, pas par sa forme : même rang, autre nature. */
@@ -1290,4 +1290,96 @@ button.uni-head__name:focus-visible {
 
 @media (hover: none) {
   .stats-period { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; }
+}
+
+/* ── Mode « aujourd'hui » (#49) ───────────────────────────────────────────── */
+
+/* `.home-lenses` est défini par la revue (#47), plus haut : les trois lentilles
+   ajoutent un bouton frère dans le même conteneur, et c'est elle qui l'a
+   introduit. Ne pas le redéclarer ici. */
+.home-global--focus { color: var(--color-accent-800); border-style: solid; }
+.home-global--focus:hover { background: var(--color-accent-100); border-color: var(--color-accent-600); }
+
+.focus { max-width: 620px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
+.focus-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 22px; }
+.focus-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
+.focus-count {
+  margin-left: auto; font: 600 15px var(--font-body); color: var(--color-neutral-700);
+  background: var(--color-neutral-100); border-radius: 999px; padding: 4px 12px;
+}
+
+.focus-empty { font: 15px/1.6 var(--font-body); color: var(--color-neutral-700); margin: 24px 0; }
+.focus-kbd {
+  font: 600 13px var(--font-body); background: var(--color-neutral-200);
+  border-radius: 5px; padding: 1px 6px;
+}
+.focus-room { font: 13.5px var(--font-body); color: var(--color-neutral-700); margin: 14px 0 0; }
+
+.focus-list { display: flex; flex-direction: column; gap: 12px; }
+.focus-item { display: flex; flex-direction: column; gap: 3px; }
+/* La matrice d'origine : la sélection agrège, donc sans elle on ne sait plus de
+   quel contexte on parle. */
+.focus-item__board {
+  font: 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.5px;
+  color: var(--color-neutral-700); padding-left: 2px;
+}
+/* Une tâche faite reste affichée, en retrait : la faire disparaître effacerait
+   la preuve de l'avancement, qui est la moitié de l'intérêt de l'écran. */
+.focus-item--done { opacity: 0.62; }
+
+/* ── La limite, assumée à l'écran ────────────────────────────────────────── */
+.focus-limit { margin: 26px 0 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
+.focus-limit__btn {
+  font: 600 12px var(--font-body); color: var(--color-neutral-700);
+  background: var(--color-neutral-100); border: none; border-radius: 999px;
+  padding: 5px 12px; cursor: pointer;
+}
+.focus-limit__btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+.focus-limit__field { display: inline-flex; align-items: center; gap: 8px; font: 600 12px var(--font-body); color: var(--color-neutral-700); }
+.focus-limit__field input {
+  width: 66px; font: 600 13px var(--font-body); padding: 5px 8px;
+  border: 1.5px solid var(--color-neutral-400); border-radius: 8px;
+  background: var(--card-warm); color: var(--color-text);
+}
+.focus-limit__why { font: italic 11.5px/1.45 var(--font-body); color: var(--color-neutral-700); max-width: 46ch; }
+
+/* ── Le bilan ────────────────────────────────────────────────────────────── */
+.focus-bilan {
+  margin: 30px 0 0; padding: 16px 18px;
+  background: var(--card-warm); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.focus-bilan__title { font: 400 19px/1.25 var(--font-heading); color: var(--color-text); margin: 0 0 12px; }
+/* `capitalize` donnait « Mardi 1 Septembre » : en français, les noms de mois et
+   de jour sont en minuscules. Seule la première lettre de la phrase se hausse. */
+.focus-bilan__title::first-letter { text-transform: uppercase; }
+.focus-bilan__group { margin-bottom: 12px; }
+.focus-bilan__group:last-child { margin-bottom: 0; }
+.focus-bilan__label {
+  font: 700 10.5px var(--font-body); text-transform: uppercase; letter-spacing: 0.07em;
+  color: var(--color-neutral-700);
+}
+.focus-bilan__ul { margin: 5px 0 0; padding-left: 18px; font: 13.5px/1.6 var(--font-body); color: var(--color-text); }
+.focus-bilan__note { font: italic 12px var(--font-body); color: var(--color-neutral-700); margin: 5px 0 0; }
+
+/* ── L'entrée de menu de la carte ────────────────────────────────────────── */
+.task-menu__action--focus { color: var(--color-accent-800); }
+/* Désactivée, pas masquée : la limite doit se voir. */
+.task-menu__action--off {
+  display: block; color: var(--color-neutral-500); cursor: not-allowed;
+}
+.task-menu__why {
+  display: block; font: italic 11px/1.4 var(--font-body); color: var(--color-neutral-700);
+  margin-top: 2px; white-space: normal; max-width: 22ch;
+}
+
+@media (max-width: 720px) {
+  .focus { padding: 28px 16px 48px; }
+  .focus-title { font-size: 28px; }
+  /* `.home-lenses` passe en colonne dans le bloc de la revue (#47), qui porte
+     aussi la mise en garde sur `flex: 1 1 240px`. Pas de doublon. */
+}
+
+@media (hover: none) {
+  .focus-limit__btn { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; }
+  .focus-limit__field input { min-height: 44px; }
 }

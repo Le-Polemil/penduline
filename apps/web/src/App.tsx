@@ -6,6 +6,7 @@ import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
 import { GlobalScreen, type Scope } from './screens/Global';
+import { FocusScreen } from './screens/Focus';
 import { ReviewScreen } from './screens/Review';
 import { StatsScreen } from './screens/Stats';
 import { AnnounceProvider } from './a11y/announce';
@@ -108,6 +109,8 @@ type View =
    */
   | { kind: 'board'; id: string; focusTask?: string; openBin?: boolean }
   | { kind: 'global'; scope: Scope }
+  /** Le mode « aujourd'hui » (#49). Sans portée : il regarde tout le compte. */
+  | { kind: 'focus' }
   /** La revue périodique (#47). Sans portée : elle regarde tout le compte. */
   | { kind: 'review' }
   /** La rétrospective (#48). Sans portée : elle regarde tout le compte. */
@@ -140,6 +143,7 @@ function readView(): View {
     const v = JSON.parse(raw) as View;
     if (v.kind === 'board' && typeof v.id === 'string') return v;
     if (v.kind === 'global' && (v.scope?.kind === 'all' || typeof v.scope?.id === 'string')) return v;
+    if (v.kind === 'focus') return v;
     if (v.kind === 'review') return v;
     if (v.kind === 'stats') return v;
     return HOME;
@@ -251,6 +255,8 @@ function Workspace({ userId }: { userId: string }) {
           scope={view.scope}
           onScope={(scope) => setView({ kind: 'global', scope })}
         />
+      ) : view.kind === 'focus' ? (
+        <FocusScreen store={store} />
       ) : view.kind === 'review' ? (
         <ReviewScreen store={store} onOpenBoard={(id) => setView({ kind: 'board', id })} />
       ) : view.kind === 'stats' ? (
@@ -260,6 +266,7 @@ function Workspace({ userId }: { userId: string }) {
           store={store}
           onOpen={(id) => setView({ kind: 'board', id })}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
+          onFocus={() => setView({ kind: 'focus' })}
           onReview={() => setView({ kind: 'review' })}
           onStats={() => setView({ kind: 'stats' })}
         />
