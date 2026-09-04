@@ -14,6 +14,17 @@ import { ToastProvider } from './components/Toast';
 import { Search, type SearchHit } from './components/Search';
 import { useUndoShortcut } from './data/useUndoShortcut';
 import { clearSessionNotice, readSessionNotice } from './lib/session-notice';
+import { shareSession, shareSignOut } from './lib/extension-bridge';
+
+/**
+ * Les événements qui valent la peine d'être poussés vers l'extension.
+ *
+ * `TOKEN_REFRESHED` y est pour que l'extension reçoive un access token frais
+ * plutôt que d'avoir à le renouveler elle-même au premier clic droit. Les autres
+ * (`USER_UPDATED`, `PASSWORD_RECOVERY`…) ne changent pas les jetons : les pousser
+ * serait du bruit.
+ */
+const SHARED_EVENTS = new Set(['INITIAL_SESSION', 'SIGNED_IN', 'TOKEN_REFRESHED']);
 
 /**
  * Lit ce que GoTrue a déposé dans le fragment d'URL en renvoyant l'utilisateur.
@@ -79,6 +90,14 @@ export function App() {
       // l'écran de changement de mot de passe serait purement et simplement
       // sauté, et l'utilisateur repartirait avec son ancien mot de passe.
       if (event === 'PASSWORD_RECOVERY') setRecovering(true);
+
+      // L'extension se connecte dans notre sillage (voir `lib/extension-bridge`).
+      // `INITIAL_SESSION` compte autant que `SIGNED_IN` : c'est lui qui couvre
+      // l'extension installée APRÈS coup, sur un navigateur déjà connecté ici —
+      // sans lui, il faudrait se déconnecter pour se reconnecter.
+      if (SHARED_EVENTS.has(event) && s) shareSession(s);
+      if (event === 'SIGNED_OUT') shareSignOut();
+
       setSession(s);
     });
     return () => sub.subscription.unsubscribe();

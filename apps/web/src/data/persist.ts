@@ -64,7 +64,21 @@ export function usePersist(): Persist {
   return useCallback(
     async function persist<T>(op: WriteOp<T>): Promise<WriteOutcome<T>> {
       op.apply?.();
-      const { data, error, status } = await op.write();
+      let { data, error, status } = await op.write();
+
+      // ⚠️ UN 401 N'EST PAS UNE SESSION MORTE. Le cas de loin le plus fréquent
+      // est l'access token périmé pendant que la machine dormait : auth-js le
+      // renouvelle bien au réveil, mais sur `visibilitychange`, et le premier
+      // geste de l'utilisateur peut très bien partir avant. Conclure tout de
+      // suite à l'expiration renvoyait l'utilisateur à l'écran de connexion
+      // alors que sa session était parfaitement valide.
+      //
+      // Une seule tentative, et pas de boucle : si le rafraîchissement échoue,
+      // la session est réellement morte et la suite s'en charge.
+      if (error && classifyWriteFailure(error, status, op.label).kind === 'session') {
+        const { error: refus } = await supabase.auth.refreshSession();
+        if (!refus) ({ data, error, status } = await op.write());
+      }
 
       if (!error) {
         if (data !== null) op.commit?.(data);
