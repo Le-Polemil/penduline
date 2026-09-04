@@ -60,18 +60,55 @@ async function readBoards(): Promise<CachedBoard[]> {
 }
 
 /**
- * Reconstruit le menu de zéro. `removeAll` d'abord : `create` lève si un
- * identifiant existe déjà, et le worker peut redémarrer avec des menus encore
- * enregistrés.
+ * Crée une entrée en ACCUSANT réception de l'échec.
+ *
+ * `chrome.contextMenus.create` ne rend pas de promesse : sans rappel, un échec
+ * atterrit dans `chrome.runtime.lastError` que personne ne lit, et Chrome
+ * l'imprime en « Unchecked runtime.lastError » dans la console de
+ * l'utilisateur — ce qui se lit comme un plantage de l'extension. Le rappel
+ * n'est pas là pour étouffer l'erreur mais pour la rendre NOTRE ligne de log,
+ * au même format que le reste du fichier.
+ */
+function createItem(props: chrome.contextMenus.CreateProperties) {
+  chrome.contextMenus.create(props, () => {
+    const err = chrome.runtime.lastError;
+    if (err) console.error('[penduline] menu', props.id, err.message);
+  });
+}
+
+/**
+ * Reconstruit le menu de zéro.
+ *
+ * ⚠️ **L'ordre des lectures est le correctif de #105, et il n'est pas
+ * cosmétique.** `removeAll` était appelé d'abord, puis venaient DEUX `await`
+ * (le cache des matrices, la matrice active) avant le premier `create`. Deux
+ * reconstructions qui se chevauchaient passaient donc toutes les deux le
+ * `removeAll`, puis arrivaient toutes les deux sur `ROOT_ACTIVE` : la seconde
+ * échouait sur « Cannot create item with duplicate id », et le menu restait
+ * amputé de tout ce qui suivait.
+ *
+ * Les lectures passent donc AVANT. Après l'unique `await` restant — celui de
+ * `removeAll` — tous les `create` s'enchaînent **dans le même tour de boucle**,
+ * sans point de suspension entre eux : aucune autre reconstruction ne peut
+ * s'insérer au milieu. La fenêtre disparaît par construction, et non par chance
+ * d'ordonnancement.
+ *
+ * C'est CE changement qui corrige le défaut. `rebuildMenus` sérialise par
+ * ailleurs, et achète autre chose : sans lui, trois appels concurrents ne
+ * collisionnent plus mais se piétinent quand même — chacun efface les entrées
+ * que le précédent venait de poser, pour les reposer à l'identique. L'état final
+ * est juste, le travail est fait trois fois, et le menu clignote entre-temps.
  */
 async function buildMenus() {
-  await chrome.contextMenus.removeAll();
-
+  // Lues d'abord — voir l'avertissement ci-dessus.
   const boards = await readBoards();
   const activeId = await getActiveBoard();
   const active = boards.find((b) => b.id === activeId) ?? boards[0];
 
-  chrome.contextMenus.create({
+  // À partir d'ici, plus aucun `await` jusqu'au dernier `create`.
+  await chrome.contextMenus.removeAll();
+
+  createItem({
     id: ROOT_ACTIVE,
     // Sans matrice connue, on reste générique : l'utilisateur découvrira la
     // destination au premier usage plutôt que de lire un nom faux.
@@ -81,9 +118,9 @@ async function buildMenus() {
 
   const others = boards.filter((b) => b.id !== active?.id);
   if (others.length > 0) {
-    chrome.contextMenus.create({ id: ROOT_OTHER, title: 'Autre matrice', contexts: CONTEXTS });
+    createItem({ id: ROOT_OTHER, title: 'Autre matrice', contexts: CONTEXTS });
     for (const b of others) {
-      chrome.contextMenus.create({
+      createItem({
         id: `${ROOT_OTHER}:${b.id}`,
         parentId: ROOT_OTHER,
         title: b.name,
@@ -91,6 +128,34 @@ async function buildMenus() {
       });
     }
   }
+}
+
+/**
+ * Le seul point d'entrée pour reconstruire le menu. **Ne jamais appeler
+ * `buildMenus` directement.**
+ *
+ * Trois choses le déclenchent — `onInstalled`, `onStartup`, et le message
+ * `boards` que le panneau pousse à chaque chargement — et à l'installation sur
+ * un profil neuf, plusieurs tombent à quelques millisecondes d'intervalle.
+ *
+ * ⚠️ Ce n'est PAS ici que #105 est corrigé : c'est l'ordre des lectures dans
+ * `buildMenus` qui ferme la collision. La file évite le gâchis restant — trois
+ * appels concurrents qui s'effacent l'un l'autre pour reconstruire trois fois le
+ * même menu — et garantit un seul écrivain à la fois, ce qui rend le prochain
+ * point d'appel sans danger.
+ *
+ * Une chaîne de promesses plutôt qu'un vrai verrou : une reconstruction, c'est
+ * deux lectures de stockage et une poignée de `create`. En rejouer une de trop
+ * ne se mesure pas, alors que coalescer demanderait un état à tenir juste.
+ *
+ * Le `catch` porte sur le maillon PRÉCÉDENT : sans lui, une reconstruction qui
+ * échoue empoisonne la chaîne et aucune suivante ne partirait jamais.
+ */
+let file: Promise<unknown> = Promise.resolve();
+
+function rebuildMenus(): Promise<void> {
+  file = file.catch(() => {}).then(buildMenus);
+  return file as Promise<void>;
 }
 
 // ── Capture ──────────────────────────────────────────────────────────────────
@@ -183,7 +248,7 @@ async function capture(boardId: string | null, title: string, url = '') {
  *
  * C'est ce que remplace le retrait de `action.default_popup` du manifeste : tant
  * qu'il y était, il gagnait sur tout le reste et cette préférence n'avait aucun
- * effet. Déclarée aux deux événements comme `buildMenus`, parce que le worker
+ * effet. Déclarée aux deux événements comme `rebuildMenus`, parce que le worker
  * MV3 est tué en permanence et qu'aucun des deux seul ne couvre tous les
  * réveils.
  */
@@ -195,11 +260,11 @@ function preferPanel() {
 
 chrome.runtime.onInstalled.addListener(() => {
   preferPanel();
-  void buildMenus();
+  void rebuildMenus();
 });
 chrome.runtime.onStartup.addListener(() => {
   preferPanel();
-  void buildMenus();
+  void rebuildMenus();
 });
 
 /** Le panneau pousse la liste des matrices à chaque chargement. */
@@ -207,7 +272,7 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; boards?: CachedBoard
   if (msg?.type !== 'boards' || !Array.isArray(msg.boards)) return;
   void (async () => {
     await chrome.storage.local.set({ [BOARDS_KEY]: msg.boards });
-    await buildMenus();
+    await rebuildMenus();
   })();
 });
 

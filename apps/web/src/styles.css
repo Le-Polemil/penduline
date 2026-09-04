@@ -1188,3 +1188,106 @@ button.uni-head__name:focus-visible {
   .review-tune input { min-height: 44px; }
   .review-board { min-height: 44px; padding: 12px 14px; }
 }
+
+/* ── Rétrospective (#48) ──────────────────────────────────────────────────── */
+
+/* `.home-lenses` est défini par la revue (#47), juste au-dessus : les deux
+   tickets ajoutent un bouton frère dans le même conteneur, et c'est elle qui
+   l'a introduit. Ne pas le redéclarer ici. */
+.home-global--stats { color: var(--color-accent-2-800); }
+.home-global--stats:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+
+.stats { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
+.stats-head { margin-bottom: 22px; }
+.stats-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
+.stats-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-700); margin: 8px 0 14px; }
+
+.stats-periods { display: flex; gap: 6px; flex-wrap: wrap; }
+.stats-period {
+  font: 600 13px var(--font-body); color: var(--color-neutral-700);
+  background: none; border: 1.5px solid var(--color-neutral-400); border-radius: 999px;
+  padding: 6px 14px; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.stats-period:hover { background: var(--color-accent-100); }
+.stats-period--on {
+  color: var(--color-accent-800); background: var(--color-accent-100);
+  border-color: var(--color-accent-600);
+}
+
+.stats-empty { font: 15px/1.6 var(--font-body); color: var(--color-neutral-700); margin: 24px 0; }
+
+/* La phrase avant les graphiques : c'est elle qu'on retient, et elle doit être
+   lue avant ce qui la fonde. */
+.stats-sentence {
+  font: 400 19px/1.5 var(--font-heading); color: var(--color-text);
+  background: var(--card-warm); border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm); padding: 18px 20px; margin: 0 0 20px;
+}
+
+.stats-fig {
+  margin: 0 0 18px; padding: 16px 18px 14px;
+  background: var(--card-warm); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.stats-fig__head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.stats-fig__title { font: 400 19px/1.25 var(--font-heading); color: var(--color-text); }
+.stats-fig__hint { font: 12.5px var(--font-body); color: var(--color-neutral-700); }
+.stats-note { font: italic 12px/1.45 var(--font-body); color: var(--color-neutral-700); margin: 12px 0 0; }
+
+/* ── Barres horizontales ─────────────────────────────────────────────────── */
+/* Horizontales et non verticales : les libellés de case tiennent en clair à côté
+   de leur barre, à toute largeur. En colonnes, ils basculeraient à la verticale
+   dès le mobile. */
+.bars { display: flex; flex-direction: column; gap: 9px; }
+.bar { display: grid; grid-template-columns: 5.5rem 1fr auto; align-items: center; gap: 10px; }
+.bar__label { font: 600 13px var(--font-body); color: var(--color-text); }
+/* Piste discrète : c'est le fond de l'échelle, pas une donnée. */
+.bar__track { height: 14px; background: var(--color-neutral-200); border-radius: 4px; overflow: hidden; }
+/* Extrémité arrondie de 4 px, ancrée à la ligne de base à gauche : la barre
+   part du zéro, elle ne flotte pas. */
+.bar__fill { display: block; height: 100%; border-radius: 0 4px 4px 0; background: var(--color-neutral-500); min-width: 3px; }
+/* La valeur est TOUJOURS écrite : jamais de lecture qui dépende de la couleur. */
+.bar__value { font: 600 13px var(--font-body); color: var(--color-text); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.bar__share { font: 400 12px var(--font-body); color: var(--color-neutral-700); }
+.bar__dot { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+
+/* ── Petits multiples de la tendance ─────────────────────────────────────── */
+/* Un panneau par case, à échelle commune. Voir l'en-tête de `Stats.tsx` : la
+   palette des quadrants échoue comme série catégorielle, on change donc de forme
+   plutôt que de couleurs. */
+.spark-set { display: flex; flex-direction: column; gap: 12px; }
+.spark { display: grid; grid-template-columns: 5.5rem 1fr; align-items: end; gap: 10px; }
+.spark__name { font: 600 12px var(--font-body); }
+.spark__plot {
+  display: flex; align-items: flex-end; gap: 2px; height: 46px;
+  /* La série défile dans SON conteneur plutôt que d'élargir la page : douze mois
+     font 52 semaines, et aucune largeur d'écran ne les tient. */
+  overflow-x: auto; overflow-y: hidden;
+}
+.spark__col { flex: 1 0 6px; height: 100%; display: flex; align-items: flex-end; }
+/* Une semaine à zéro reste plate — c'est l'information, pas un trou. */
+.spark__bar { width: 100%; border-radius: 3px 3px 0 0; }
+.spark-axis {
+  display: flex; justify-content: space-between;
+  font: 11px var(--font-body); color: var(--color-neutral-700);
+  margin-left: calc(5.5rem + 10px);
+}
+
+@media (max-width: 720px) {
+  .stats { padding: 28px 16px 48px; }
+  .stats-title { font-size: 28px; }
+  .stats-sentence { font-size: 17px; padding: 15px 16px; }
+  /* `.home-lenses` passe en colonne dans le bloc de la revue (#47) plus haut,
+     qui porte aussi la mise en garde sur `flex: 1 1 240px`. Pas de doublon. */
+  /* Les libellés passent au-dessus de leur barre : à 390 px, 5,5 rem de gouttière
+     ne laissent plus de place à la barre elle-même. */
+  .bar { grid-template-columns: 1fr auto; grid-template-areas: "label value" "track track"; row-gap: 4px; }
+  .bar__label { grid-area: label; }
+  .bar__value { grid-area: value; }
+  .bar__track { grid-area: track; }
+  .spark { grid-template-columns: 1fr; align-items: stretch; }
+  .spark-axis { margin-left: 0; }
+}
+
+@media (hover: none) {
+  .stats-period { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; }
+}
