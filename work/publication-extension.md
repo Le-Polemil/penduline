@@ -266,6 +266,46 @@ change : mêmes écrans, mêmes gestes, mêmes données. C'est l'hôte qui bouge
 > sous les yeux pendant que vous naviguez, et la fenêtre ne se referme plus au
 > premier clic dans la page.
 
+## Version 1.4.0 — notes de publication
+
+**Trois changements en une soumission.** Même arbitrage qu'en 1.1.0 : chaque
+envoi repasse en revue, les étaler coûterait trois examens.
+
+**Nouveautés**
+
+- **Un badge sur l'icône** (#108) : le nombre de tâches du jour restantes, sans
+  rien ouvrir. C'est le nombre du bandeau « Aujourd'hui », posé sur la barre
+  d'outils. Zéro efface le badge plutôt que d'écrire « 0 ».
+- **Se connecter sur l'app web connecte l'extension** (#107). Plus de seconde
+  saisie de mot de passe : l'app web pousse sa session, l'extension la reprend.
+  La déconnexion est propagée elle aussi.
+- **Le bandeau « Aujourd'hui »** dans le panneau (#104) — ce sur quoi on s'est
+  engagé, visible à l'ouverture.
+
+**Correction**
+
+- Plus de menu contextuel en doublon à l'installation (#106).
+
+**Ce qui touche la fiche du Store**
+
+- **`externally_connectable` ajouté au manifeste**, limité à
+  `https://penduline.polemil.dev/*`. Ce n'est PAS une permission : aucun
+  avertissement à l'installation, rien à justifier dans le formulaire. La revue
+  reste standard — `host_permissions` est toujours absent.
+- **L'usage des données ne change pas.** Le jeton de session arrive désormais
+  aussi par l'app web, mais « informations d'authentification » était déjà coché
+  et couvre exactement ça. La nature de la donnée est la même, seul son chemin
+  change.
+- **Les captures d'écran restent à refaire** — la dette de la 1.3.0 n'a pas été
+  soldée, elles montrent encore un popup. Le bandeau « Aujourd'hui » et le badge
+  méritent d'y figurer.
+
+**Texte court pour la fiche :**
+
+> Votre icône affiche ce qu'il vous reste à faire aujourd'hui, et vous n'avez
+> plus à vous connecter deux fois : ouvrir Penduline sur le web connecte aussi
+> l'extension.
+
 ## Le point à peser avant de publier
 
 **L'inscription est ouverte.** `DISABLE_SIGNUP` vaut toujours `false` sur l'API.
