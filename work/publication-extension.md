@@ -126,6 +126,22 @@ approfondi.
 
 ## Politique de confidentialité
 
+> ⚠️ **Corrigée le 5 septembre 2026 — elle était FAUSSE depuis la 1.1.0.**
+>
+> Elle affirmait « L'extension ne lit aucune page web » et « ni contenu des pages
+> que vous visitez », alors que la capture contextuelle lit la sélection, l'URL du
+> lien et le titre de la page **depuis la 1.1.0**, c'est-à-dire depuis la version
+> publiée. Le formulaire déclare « contenu des sites web » coché : un examinateur
+> qui compare la déclaration et la page liée voyait une contradiction, et c'est
+> exactement le motif d'un retrait.
+>
+> La page décrit maintenant ce qui est réellement collecté : la capture
+> contextuelle et l'adresse jointe, le passage du jeton de l'app web vers
+> l'extension (#107), les échéances et les étapes, et les repères gardés sur
+> l'appareil. **Elle est servie par l'app web** : elle ne sera à jour en ligne
+> qu'après un déploiement du front.
+
+
 Publiée à `https://penduline.polemil.dev/confidentialite`
 (`apps/web/public/confidentialite/index.html`). Page autonome : aucune police
 distante, aucun script, pour rester lisible même si l'application est en panne.
@@ -162,19 +178,36 @@ coup.
 
 **Justification de la permission `storage`**
 
-> L'extension conserve deux choses dans le stockage local : le jeton de session,
-> pour éviter à l'utilisateur de se reconnecter à chaque ouverture du panneau, et
-> l'identifiant de la dernière matrice consultée, afin de la rouvrir directement
-> pendant deux heures. Rien n'est transmis à un tiers.
+> L'extension conserve dans le stockage local, sur l'appareil de l'utilisateur et
+> nulle part ailleurs :
+>
+> - son **jeton de session**, pour lui éviter de se reconnecter à chaque
+>   ouverture du panneau ;
+> - l'**identifiant de la dernière matrice consultée**, afin de la rouvrir
+>   directement pendant deux heures ;
+> - le **nom de ses matrices**, parce que les entrées de menu contextuel doivent
+>   être enregistrées avant tout clic droit et ne peuvent pas être calculées au
+>   moment du clic ;
+> - le **nombre de tâches du jour**, affiché sur l'icône ;
+> - la **capture en attente**, le temps que le formulaire s'ouvre — effacée
+>   aussitôt.
+>
+> Rien n'est transmis à un tiers.
+
+*Les trois derniers points sont nouveaux depuis la 1.1.0 : le menu contextuel
+(1.1.0), le badge (1.4.0) et le formulaire de capture (ex-1.2.0). La justification
+en ligne ne mentionne que les deux premiers — elle est donc à remplacer, pas à
+compléter.*
 
 **Justification de la permission `contextMenus`** *(nouveau en 1.1.0)*
 
 > L'extension ajoute une entrée « Ajouter à Penduline » au menu contextuel, pour
 > créer une tâche à partir d'un texte sélectionné, d'un lien ou de la page en
-> cours. Cette permission sert uniquement à afficher cette entrée. Elle
-> n'accorde aucun accès au contenu des pages : l'extension ne reçoit que ce que
-> l'utilisateur a lui-même sélectionné, et seulement au moment où il clique sur
-> l'entrée.
+> cours. L'adresse de la page peut être jointe à la tâche ainsi créée, afin que
+> l'utilisateur retrouve sa source. Cette permission sert uniquement à afficher
+> cette entrée. Elle n'accorde aucun accès au contenu des pages : l'extension ne
+> reçoit que ce que l'utilisateur a lui-même désigné, et seulement au moment où
+> il clique sur l'entrée.
 
 **Justification de la permission `sidePanel`** *(écrite pour la 1.3.0, jamais
 soumise — c'est donc une **nouvelle permission** pour la fiche en 1.4.0)*
@@ -211,9 +244,10 @@ Justification à joindre :
 
 > Lorsque l'utilisateur choisit « Ajouter à Penduline » dans le menu contextuel,
 > le texte qu'il a sélectionné (ou, à défaut, l'adresse du lien ou le titre de la
-> page) devient l'intitulé de la tâche créée dans son propre compte. Rien n'est
-> lu en dehors de cette action explicite, rien n'est transmis à un tiers, et
-> aucune page n'est parcourue en arrière-plan.
+> page) devient l'intitulé de la tâche créée dans son propre compte, et l'adresse
+> de la page peut y être jointe pour qu'il en retrouve la source. Rien n'est lu
+> en dehors de cette action explicite, rien n'est transmis à un tiers, et aucune
+> page n'est parcourue en arrière-plan.
 
 Ne PAS cocher activité de navigation, localisation ni communications
 personnelles : l'extension ne suit aucune navigation et ne lit rien de sa propre
@@ -225,13 +259,20 @@ Puis certifier les trois points : données non revendues, non utilisées à des 
 **Description proposée pour la fiche**
 
 > Urgent n'est pas important. Penduline range vos tâches selon ces deux axes —
-> faire, planifier, déléguer, éliminer — et vous les rend en un clic depuis votre
-> barre d'outils.
+> faire, planifier, déléguer, éliminer — et vous les garde à portée de main
+> pendant que vous naviguez.
 >
 > Organisez autant de matrices que vous voulez, selon le découpage qui vous
-> convient : un lieu, un moment de la journée, un projet. L'extension retrouve la
-> dernière matrice consultée, affiche d'un coup d'œil ce qui reste ouvert, et
-> permet d'ajouter une tâche directement dans la bonne case.
+> convient : un lieu, un moment de la journée, un projet.
+>
+> L'extension vit dans le panneau latéral : vos tâches restent sous les yeux
+> pendant que vous naviguez, et le panneau ne se referme plus au premier clic
+> dans la page. L'icône affiche ce qu'il vous reste à faire aujourd'hui.
+>
+> Un clic droit sur une sélection, un lien ou la page ajoute une tâche sans
+> quitter ce que vous lisez. Posez une échéance, découpez en étapes, regroupez
+> vos matrices en univers. Et si vous êtes connecté sur le site, l'extension
+> l'est aussi.
 >
 > Un compte Penduline est nécessaire. Vos données restent les vôtres : rien n'est
 > revendu, aucun traceur, aucune mesure d'audience.
