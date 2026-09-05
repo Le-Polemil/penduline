@@ -5,10 +5,14 @@ Paquet produit par `npm run build:ext` puis un zip du contenu de
 plus bas) ; les versions antérieures restent décrites ici pour l'historique des
 arbitrages.
 
-> ⚠️ La **1.2.0** n'a pas de notes dans ce document : elle a été bumpée sans
-> passer par ici. Si elle n'a jamais été soumise, la 1.3.0 emporte ses
-> changements ; sinon, ses notes sont à reconstituer depuis l'historique git
-> avant la prochaine soumission.
+> ⚠️ **La version publiée sur le Store est la 1.1.0.** Ni la 1.2.0 ni la 1.3.0
+> n'ont jamais été soumises : la 1.4.0 emporte donc leurs changements, et la
+> revue portera sur **trois versions d'un coup**. Voir les notes 1.4.0 plus bas,
+> qui couvrent tout l'écart — c'est la seule section à lire pour remplir le
+> formulaire.
+>
+> Pour mémoire : **1.2.0 = #87** (capture avec lien, dans un formulaire),
+> **1.3.0 = #102** (passage au panneau latéral).
 
 ## ⚠️ Deux vérifications AVANT de zipper — depuis la 1.4.0
 
@@ -95,11 +99,16 @@ l'extension gérant des comptes et du contenu utilisateur.
 `apps/extension/store/01-liste.png` et `02-matrice.png`, 1280×800, le format
 attendu. L'interface y est composée dans un cadre, avec une accroche à gauche.
 
-> ⚠️ **À refaire pour la 1.3.0.** Les captures actuelles montrent le popup à ses
-> dimensions d'alors (400×600). L'extension vit désormais dans le panneau
-> latéral : la composer à une largeur de panneau plausible (~400 px) *le long du
-> bord droit d'une fenêtre de navigateur*, et non en vignette flottante — c'est
-> la différence que la fiche doit montrer.
+> ⚠️ **À REFAIRE avant la soumission 1.4.0 — ce n'est pas de la cosmétique.**
+> Les captures en ligne montrent le popup à ses dimensions d'alors (400×600), et
+> elles sont **exactes pour la 1.1.0**, seule version publiée. C'est justement le
+> problème : l'extension change d'hôte dans cette soumission, et une fiche qui
+> montre encore un popup décrirait un autre produit.
+>
+> La composer à une largeur de panneau plausible (~400 px) *le long du bord droit
+> d'une fenêtre de navigateur*, et non en vignette flottante — c'est la
+> différence que la fiche doit montrer. Le bandeau « Aujourd'hui » et le badge
+> sur l'icône méritent d'y figurer.
 
 **Elles utilisent du contenu de démonstration neutre, volontairement.** Les vraies
 tâches du compte de test nommaient des projets clients — les publier sur le Store
@@ -129,7 +138,8 @@ coup.
 > l'utilisateur a lui-même sélectionné, et seulement au moment où il clique sur
 > l'entrée.
 
-**Justification de la permission `sidePanel`** *(nouveau en 1.3.0)*
+**Justification de la permission `sidePanel`** *(écrite pour la 1.3.0, jamais
+soumise — c'est donc une **nouvelle permission** pour la fiche en 1.4.0)*
 
 > L'extension affiche son interface dans le panneau latéral du navigateur plutôt
 > que dans une fenêtre surgissante, afin que l'utilisateur puisse consulter ses
@@ -268,43 +278,63 @@ change : mêmes écrans, mêmes gestes, mêmes données. C'est l'hôte qui bouge
 
 ## Version 1.4.0 — notes de publication
 
-**Trois changements en une soumission.** Même arbitrage qu'en 1.1.0 : chaque
-envoi repasse en revue, les étaler coûterait trois examens.
+> ⚠️ **Cette soumission part d'une fiche en 1.1.0**, la 1.2.0 et la 1.3.0
+> n'ayant jamais été envoyées. Douze commits séparent les deux. Ce qui suit
+> couvre **tout l'écart**, pas seulement la 1.4.0 — remplir le formulaire à
+> partir des seules nouveautés 1.4.0 déclarerait moins que la réalité.
+
+### Ce qui touche la fiche du Store
+
+| Élément | Venu de | À faire |
+|---|---|---|
+| Permission **`sidePanel`** | 1.3.0 | **Nouvelle pour la fiche** — justification déjà rédigée plus haut, à coller |
+| `minimum_chrome_version: "116"` | 1.3.0 | Nouveau. `sidePanel.open()` n'existe qu'à partir de 116 |
+| `action.default_popup` retiré | 1.3.0 | Rien à déclarer, mais ne pas le remettre |
+| **`externally_connectable`** | 1.4.0 | Pas une permission : aucun avertissement, rien à justifier |
+| **Captures d'écran** | 1.3.0 | **Obligatoire.** Celles en ligne montrent un popup — et elles sont exactes pour la 1.1.0. Le produit change d'hôte, la fiche doit le montrer |
+| Usage des données | — | **Inchangé depuis la 1.1.0.** Voir ci-dessous |
+| Autorisation d'hôte | — | Toujours aucune → revue standard |
+
+**L'usage des données ne bouge pas, et c'est à vérifier plutôt qu'à croire.** La
+capture contextuelle (« contenu des sites web ») était déjà déclarée en 1.1.0. Le
+formulaire de capture avec lien (#87) reste dans cette catégorie. Le partage de
+session (#107) fait arriver le jeton par un second chemin, mais « informations
+d'authentification » était déjà coché et couvre exactement ça.
+
+### Les changements, par ordre d'importance pour l'utilisateur
+
+**L'extension passe du popup au panneau latéral** (#102, ex-1.3.0). C'est le
+changement structurant : le panneau ne se ferme plus au clic dans la page, reste
+ouvert en changeant d'onglet, occupe toute la hauteur. Le détail est dans les
+notes 1.3.0 ci-dessus, qui restent valables.
 
 **Nouveautés**
 
 - **Un badge sur l'icône** (#108) : le nombre de tâches du jour restantes, sans
-  rien ouvrir. C'est le nombre du bandeau « Aujourd'hui », posé sur la barre
-  d'outils. Zéro efface le badge plutôt que d'écrire « 0 ».
+  rien ouvrir. Zéro efface le badge plutôt que d'écrire « 0 ».
 - **Se connecter sur l'app web connecte l'extension** (#107). Plus de seconde
-  saisie de mot de passe : l'app web pousse sa session, l'extension la reprend.
-  La déconnexion est propagée elle aussi.
-- **Le bandeau « Aujourd'hui »** dans le panneau (#104) — ce sur quoi on s'est
-  engagé, visible à l'ouverture.
+  saisie de mot de passe ; la déconnexion est propagée elle aussi.
+- **Le bandeau « Aujourd'hui »** dans le panneau (#104).
+- **Capturer une tâche avec son lien**, dans un formulaire (#87, ex-1.2.0).
+- **Poser une échéance**, la voir, et faire remonter les dépassées (#97).
+- **Des étapes sur une tâche**, sur un seul niveau (#86).
+- **Regrouper les matrices en univers** (#62).
+- **Renommer une tâche, la changer de matrice** (#58).
 
-**Correction**
+**Corrections et fond**
 
 - Plus de menu contextuel en doublon à l'installation (#106).
-
-**Ce qui touche la fiche du Store**
-
-- **`externally_connectable` ajouté au manifeste**, limité à
-  `https://penduline.polemil.dev/*`. Ce n'est PAS une permission : aucun
-  avertissement à l'installation, rien à justifier dans le formulaire. La revue
-  reste standard — `host_permissions` est toujours absent.
-- **L'usage des données ne change pas.** Le jeton de session arrive désormais
-  aussi par l'app web, mais « informations d'authentification » était déjà coché
-  et couvre exactement ça. La nature de la donnée est la même, seul son chemin
-  change.
-- **Les captures d'écran restent à refaire** — la dette de la 1.3.0 n'a pas été
-  soldée, elles montrent encore un popup. Le bandeau « Aujourd'hui » et le badge
-  méritent d'y figurer.
+- Les échecs d'écriture deviennent visibles et réversibles (#77).
+- Ne plus charger ce qu'on n'affiche pas (#82) — l'ouverture du panneau est le
+  premier travail perçu.
+- Le placement de la tâche partenaire corrigé (#61).
 
 **Texte court pour la fiche :**
 
-> Votre icône affiche ce qu'il vous reste à faire aujourd'hui, et vous n'avez
-> plus à vous connecter deux fois : ouvrir Penduline sur le web connecte aussi
-> l'extension.
+> Penduline s'installe désormais dans le panneau latéral : vos matrices restent
+> sous les yeux pendant que vous naviguez. Votre icône affiche ce qu'il vous
+> reste à faire aujourd'hui, et vous n'avez plus à vous connecter deux fois —
+> ouvrir Penduline sur le web connecte aussi l'extension.
 
 ## Le point à peser avant de publier
 
