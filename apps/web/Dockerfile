@@ -12,6 +12,14 @@ ARG VITE_SUPABASE_ANON_KEY
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 
+# L'extension à qui pousser la session (#107). Inlinée elle aussi, donc build arg.
+#
+# ⚠️ Son absence ne casse RIEN et ne se voit NULLE PART : le partage de session
+# se désactive en silence, par conception (`apps/web/src/lib/extension-bridge.ts`).
+# C'est précisément ce qui la rend facile à oublier — d'où ce commentaire.
+ARG VITE_EXTENSION_ID
+ENV VITE_EXTENSION_ID=$VITE_EXTENSION_ID
+
 # Manifests d'abord : la couche `npm ci` reste en cache tant qu'ils ne bougent pas.
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
