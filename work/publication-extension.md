@@ -14,6 +14,44 @@ arbitrages.
 > Pour mémoire : **1.2.0 = #87** (capture avec lien, dans un formulaire),
 > **1.3.0 = #102** (passage au panneau latéral).
 
+## Le numéro de version appartient à la SOUMISSION, pas à la PR
+
+**Une PR de feature ne touche jamais à `version` dans le manifeste.** Le bump se
+fait dans la PR qui prépare l'envoi au Store — celle qui porte aussi les notes de
+publication et les vérifications de paquet.
+
+**Pourquoi**, et ce n'est pas de la cosmétique : ce numéro a **un seul
+consommateur**, le Chrome Web Store, et **un seul sens** — quel paquet est
+installé chez les gens. Seule une soumission en crée un. Le bumper à chaque PR le
+transforme en compteur de PR, et il cesse de répondre à la seule question qu'on
+lui pose.
+
+C'est ce qui s'est produit entre la 1.1.0 et la 1.4.0, et les trois symptômes
+valent d'être connus :
+
+1. **Trois numéros, un seul publié.** 1.2.0 et 1.3.0 désignent des paquets qui
+   n'ont jamais existé ailleurs que dans git. La section « Version 1.3.0 — notes
+   de publication » plus bas décrit ainsi une publication qui n'a pas eu lieu :
+   elle est conservée pour l'historique des arbitrages, **pas** comme la trace
+   d'un envoi.
+2. **Le numéro a cessé d'identifier un build.** #107 a modifié le manifeste sans
+   bumper — « 1.3.0 » a désigné deux paquets différents à deux moments.
+3. **Les notes se fragmentent.** Le découpage par version suppose une version =
+   une soumission. Quand trois partent ensemble, le périmètre réel doit être
+   reconstitué depuis l'historique.
+
+> ⚠️ **Ne pas recycler un numéro brûlé.** 1.2.0 et 1.3.0 nomment déjà des arbres
+> précis dans l'historique (`2ddd805` et `604a64a`). Les réattribuer à une
+> soumission au contenu différent rejouerait exactement le défaut ci-dessus. Un
+> saut dans la séquence ne se voit nulle part : les utilisateurs ne voient que
+> les versions publiées. Et un numéro téléversé ne serait-ce qu'en brouillon est
+> réservé côté Store, publié ou non.
+
+La version de la racine (`package.json`, `0.0.x`) suit une autre logique et n'a
+pas ce problème : elle marque un état de `main`, aucun tiers ne la lit, elle ne
+peut pas mentir. Les deux ne sont pas synchronisées, et il n'y a pas de raison
+qu'elles le soient.
+
 ## ⚠️ Deux vérifications AVANT de zipper — depuis la 1.4.0
 
 Le partage de session (#107) fait dépendre le paquet de son **environnement de
@@ -239,6 +277,10 @@ d'usage des données (voir plus haut). Les six autres changements sont internes.
 > matrice à l'autre. La case « À trier » s'affiche désormais correctement.
 
 ## Version 1.3.0 — notes de publication
+
+> ⚠️ **Jamais soumise.** Cette section décrit un bump, pas un envoi — voir « Le
+> numéro de version appartient à la soumission » plus haut. Son contenu part
+> dans la 1.4.0, et les arbitrages qu'elle documente restent valables.
 
 **L'extension passe du popup au panneau latéral.** Aucune fonctionnalité ne
 change : mêmes écrans, mêmes gestes, mêmes données. C'est l'hôte qui bouge.
