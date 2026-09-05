@@ -120,6 +120,26 @@ export function App() {
     };
   }, []);
 
+  /**
+   * Déconnecté, l'icône ne doit plus rien annoncer (#108).
+   *
+   * Sans ça, le badge gardait le reliquat d'un compte auquel on n'a plus accès —
+   * et il y serait resté indéfiniment, le panneau déconnecté ne poussant plus
+   * jamais de compte.
+   *
+   * `ready` garde l'effet : avant que la session ne soit relue, `session` est
+   * nul sans que ça veuille dire quoi que ce soit, et effacer là ferait clignoter
+   * le badge à chaque ouverture du panneau.
+   */
+  useEffect(() => {
+    if (!ready || session) return;
+    try {
+      chrome.runtime.sendMessage({ type: 'focus', count: 0 });
+    } catch {
+      /* pas de runtime (aperçu web) */
+    }
+  }, [ready, session]);
+
   return (
     <div className="panel">
       {/* Au-dessus de `PanelApp` : c'est `useExtStore` qui signale les échecs
@@ -212,6 +232,27 @@ function PanelApp({ userId }: { userId: string }) {
       /* pas de runtime (aperçu web) */
     }
   }, [store.ready, store.boards]);
+
+  /**
+   * Le compte du jour, pour le badge de l'icône (#108).
+   *
+   * ICI et non dans `Home`, qui affiche pourtant le même nombre dans son
+   * bandeau : `Home` est démonté dès qu'on ouvre une matrice, et c'est
+   * précisément sur `Detail` qu'on coche des tâches. Le badge y serait resté
+   * figé sur le compte du matin.
+   *
+   * Les deux appellent la même fonction pure sur les mêmes tâches : c'est le
+   * même nombre par construction, pas une seconde source.
+   */
+  const focusCount = focusToday(store.tasks, localDay()).length;
+  useEffect(() => {
+    if (!store.ready) return;
+    try {
+      chrome.runtime.sendMessage({ type: 'focus', count: focusCount });
+    } catch {
+      /* pas de runtime (aperçu web) */
+    }
+  }, [store.ready, focusCount]);
 
   function openBoard(id: string) {
     void setActiveBoard(id);

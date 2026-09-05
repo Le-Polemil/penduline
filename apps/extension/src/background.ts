@@ -35,6 +35,50 @@ const CONTEXTS: chrome.contextMenus.ContextType[] = ['selection', 'link', 'page'
 
 // ── Badge ────────────────────────────────────────────────────────────────────
 
+/**
+ * Le compte du jour, poussé par le panneau (#108).
+ *
+ * En STOCKAGE et non dans une variable de module : le worker MV3 est tué en
+ * permanence, et c'est justement quand il dort que le badge sert — l'utilisateur
+ * regarde sa barre d'outils sans rien ouvrir. Une variable serait perdue au
+ * premier réveil, c'est-à-dire toujours.
+ */
+const FOCUS_KEY = 'penduline-focus-count';
+
+/** La teinte du bandeau « Aujourd'hui » que ce badge reflète (`.today-head`). */
+const FOCUS_COLOR = '#643312';
+
+async function readFocusCount(): Promise<number> {
+  try {
+    const res = await chrome.storage.local.get(FOCUS_KEY);
+    const n = res[FOCUS_KEY] as unknown;
+    return typeof n === 'number' && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Pose sur l'icône le compte du jour — ou rien.
+ *
+ * ⚠️ Zéro EFFACE le badge au lieu d'écrire « 0 ». Un badge vide se lit « rien en
+ * attente » ; un « 0 » attire l'œil pour dire qu'il n'y a rien à voir.
+ *
+ * Le plafond est défensif : la limite du mode « aujourd'hui » vaut sept
+ * (`packages/shared/src/focus.ts`), mais elle n'est appliquée qu'à l'ÉCRITURE —
+ * rien n'interdit à une sélection faite sous une limite plus haute d'être plus
+ * grande, et un badge ne tient pas quatre chiffres.
+ */
+async function showFocusCount(): Promise<void> {
+  const n = await readFocusCount();
+  const reste = n > 1 ? 's' : '';
+  void chrome.action.setBadgeBackgroundColor({ color: FOCUS_COLOR });
+  void chrome.action.setBadgeText({ text: n === 0 ? '' : n > 99 ? '99+' : String(n) });
+  void chrome.action.setTitle({
+    title: n === 0 ? 'Penduline' : `Penduline — ${n} tâche${reste} restante${reste} aujourd'hui`,
+  });
+}
+
 let clearTimer: number | undefined;
 
 function flash(text: string, color: string, title: string) {
@@ -43,8 +87,10 @@ function flash(text: string, color: string, title: string) {
   void chrome.action.setTitle({ title });
   clearTimeout(clearTimer);
   clearTimer = setTimeout(() => {
-    void chrome.action.setBadgeText({ text: '' });
-    void chrome.action.setTitle({ title: 'Penduline' });
+    // On REND LA MAIN au compte du jour, on ne vide pas : l'accusé de réception
+    // est passager, le compte est l'état permanent de l'icône. Vider ici faisait
+    // disparaître le badge pour de bon après la moindre capture.
+    void showFocusCount();
   }, 2500) as unknown as number;
 }
 
@@ -258,13 +304,19 @@ function preferPanel() {
     .catch((e: unknown) => console.error('[penduline] panneau', e));
 }
 
+// `showFocusCount` rejoint les deux événements pour la même raison que le reste :
+// le badge ne survit pas au redémarrage du navigateur, alors que le compte, lui,
+// est en stockage. Sans ce rappel, l'icône restait nue jusqu'à la prochaine
+// ouverture du panneau — c'est-à-dire au moment précis où le badge ne sert plus.
 chrome.runtime.onInstalled.addListener(() => {
   preferPanel();
   void rebuildMenus();
+  void showFocusCount();
 });
 chrome.runtime.onStartup.addListener(() => {
   preferPanel();
   void rebuildMenus();
+  void showFocusCount();
 });
 
 /** Le panneau pousse la liste des matrices à chaque chargement. */
@@ -273,6 +325,26 @@ chrome.runtime.onMessage.addListener((msg: { type?: string; boards?: CachedBoard
   void (async () => {
     await chrome.storage.local.set({ [BOARDS_KEY]: msg.boards });
     await rebuildMenus();
+  })();
+});
+
+/**
+ * Le panneau pousse aussi le compte du jour (#108).
+ *
+ * Même mécanisme que les matrices ci-dessus, et pour la même raison : faire
+ * interroger Supabase par un worker qu'on tue à tout moment coûterait une requête
+ * par réveil, pour un chiffre que le panneau a déjà sous la main.
+ *
+ * Conséquence assumée, la même que pour le menu contextuel : le compte est celui
+ * du dernier passage du panneau. Une tâche cochée depuis l'app web ne le met pas
+ * à jour tant qu'on n'a pas rouvert le panneau.
+ */
+chrome.runtime.onMessage.addListener((msg: { type?: string; count?: number }) => {
+  if (msg?.type !== 'focus' || typeof msg.count !== 'number') return;
+  const n = Math.max(0, Math.trunc(msg.count));
+  void (async () => {
+    await chrome.storage.local.set({ [FOCUS_KEY]: n });
+    await showFocusCount();
   })();
 });
 

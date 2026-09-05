@@ -11,6 +11,16 @@ workspaces (`packages/shared` consommé en *source*, pas en `dist`) rend les
 build packs auto-détectés fragiles. Le contexte de build est la **racine** du
 repo, pas `apps/web` : sinon `npm ci` ne résout pas les workspaces.
 
+**`VITE_EXTENSION_ID` est un build arg lui aussi** — l'ID de l'extension Chrome à
+qui l'app web pousse sa session (#107). Valeur du Store :
+`bloodkencammifmhmogffodjalepoime`.
+
+⚠️ **Son absence ne casse rien et ne se voit nulle part** : le partage de session
+se désactive en silence, par conception. C'est ce qui la rend facile à oublier —
+et elle a effectivement été oubliée à la livraison de #107, où le `ARG` manquait
+carrément dans le Dockerfile. La poser dans Coolify sans le `ARG` n'aurait servi
+à rien.
+
 **Les clés Supabase sont des build args, pas des variables runtime.** Vite les
 inline dans le bundle : `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` doivent
 être présentes au `docker build`, les injecter au run n'a aucun effet. Corollaire :
@@ -118,9 +128,34 @@ et connectables. Aucune migration n'est nécessaire.
 être repris à la main sur le service `supabase-auth`, sans quoi la production
 garde l'ancien comportement.
 
+```yaml
+# Coolify → la ressource Supabase → l'éditeur de compose, service `supabase-auth`,
+# bloc `environment:`. Puis redéployer LE SERVICE.
+GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED: "false"
 ```
-GOTRUE_SECURITY_REFRESH_TOKEN_ROTATION_ENABLED=false
+
+⚠️ **À ajouter au compose, pas seulement en variable Coolify.** La variable est
+aujourd'hui **absente** du conteneur : il n'existe donc aucune ligne
+`GOTRUE_… : ${…}` à alimenter. Poser une variable Coolify sans ajouter le passage
+correspondant dans `environment:` n'aurait aucun effet — c'est le même piège que
+les quatre variables de gabarit d'e-mail, plus bas.
+
+⚠️ **`"false"` entre guillemets.** En YAML, `false` nu devient un booléen ; Docker
+Compose veut une chaîne pour une valeur d'environnement, et certaines versions
+refusent le document plutôt que de convertir.
+
+**Vérifier après redéploiement** — la variable doit apparaître, et le rapport
+jetons/sessions cesser de grimper :
+
+```bash
+ssh <hôte> 'docker exec supabase-auth-<suffixe> env | grep ROTATION'
+ssh <hôte> 'docker exec -i supabase-db-<suffixe> psql -U supabase_admin -d postgres \
+  -c "select count(*) jetons, count(distinct session_id) sessions from auth.refresh_tokens"'
 ```
+
+Mesuré le 5 septembre 2026, rotation encore active : **806 jetons pour 15
+sessions, dont 791 révoqués** — 54 jetons par session, la signature de la
+rotation. Rotation désactivée, ce rapport doit tendre vers 1.
 
 **Ce que ça corrige.** Une session Supabase n'expire pas — ni `timebox` ni
 `inactivity_timeout` ne sont posés. Les déconnexions constatées après une absence
