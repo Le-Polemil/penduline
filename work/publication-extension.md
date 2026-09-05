@@ -1,7 +1,7 @@
 # Publier l'extension sur le Chrome Web Store
 
 Paquet produit par `npm run build:ext` puis un zip du contenu de
-`apps/extension/dist`. Version courante : **1.3.0** (voir les notes de publication
+`apps/extension/dist`. Version courante : **1.4.0** (voir les notes de publication
 plus bas) ; les versions antérieures restent décrites ici pour l'historique des
 arbitrages.
 
@@ -9,6 +9,46 @@ arbitrages.
 > passer par ici. Si elle n'a jamais été soumise, la 1.3.0 emporte ses
 > changements ; sinon, ses notes sont à reconstituer depuis l'historique git
 > avant la prochaine soumission.
+
+## ⚠️ Deux vérifications AVANT de zipper — depuis la 1.4.0
+
+Le partage de session (#107) fait dépendre le paquet de son **environnement de
+build**. Ce sont les deux seules choses qui peuvent produire un zip d'apparence
+correcte et fonctionnellement mort.
+
+**1. `VITE_WEB_APP_URL` doit valoir l'URL de production.** Le service worker
+n'accepte une session que d'une origine exactement égale à celle-ci
+(`src/web-app.ts` → `src/session-bridge.ts`). Le défaut du code est
+`http://localhost:5173` : un paquet construit avec un `.env` de développement
+n'accepterait donc que le serveur local, et le partage serait mort en production.
+
+```bash
+grep VITE_WEB_APP_URL .env      # doit dire https://penduline.polemil.dev
+```
+
+**2. `externally_connectable` ne doit lister QUE l'origine de production.** C'est
+l'état du manifeste versionné — ne pas le commiter autrement.
+
+### Tester en local malgré ça
+
+Les match patterns **n'acceptent pas de port** : la ligne à ajouter est
+`http://localhost/*`, jamais `http://localhost:5173/*` (invalide, et un manifeste
+invalide empêche l'extension ENTIÈRE de se charger).
+
+À ajouter **dans `dist/manifest.json` après le build**, jamais dans
+`public/manifest.json` — sinon elle part au Store. Un paquet publié qui liste
+`localhost` autorise n'importe quelle page servie localement sur la machine de
+l'utilisateur à parler à l'extension.
+
+```bash
+npm run build:ext
+# puis, à la main dans apps/extension/dist/manifest.json :
+#   "matches": ["https://penduline.polemil.dev/*", "http://localhost/*"]
+```
+
+Et côté app web, `VITE_EXTENSION_ID` doit porter l'ID affiché par
+`chrome://extensions` — il dérive du CHEMIN du dossier chargé, il n'est donc pas
+celui du Store et diffère d'une machine à l'autre.
 
 ## Corrections faites pour la publication
 

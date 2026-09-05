@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Penduline",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Consulte et alimente tes matrices d'Eisenhower depuis ton navigateur.",
   "minimum_chrome_version": "116",
   "icons": {
@@ -29,8 +29,7 @@
   ],
   "externally_connectable": {
     "matches": [
-      "https://penduline.polemil.dev/*",
-      "http://localhost/*"
+      "https://penduline.polemil.dev/*"
     ]
   },
   "background": {

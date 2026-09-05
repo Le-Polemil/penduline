@@ -32,10 +32,13 @@ export function listenForSharedSession(): () => void {
     // `https://penduline.polemil.dev` est un préfixe de
     // `https://penduline.polemil.dev.attaquant.example`.
     //
-    // Le manifeste filtre déjà via `externally_connectable`, mais il liste aussi
-    // `http://localhost/*` pour le développement : ce contrôle-ci suit
-    // `VITE_WEB_APP_URL` et resserre donc tout seul un build de production sur
-    // la seule app qu'il vise.
+    // Redondant avec `externally_connectable` du manifeste, et gardé pour deux
+    // raisons. D'abord parce qu'une vérification de sécurité qui repose sur un
+    // fichier voisin est une vérification qu'un jour on déplacera sans la voir.
+    // Ensuite parce que le manifeste est ÉLARGI À LA MAIN pendant le
+    // développement (voir work/publication-extension.md, « Tester en local ») :
+    // ce contrôle-ci suit `VITE_WEB_APP_URL`, donc un paquet construit pour la
+    // production refuse un serveur local même si le manifeste l'autorisait.
     if (!sender.origin || sender.origin !== WEB_APP_ORIGIN) return;
 
     const msg = parseBridgeMessage(raw);
