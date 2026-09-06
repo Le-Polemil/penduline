@@ -9,7 +9,6 @@ import {
   isVisible,
   orderedBoards,
   partnerOf,
-  pinnedTasks,
   planBoardReorder,
   planPairDetach,
   planPairMove,
@@ -211,33 +210,27 @@ describe('matrice d’états', () => {
     quoi: string;
     task: Partial<ReturnType<typeof makeTask>>;
     visible: boolean;
-    epinglee: boolean;
     ouverte: boolean;
   }> = [
-    { quoi: 'ordinaire', task: {}, visible: true, epinglee: false, ouverte: true },
-    { quoi: 'épinglée', task: { pinned: true }, visible: false, epinglee: true, ouverte: true },
+    { quoi: 'ordinaire', task: {}, visible: true, ouverte: true },
     // ⚠️ RENVERSÉ PAR #75. Cette ligne disait auparavant `visible: true`, au nom
     // du délai d'annulation de 4 s — le délai était donc encodé dans le MODÈLE DE
     // DONNÉES, et une tâche dont l'archivage n'arrivait jamais restait affichée
     // pour toujours. Le délai vit désormais en mémoire (paramètre `pending`) :
     // `done` suffit à masquer, quel que soit `archived`.
-    { quoi: 'cochée, pas encore archivée', task: { done: true }, visible: false, epinglee: false, ouverte: false },
-    { quoi: 'cochée et archivée', task: { done: true, archived: true }, visible: false, epinglee: false, ouverte: false },
-    // Une épinglée cochée quitte aussi la zone des épinglées, même règle.
-    { quoi: 'épinglée et cochée', task: { pinned: true, done: true }, visible: false, epinglee: false, ouverte: false },
-    { quoi: 'supprimée', task: { deleted: true }, visible: false, epinglee: false, ouverte: false },
-    { quoi: 'supprimée et épinglée', task: { deleted: true, pinned: true }, visible: false, epinglee: false, ouverte: false },
+    { quoi: 'cochée, pas encore archivée', task: { done: true }, visible: false, ouverte: false },
+    { quoi: 'cochée et archivée', task: { done: true, archived: true }, visible: false, ouverte: false },
+    { quoi: 'supprimée', task: { deleted: true }, visible: false, ouverte: false },
     // `archived` sans `done` ne devrait pas exister. Le masquage portant
     // désormais sur `done` seul, cet état reste visible — inchangé par #75.
-    { quoi: 'archivée sans être cochée', task: { archived: true }, visible: true, epinglee: false, ouverte: true },
+    { quoi: 'archivée sans être cochée', task: { archived: true }, visible: true, ouverte: true },
   ];
 
   for (const c of cases) {
-    it(`${c.quoi} — visible: ${c.visible}, épinglée: ${c.epinglee}, ouverte: ${c.ouverte}`, () => {
+    it(`${c.quoi} — visible: ${c.visible}, ouverte: ${c.ouverte}`, () => {
       const t = makeTask({ quadrant: 'faire', ...c.task });
       expect(isVisible(t, 'faire')).toBe(c.visible);
       expect(visibleTasks([t], 'b1', 'faire')).toHaveLength(c.visible ? 1 : 0);
-      expect(pinnedTasks([t], 'b1', 'faire')).toHaveLength(c.epinglee ? 1 : 0);
       expect(countOpen([t], 'b1', 'faire')).toBe(c.ouverte ? 1 : 0);
     });
   }
@@ -257,13 +250,6 @@ describe('matrice d’états', () => {
     expect(visibleTasks([cochee, autre], 'b1', 'faire', 'cochee').map((t) => t.id)).toEqual(['cochee']);
     expect(isVisible(cochee, 'faire', 'cochee')).toBe(true);
     expect(isVisible(autre, 'faire', 'cochee')).toBe(false);
-  });
-
-  it('`pending` vaut aussi dans la zone des épinglées', () => {
-    // Sinon cocher une épinglée la ferait disparaître sans délai d'annulation.
-    const t = makeTask({ id: 'p', pinned: true, done: true, archived: true });
-    expect(pinnedTasks([t], 'b1', 'faire')).toHaveLength(0);
-    expect(pinnedTasks([t], 'b1', 'faire', 'p')).toHaveLength(1);
   });
 
   it('`pending` ne ressuscite ni une supprimée ni une tâche d’une autre case', () => {
@@ -345,9 +331,9 @@ describe('préservation des paires', () => {
     // archiver l'autre.
     const a = makeTask({ id: 'a', pair_id: pair });
     const b = makeTask({ id: 'b', pair_id: pair });
-    const writes = planPairDetach([a, b], a, { archived: true, pinned: false });
+    const writes = planPairDetach([a, b], a, { archived: true });
 
-    expect(writes[0].patch).toEqual({ archived: true, pinned: false, pair_id: null });
+    expect(writes[0].patch).toEqual({ archived: true, pair_id: null });
     expect(writes[1].patch).toEqual({ pair_id: null });
   });
 
@@ -502,9 +488,9 @@ describe('résumé d’un univers replié', () => {
     expect(summarizeUniverse([a], tasks).tasks).toBe(1);
   });
 
-  it('compte les tâches épinglées : elles restent à faire', () => {
+  it('compte les tâches d’une matrice, quelle que soit leur case', () => {
     const a = makeBoard({ id: 'a' });
-    expect(summarizeUniverse([a], [makeTask({ board_id: 'a', pinned: true })]).tasks).toBe(1);
+    expect(summarizeUniverse([a], [makeTask({ board_id: 'a' })]).tasks).toBe(1);
   });
 
   it('ignore les tâches des matrices hors du groupe', () => {
@@ -588,20 +574,18 @@ describe('vue globale — regroupement des tâches par matrice', () => {
     expect(groups[0].rows.flat().map((t) => t.id)).toEqual(['ici']);
   });
 
-  it('sépare les épinglées des ordinaires, dans le bon groupe', () => {
+  it('range chaque tâche dans le groupe de SA matrice', () => {
     const groups = groupTasksByBoard(
       [
-        makeTask({ id: 'p', board_id: 'maison', pinned: true }),
-        makeTask({ id: 'o', board_id: 'maison' }),
-        makeTask({ id: 'autre', board_id: 'boulot', pinned: true }),
+        makeTask({ id: 'a', board_id: 'maison' }),
+        makeTask({ id: 'b', board_id: 'maison', position: 1 }),
+        makeTask({ id: 'autre', board_id: 'boulot' }),
       ],
       [maison, boulot],
       'faire',
     );
-    expect(groups[0].pinned.flat().map((t) => t.id)).toEqual(['p']);
-    expect(groups[0].rows.flat().map((t) => t.id)).toEqual(['o']);
-    expect(groups[1].pinned.flat().map((t) => t.id)).toEqual(['autre']);
-    expect(groups[1].rows).toEqual([]);
+    expect(groups[0].rows.flat().map((t) => t.id)).toEqual(['a', 'b']);
+    expect(groups[1].rows.flat().map((t) => t.id)).toEqual(['autre']);
   });
 
   it('conserve l’ordre manuel propre à chaque matrice', () => {
@@ -711,23 +695,6 @@ describe('réordonnancement au clavier — tâches', () => {
     expect(plan.writes[0].patch.position).toBeGreaterThan(2);
   });
 
-  it('réordonne une épinglée parmi les épinglées, jamais parmi les autres', () => {
-    // Les deux zones sont distinctes à l'écran : mélanger les listes ferait
-    // sauter la tâche d'une zone à l'autre sans qu'on l'ait demandé.
-    const pin1 = makeTask({ id: 'pin1', position: 0, pinned: true });
-    const pin2 = makeTask({ id: 'pin2', position: 1, pinned: true });
-    const libre = makeTask({ id: 'libre', position: 2 });
-    const tasks = [pin1, pin2, libre];
-
-    const plan = planReorder(tasks, pin2, -1)!;
-    expect(plan.writes[0].id).toBe('pin2');
-    expect([plan.index, plan.total]).toEqual([1, 2]); // 2 lignes : les épinglées seules
-
-    // Et une épinglée seule dans sa zone ne bouge pas, même s'il reste des
-    // ordinaires en dessous.
-    expect(planReorder([pin1, libre], pin1, 1)).toBeNull();
-  });
-
   it('ignore les tâches d’une autre case et les supprimées', () => {
     const ici = makeTask({ id: 'ici', position: 0 });
     const ailleurs = makeTask({ id: 'ailleurs', position: 1, quadrant: 'planifier' });
@@ -794,12 +761,6 @@ describe('sous-tâches — un seul niveau', () => {
     const etape = makeTask({ id: 'e', parent_id: 'p' });
     expect(visibleTasks([parent, etape], 'b1', 'faire').map((t) => t.id)).toEqual(['p']);
     expect(isVisible(etape, 'faire')).toBe(false);
-  });
-
-  it('une sous-tâche ne s’épingle pas', () => {
-    // Épingler, c'est remonter en haut d'une case — or elle n'en a pas.
-    const etape = makeTask({ id: 'e', parent_id: 'p', pinned: true });
-    expect(pinnedTasks([etape], 'b1', 'faire')).toHaveLength(0);
   });
 
   it('les sous-tâches ne comptent pas dans le compteur de case', () => {
@@ -1049,16 +1010,6 @@ describe('échéances (#19)', () => {
     expect(planReorder(tasks, retard, 1, t0)).toBe(null);
   });
 
-  it('mais une dépassée ÉPINGLÉE le reste : l’épinglage garde la préséance', () => {
-    const tasks = [
-      makeTask({ id: 'p1', pinned: true, position: 0 }),
-      due('p2', -DAY, { pinned: true, position: 1 }),
-    ];
-    const plan = planReorder(tasks, tasks[1], -1, t0);
-    expect(plan).not.toBe(null);
-    expect(plan?.index).toBe(1);
-  });
-
   it('le réordonnancement ignore la zone « en retard » dans son décompte', () => {
     // Trois lignes ordinaires et une dépassée : « descendre » la première
     // ordinaire doit la placer entre `b` et `c`, sans jamais compter la dépassée
@@ -1077,15 +1028,13 @@ describe('échéances (#19)', () => {
     expect(position).toBeLessThan(3);
   });
 
-  it('la vue globale rend les trois zones, matrice par matrice', () => {
+  it('la vue globale sépare les dépassées des ordinaires, matrice par matrice', () => {
     const board = makeBoard({ id: 'b1' });
     const tasks = [
-      makeTask({ id: 'epingle', board_id: 'b1', pinned: true, position: 0 }),
       due('retard', -DAY, { board_id: 'b1', position: 1 }),
       makeTask({ id: 'normale', board_id: 'b1', position: 2 }),
     ];
     const [groupe] = groupTasksByBoard(tasks, [board], 'faire', null, t0);
-    expect(groupe.pinned.flat().map((t) => t.id)).toEqual(['epingle']);
     expect(groupe.overdue.flat().map((t) => t.id)).toEqual(['retard']);
     expect(groupe.rows.flat().map((t) => t.id)).toEqual(['normale']);
   });

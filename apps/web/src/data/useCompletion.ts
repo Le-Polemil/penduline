@@ -97,7 +97,7 @@ export function useCompletion(
 
     // Une seule écriture, état final compris. `planPairDetach` emmène la
     // partenaire : une tâche qui part ne doit pas laisser de `pair_id` orphelin.
-    const writes = planPairDetach(tasks, task, { done: true, archived: true, pinned: false });
+    const writes = planPairDetach(tasks, task, { done: true, archived: true });
     const entry: Pending = { id: task.id, mateId: writes[1]?.id ?? null, pairId: task.pair_id };
 
     setPending(entry);

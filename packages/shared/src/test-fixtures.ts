@@ -20,7 +20,6 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     title: `Tâche ${seq}`,
     quadrant: 'faire',
     done: false,
-    pinned: false,
     archived: false,
     deleted: false,
     // 0 par défaut, jamais dérivé du compteur : un test qui dépend de l'ordre

@@ -40,8 +40,6 @@ export interface Task {
   quadrant: QuadrantKey;
   /** Cochée (part vers la corbeille « Terminées » après le délai d'annulation). */
   done: boolean;
-  /** Épinglée en haut de sa case. */
-  pinned: boolean;
   /** Terminée et archivée (visible seulement dans la corbeille). */
   archived: boolean;
   /** Supprimée (visible seulement dans la corbeille « Supprimées »). */
@@ -109,7 +107,6 @@ export type TaskPatch = Partial<
     | 'board_id'
     | 'quadrant'
     | 'done'
-    | 'pinned'
     | 'archived'
     | 'deleted'
     | 'position'

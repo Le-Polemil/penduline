@@ -13,7 +13,6 @@ import {
   planDelete,
   planPairDetach,
   planPairMove,
-  planPairPatch,
   planRestore,
   quadrant,
   subtasksOf,
@@ -189,15 +188,6 @@ export function GlobalScreen({
     else moveToBoard(task, target);
   }
 
-  function togglePin(t: Task) {
-    if (t.pinned) {
-      const pos = endPosition(visibleTasks(tasks, t.board_id, t.quadrant));
-      withVT(() => apply('Désépinglée', planPairMove(tasks, t, { pinned: false }, pos)));
-    } else {
-      withVT(() => apply('Épinglée', planPairPatch(tasks, t, { pinned: true })));
-    }
-    setMenuTask(null);
-  }
 
   function unpair(task: Task) {
     withVT(() => apply('Dissociée', planPairDetach(tasks, task)));
@@ -236,7 +226,7 @@ export function GlobalScreen({
    * `split` est volontairement absent : appairer suppose de poser la nouvelle
    * venue juste après sa partenaire, donc un ordre — et il n'en existe pas ici.
    */
-  function card(t: Task, q: Quadrant, pinnedCard: boolean) {
+  function card(t: Task, q: Quadrant) {
     return (
       <TaskCard
         key={t.id}
@@ -248,7 +238,6 @@ export function GlobalScreen({
         // sortir de l'écran, et c'est la conséquence juste.
         otherBoards={store.boards.filter((b) => b.id !== t.board_id)}
         universes={store.universes}
-        pinnedCard={pinnedCard}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}
         rename={{
@@ -261,7 +250,6 @@ export function GlobalScreen({
         onCheck={() => onCheck(t)}
         onMoveQuad={(key) => moveQuad(t, key)}
         onMoveBoard={(b) => askMoveToBoard(t, b)}
-        onTogglePin={() => togglePin(t)}
         onUnpair={() => unpair(t)}
         onDelete={() => askRemoveTask(t)}
         // L'engagement du jour (#49). La sélection se lit dans `store.tasks`,
@@ -431,22 +419,17 @@ export function GlobalScreen({
                   <div className="bgroup" key={g.board.id} role="group" aria-label={`Matrice ${g.board.name}`}>
                     <div className="bgroup__name">{g.board.name}</div>
                     <div className="bgroup__body">
-                      {g.pinned.map((cards, i) => (
-                        <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`pin-${i}`}>
-                          {cards.map((t) => card(t, q, true))}
-                        </div>
-                      ))}
-                      {/* Zone « en retard » (#19), entre les épinglées et
+                      {/* Zone « en retard » (#19), avant
                           l'ordre manuel — le même découpage que la matrice. */}
                       {g.overdue.map((cards, i) => (
                         <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`late-${i}`}>
-                          {cards.map((t) => card(t, q, false))}
+                          {cards.map((t) => card(t, q))}
                         </div>
                       ))}
                       {g.overdue.length > 0 && g.rows.length > 0 && <div className="zone-split" />}
                       {g.rows.map((cards, i) => (
                         <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`row-${i}`}>
-                          {cards.map((t) => card(t, q, false))}
+                          {cards.map((t) => card(t, q))}
                         </div>
                       ))}
                     </div>

@@ -11,11 +11,9 @@ import {
   insertPosition,
   isOpenRow,
   partnerOf,
-  pinnedTasks,
   planDelete,
   planPairDetach,
   planPairMove,
-  planPairPatch,
   planReorder,
   planRestore,
   quadrant,
@@ -261,23 +259,12 @@ export function MatrixScreen({
     setMenuTask(null);
   }
 
-  // ── Menu : déplacer / épingler / supprimer ────────────────────────────────
+  // ── Menu : déplacer / supprimer ───────────────────────────────────────────
   function menuMove(id: string, quad: QuadrantKey) {
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
     const pos = endPosition(visibleTasks(tasks, board.id, quad));
     withVT(() => apply(`Déplacée vers « ${quadrant(quad).label} »`, planPairMove(tasks, task, { quadrant: quad }, pos)));
-    setMenuTask(null);
-  }
-  function togglePin(t: Task) {
-    if (t.pinned) {
-      const pos = endPosition(visibleTasks(tasks, board.id, t.quadrant));
-      withVT(() => apply('Désépinglée', planPairMove(tasks, t, { pinned: false }, pos)));
-    } else {
-      // Épingler ne change pas les positions : les épinglées ont leur propre
-      // zone, et la paire y sera regroupée par `buildRows` comme ailleurs.
-      withVT(() => apply('Épinglée', planPairPatch(tasks, t, { pinned: true })));
-    }
     setMenuTask(null);
   }
   /**
@@ -342,7 +329,7 @@ export function MatrixScreen({
     const pairId = target.pair_id ?? crypto.randomUUID();
     withVT(() => {
       if (!target.pair_id) patchTask(target.id, { pair_id: pairId });
-      patchTask(drag.id, { quadrant: quad, pinned: false, pair_id: pairId, position: target.position + 0.001 });
+      patchTask(drag.id, { quadrant: quad, pair_id: pairId, position: target.position + 0.001 });
     });
     setDrag(null);
     setHover(null);
@@ -372,7 +359,7 @@ export function MatrixScreen({
    * `drag`, `split` et `reorder` sont fournis ici parce que la matrice les
    * autorise tous les trois — la vue globale, elle, omet les deux derniers.
    *
-   * `row` et `rowCount` situent la LIGNE de la carte dans sa zone (épinglées ou
+   * `row` et `rowCount` situent la LIGNE de la carte dans sa zone (en retard ou
    * ordinaires). Les bornes s'en déduisent sans recalcul : le rendu vient de
    * construire ces lignes, autant s'en servir.
    */
@@ -380,11 +367,10 @@ export function MatrixScreen({
     t: Task,
     q: Quadrant,
     single: boolean,
-    pinnedCard: boolean,
     row: number,
     rowCount: number,
   ) {
-    const splitOk = single && !t.pinned && !t.done && !!drag && drag.id !== t.id;
+    const splitOk = single && !t.done && !!drag && drag.id !== t.id;
     return (
       <TaskCard
         key={t.id}
@@ -393,7 +379,6 @@ export function MatrixScreen({
         tasks={tasks}
         otherBoards={otherBoards}
         universes={store.universes}
-        pinnedCard={pinnedCard}
         flash={flash === t.id}
         attachments={{
           all: store.attachments,
@@ -438,7 +423,6 @@ export function MatrixScreen({
         onCheck={() => onCheck(t)}
         onMoveQuad={(key) => menuMove(t.id, key)}
         onMoveBoard={(b) => askMoveToBoard(t, b)}
-        onTogglePin={() => togglePin(t)}
         onUnpair={() => unpair(t)}
         onDelete={() => askRemoveTask(t.id)}
         // L'engagement du jour (#49). La sélection se lit dans `store.tasks`,
@@ -594,8 +578,7 @@ export function MatrixScreen({
 
       <div className="grid">
         {ALL.map((q) => {
-          const pinnedRows = buildRows(pinnedTasks(tasks, board.id, q.key, pending));
-          // Trois zones (#19) : épinglées, en retard, ordre manuel. Seule la
+          // Deux zones (#19) : en retard, puis ordre manuel. Seule la
           // dernière porte des interstices — les deux premières ont un ordre
           // qui n'appartient pas à l'utilisateur.
           const { overdue: lateRows, rest: rows } = splitOverdue(
@@ -633,21 +616,13 @@ export function MatrixScreen({
                 <span className="quad-count">{countOpen(tasks, board.id, q.key)}</span>
               </div>
 
-              {/* Les épinglées passent aussi par `buildRows` : sans ça, une paire
-                  épinglée s'afficherait sur deux lignes — cassée, alors qu'on
-                  vient justement de garantir qu'une paire reste ensemble. */}
-              {pinnedRows.map((cards, i) => (
-                <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`pin-${i}`}>
-                  {cards.map((t) => card(t, q, cards.length === 1, true, i, pinnedRows.length))}
-                </div>
-              ))}
 
               {/* Zone « en retard » : pas d'interstice, pas de flèches ↑/↓. Son
                   ordre est celui des échéances, et `rowCount` vaut 1 pour que
                   `card()` n'offre aucun déplacement. */}
               {lateRows.map((cards, i) => (
                 <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`late-${i}`}>
-                  {cards.map((t) => card(t, q, cards.length === 1, false, 0, 1))}
+                  {cards.map((t) => card(t, q, cards.length === 1, 0, 1))}
                 </div>
               ))}
               {lateRows.length > 0 && rows.length > 0 && <div className="zone-split" />}
@@ -676,7 +651,7 @@ export function MatrixScreen({
                       <div className="row-gap__line" />
                     </div>
                     <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`}>
-                      {cards.map((t) => card(t, q, cards.length === 1, false, i, rows.length))}
+                      {cards.map((t) => card(t, q, cards.length === 1, i, rows.length))}
                     </div>
                   </div>
                 );

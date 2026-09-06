@@ -60,7 +60,6 @@
 
   /* Surfaces chaudes des cartes (hors ramp, valeurs de la maquette). */
   --card-warm: #fdf6e9;
-  --card-pinned: #fdf3e6;
 }
 
 * { box-sizing: border-box; }
@@ -377,10 +376,6 @@ button { font: inherit; }
 }
 /* Les lignes se suivaient grâce aux `.row-gap` de l'écran matrice, absents ici. */
 .bgroup__body { display: flex; flex-direction: column; gap: 6px; }
-/* `.task--pinned` s'écarte de 8 px pour se détacher de la zone ordinaire de sa
-   case. Dans un groupe, c'est le cadre qui sépare et l'espacement est déjà posé
-   par `gap` : la marge n'y ferait que décentrer le haut du cadre. */
-.bgroup__body .task--pinned { margin-top: 0; }
 
 /* A — filet à gauche : le trait groupe, le nom nomme. */
 .grid--filet .bgroup__name { padding: 0 0 5px 11px; }
@@ -435,12 +430,7 @@ button { font: inherit; }
 .task--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); transform: rotate(-2deg) scale(1.03); border-color: var(--color-accent); }
 .task--split { transform: scale(0.97); border: 1.5px dotted var(--q-ink); }
 .task--done { opacity: 0.55; }
-.task--pinned {
-  background: var(--card-pinned); border: 2px solid var(--color-accent); box-shadow: var(--shadow-md);
-  margin-top: 8px; animation: mm-in 0.28s ease backwards, mm-pinpulse 2s ease-in-out 0.3s 3;
-}
 .task__grip { color: var(--color-neutral-400); letter-spacing: 1px; flex: none; }
-.task__flag { color: var(--color-accent); font-size: 15px; flex: none; }
 .task__check {
   width: 18px; height: 18px; border: 2px solid var(--q-ink); border-radius: 50%; flex: none;
   cursor: pointer; background: transparent; padding: 0; transition: background 0.15s, transform 0.12s;
@@ -448,7 +438,6 @@ button { font: inherit; }
 .task__check:hover { transform: scale(1.15); }
 .task__check--done { background: var(--q-ink); animation: mm-check 0.3s ease; }
 .task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.task--pinned .task__title { font-weight: 600; }
 .task__title--done { text-decoration: line-through; }
 /* Renommage en place : le champ prend exactement la place du titre, pour que la
    carte ne saute pas au basculement. */
@@ -613,7 +602,6 @@ button { font: inherit; }
 }
 .board-btn:hover { background: var(--color-accent-100); }
 .task-menu__action { width: 100%; margin-top: 8px; font: 600 12px var(--font-body); text-align: center; cursor: pointer; padding: 6px; border-radius: 999px; background: none; border: none; }
-.task-menu__action--pin { color: var(--color-accent-700); }
 .task-menu__action--del { color: var(--color-neutral-700); margin-top: 2px; }
 .task-menu__action:hover:not(:disabled) { background: var(--color-accent-100); }
 /* Visibles mais grisées en bout de liste : un menu dont les lignes vont et

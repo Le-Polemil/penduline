@@ -1,0 +1,34 @@
+-- Penduline — retrait de l'épinglage.
+--
+-- POURQUOI IL DISPARAÎT.
+--
+-- Épingler hissait une tâche en tête de SA case, avec un fanion. Trois raisons
+-- de s'en séparer :
+--
+--   1. La case a déjà un ordre manuel — glisser-déposer et `Alt`+↑/↓. L'épinglage
+--      était donc un second mécanisme d'ordre, plus grossier, posé sur un premier
+--      plus fin.
+--   2. C'était une priorité SUR une priorité : « Faire » signifie déjà urgent et
+--      important ; hiérarchiser à l'intérieur redouble ce que la case dit déjà.
+--   3. Rien ne le faisait jamais retomber. Aucune expiration, aucun rappel — le
+--      scénario connu où tout finit épinglé et où le fanion ne veut plus rien
+--      dire. #47 n'avait d'ailleurs pas de signal pour les épinglages qui dorment.
+--
+-- Et le mode « aujourd'hui » (#49) sert désormais la vraie intention — « qu'est-ce
+-- que je fais maintenant » — avec une mécanique qui, elle, expire toute seule et
+-- se limite à trois.
+--
+-- ⚠️ LA COLONNE EST SUPPRIMÉE, ET C'EST IRRÉVERSIBLE.
+--
+-- Les épinglages existants sont perdus. C'est assumé : ce sont des drapeaux
+-- booléens sur une fonctionnalité qu'on retire, pas du contenu utilisateur —
+-- aucune tâche, aucun titre, aucun lien ne disparaît. Le seul effet visible est
+-- que les tâches jusque-là hissées en tête retrouvent leur rang dans l'ordre
+-- manuel de leur case, qu'elles n'avaient jamais quitté.
+--
+-- Le déploiement applique les migrations AVANT le frontend : entre les deux, une
+-- version du client lisant encore `pinned` recevrait `undefined` et non une
+-- erreur — `pinned` ne servait qu'à trier et à décorer, jamais à filtrer une
+-- écriture. La fenêtre est donc sans danger.
+alter table public.tasks
+  drop column pinned;

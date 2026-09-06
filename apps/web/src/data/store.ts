@@ -40,9 +40,15 @@ const PAGE = 1000;
 /** Colonnes de pièce jointe qu'on lit/écrit (l'ordre suit le schéma). */
 const ATTACHMENT_COLS = 'id, task_id, user_id, url, label, position, created_at';
 
-/** Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma). */
-const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, due_at, focus_day, created_at, updated_at, quadrant_changed_at';
+/**
+ * Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma).
+ *
+ * Exportée : `useFocus` en avait recopié une version, qui a silencieusement raté
+ * `due_at` et `quadrant_changed_at` à la fusion de deux branches. Une seule
+ * source évite que ça recommence.
+ */
+export const TASK_COLS =
+  'id, user_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, created_at, updated_at, quadrant_changed_at';
 
 /** Tout ce qui s'ordonne par position se retrie pareil. */
 function byPosition<T extends { position: number }>(a: T, b: T): number {
@@ -91,7 +97,6 @@ function taskLabel(patch: TaskPatch): string {
   if ('archived' in patch) return 'Archiver la tâche';
   if ('board_id' in patch || 'quadrant' in patch || 'position' in patch) return 'Déplacer la tâche';
   if ('pair_id' in patch) return 'Appairer les tâches';
-  if ('pinned' in patch) return patch.pinned ? 'Épingler la tâche' : 'Détacher la tâche';
   if ('due_at' in patch) return patch.due_at ? 'Fixer l’échéance' : 'Retirer l’échéance';
   return 'Modifier la tâche';
 }

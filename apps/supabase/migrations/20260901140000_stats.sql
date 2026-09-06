@@ -6,7 +6,7 @@
 -- ajouter pour son propre besoin. Ici, non : le correctif de #75 a réglé la
 -- question sans le savoir. Cocher n'est plus qu'UNE SEULE écriture, portant
 -- `done` et `archived` ensemble, immédiate (`useCompletion.ts` :
--- `planPairDetach(tasks, task, { done: true, archived: true, pinned: false })`).
+-- `planPairDetach(tasks, task, { done: true, archived: true })`).
 -- Il n'existe plus d'écart de quatre secondes en base.
 --
 -- Donc pour une tâche `done`, `updated_at` EST l'instant de complétion, au

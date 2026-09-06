@@ -155,14 +155,12 @@ export function TaskCard({
   tasks,
   otherBoards,
   universes,
-  pinnedCard,
   menuOpen,
   onMenu,
   rename,
   onCheck,
   onMoveQuad,
   onMoveBoard,
-  onTogglePin,
   onUnpair,
   onDelete,
   focus,
@@ -188,14 +186,12 @@ export function TaskCard({
    * et il ne doit pas se compliquer pour rien.
    */
   universes?: Universe[];
-  pinnedCard: boolean;
   menuOpen: boolean;
   onMenu: (open: boolean) => void;
   rename: CardRename;
   onCheck: () => void;
   onMoveQuad: (key: QuadrantKey) => void;
   onMoveBoard: (board: Board) => void;
-  onTogglePin: () => void;
   onUnpair: () => void;
   onDelete: () => void;
   /** Absent = la carte ne propose pas l'engagement du jour (#49). */
@@ -271,7 +267,6 @@ export function TaskCard({
   const statut = deadline ? deadlineStatus(task.due_at, deadline.now) : null;
   const cls = [
     'task',
-    pinnedCard ? 'task--pinned' : '',
     drag?.dragging ? 'task--dragging' : '',
     splitActive ? 'task--split' : '',
     task.done ? 'task--done' : '',
@@ -307,7 +302,7 @@ export function TaskCard({
         className={cls}
         style={{ viewTransitionName: `vt-${task.id}` } as CSSProperties}
         // Pas de déplacement pendant une saisie : le glisser volerait le curseur.
-        draggable={!!drag && !task.pinned && !task.done && !renaming}
+        draggable={!!drag && !task.done && !renaming}
         onDragStart={(e: DragEvent) => {
           if (!drag) return;
           e.dataTransfer.effectAllowed = 'move';
@@ -332,25 +327,14 @@ export function TaskCard({
           }
         }}
       >
-        {/* Le drapeau PORTE une information — épinglée — là où la poignée n'est
-            qu'un rappel décoratif du glisser. D'où le traitement inverse : l'un
-            est nommé, l'autre masqué. Sans quoi un lecteur d'écran énonce les
-            points braille de « ⠿ » sur chaque carte. */}
-        {/* La poignée est conditionnée à `drag`, comme le geste qu'elle annonce.
-            Sans cette garde, la revue (#47) — premier écran à ne pas passer
-            `drag` — affichait une poignée sur des cartes portant
-            `draggable="false"` : une affordance qui ne mène à rien. Aucun effet
-            sur l'écran matrice ni sur la vue globale, qui passent tous deux
-            `drag`. */}
-        {pinnedCard ? (
-          <span className="task__flag" role="img" aria-label="Épinglée">
-            ⚑
-          </span>
-        ) : drag ? (
+        {/* La poignée est conditionnée à `drag`, comme le geste qu'elle annonce :
+            absente, elle mènerait à rien. Masquée au lecteur d'écran — sans quoi
+            il énonce les points braille de « ⠿ » sur chaque carte. */}
+        {drag && (
           <span className="task__grip" aria-hidden="true">
             ⠿
           </span>
-        ) : null}
+        )}
         <button
           className={`task__check${task.done ? ' task__check--done' : ''}`}
           onClick={onCheck}
@@ -628,11 +612,6 @@ export function TaskCard({
                 <span className="task-menu__why">{focus.refusal}</span>
               </span>
             ))}
-          {quad.key !== 'parking' && (
-            <button className="task-menu__action task-menu__action--pin" onClick={onTogglePin}>
-              {task.pinned ? 'Désépingler' : '⚑ Épingler en haut'}
-            </button>
-          )}
           {/* Seule sortie volontaire du lien : sans elle, il ne se déferait
               plus que par suppression ou complétion — soit par accident. */}
           {task.pair_id && partnerOf(tasks, task) && (
