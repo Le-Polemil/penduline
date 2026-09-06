@@ -97,6 +97,7 @@ export function FocusScreen({ store }: { store: Store }) {
           quad={quadrant(t.quadrant)}
           tasks={store.tasks}
           otherBoards={store.boards.filter((b) => b.id !== t.board_id)}
+        universes={store.universes}
           // `false` et non `t.pinned` : épingler veut dire « en haut de sa
           // case », et cet écran n'a pas de case. Le fanion y désignerait un
           // ordre qui n'existe pas.

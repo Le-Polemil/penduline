@@ -1414,3 +1414,34 @@ button.uni-head__name:focus-visible {
   .task__act { opacity: 0.55; min-width: 44px; min-height: 44px; padding: 0; }
   .task__today--on { opacity: 1; }
 }
+
+/* ── Sous-menu par univers du menu ⋯ ─────────────────────────────────────── */
+.task-menu__uni { position: relative; }
+.task-menu__uni-head { display: flex; align-items: center; width: 100%; }
+.task-menu__caret { margin-left: auto; color: var(--color-neutral-700); font-weight: 700; }
+.task-menu__uni--open > .task-menu__uni-head { background: var(--color-accent-100); }
+
+/* Flyout : ouvert au survol sur pointeur fin, il déborde à droite du menu. */
+.task-menu__flyout {
+  position: absolute; left: 100%; top: -4px; z-index: 1;
+  min-width: 150px; max-width: 210px;
+  background: var(--card-warm); border-radius: 12px; box-shadow: var(--shadow-lg);
+  padding: 4px; display: flex; flex-direction: column; gap: 1px;
+  animation: mm-in 0.12s ease backwards;
+}
+/* Le menu lui-même s'ouvre à droite de la carte : passé la moitié de l'écran,
+   le flyout sortirait de la fenêtre. On le renvoie à gauche. */
+@media (max-width: 900px) {
+  .task-menu__flyout { left: auto; right: 100%; }
+}
+
+/* Au doigt, `mouseenter` n'arrive jamais et un flyout se vise mal : le
+   sous-menu devient un dépliage en place, sous son univers (#90). */
+@media (hover: none) {
+  .task-menu__flyout {
+    position: static; box-shadow: none; background: none;
+    padding: 2px 0 2px 12px; min-width: 0; max-width: none;
+    border-left: 1.5px solid var(--color-neutral-300); margin-left: 8px;
+  }
+  .task-menu__uni-head { min-height: 44px; }
+}

@@ -247,6 +247,7 @@ export function GlobalScreen({
         // l'action concerne la tâche, pas la vue. Déplacer hors portée la fait
         // sortir de l'écran, et c'est la conséquence juste.
         otherBoards={store.boards.filter((b) => b.id !== t.board_id)}
+        universes={store.universes}
         pinnedCard={pinnedCard}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}

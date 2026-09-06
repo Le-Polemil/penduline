@@ -2,6 +2,7 @@ import { useState, type CSSProperties, type DragEvent, type KeyboardEvent as Rea
 import {
   deadlineStatus,
   formatDeadline,
+  groupByUniverse,
   partnerOf,
   QUADS,
   type Attachment,
@@ -9,6 +10,7 @@ import {
   type Quadrant,
   type QuadrantKey,
   type Task,
+  type Universe,
 } from '@penduline/shared';
 import { Attachments } from './Attachments';
 import { Deadline } from './Deadline';
@@ -152,6 +154,7 @@ export function TaskCard({
   quad,
   tasks,
   otherBoards,
+  universes,
   pinnedCard,
   menuOpen,
   onMenu,
@@ -177,6 +180,14 @@ export function TaskCard({
   tasks: Task[];
   /** Les matrices proposées par « Vers une autre matrice » (la sienne exclue). */
   otherBoards: Board[];
+  /**
+   * Les univers, pour ranger les matrices comme l'accueil le fait (#62).
+   *
+   * Facultatif : absent — ou vide — la liste reste PLATE, exactement celle
+   * d'aujourd'hui. C'est l'état de tout compte qui n'a pas rangé ses matrices,
+   * et il ne doit pas se compliquer pour rien.
+   */
+  universes?: Universe[];
   pinnedCard: boolean;
   menuOpen: boolean;
   onMenu: (open: boolean) => void;
@@ -248,6 +259,13 @@ export function TaskCard({
    * à `true` et le second clic ne déclencherait rien.
    */
   const [askAdd, setAskAdd] = useState(0);
+  /** L'univers dont le sous-menu est ouvert. `null` = aucun. */
+  const [openUni, setOpenUni] = useState<string | null>(null);
+  /**
+   * Les matrices d'accueil, rangées par univers et débarrassées des groupes
+   * vides. `groupByUniverse` place déjà le groupe « sans univers » en dernier.
+   */
+  const groupes = groupByUniverse(universes ?? [], otherBoards).filter((g) => g.boards.length > 0);
   const renaming = rename.value !== null;
   const splitActive = !!split?.ok && !!split.active;
   const statut = deadline ? deadlineStatus(task.due_at, deadline.now) : null;
@@ -535,19 +553,62 @@ export function TaskCard({
               </button>
             ))}
           </div>
-          {/* Les autres matrices sont listées à plat plutôt qu'en sous-menu :
-              un menu déjà flottant qui en ouvrirait un second serait pénible
-              à viser, et la liste reste courte dans l'usage réel. */}
+          {/* Les matrices sont RANGÉES PAR UNIVERS, dans l'ordre de l'accueil.
+              La liste plate d'avant tenait tant qu'on avait trois matrices ;
+              passé quelques univers elle n'avait plus ni ordre ni repère, alors
+              que l'accueil les range depuis #62. Même principe que #96 côté
+              menu contextuel de l'extension.
+              Sans aucun univers, on retombe EXACTEMENT sur la liste d'avant :
+              c'est l'état de tout compte qui n'a rien rangé. */}
           {otherBoards.length > 0 && (
             <>
               <div className="task-menu__label">Vers une autre matrice</div>
-              <div className="task-menu__boards">
-                {otherBoards.map((b) => (
-                  <button key={b.id} className="board-btn" onClick={() => onMoveBoard(b)}>
-                    {b.name}
-                  </button>
-                ))}
-              </div>
+              {groupes.length <= 1 ? (
+                <div className="task-menu__boards">
+                  {otherBoards.map((b) => (
+                    <button key={b.id} className="board-btn" onClick={() => onMoveBoard(b)}>
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                groupes.map((g) => {
+                  const cle = g.universe?.id ?? 'sans-univers';
+                  const ouvert = openUni === cle;
+                  return (
+                    <div
+                      className={`task-menu__uni${ouvert ? ' task-menu__uni--open' : ''}`}
+                      key={cle}
+                      // Le survol ouvre sur pointeur fin ; le clic sert de
+                      // repli au doigt, où `mouseenter` n'arrive jamais (#90).
+                      onMouseEnter={() => setOpenUni(cle)}
+                      onMouseLeave={() => setOpenUni((c) => (c === cle ? null : c))}
+                    >
+                      <button
+                        className="task-menu__action task-menu__uni-head"
+                        aria-expanded={ouvert}
+                        onClick={() => setOpenUni(ouvert ? null : cle)}
+                      >
+                        {/* « Sans univers » plutôt que « Autre » : c'est le mot
+                            que l'accueil emploie déjà pour ce même groupe. */}
+                        {g.universe?.name ?? 'Sans univers'}
+                        <span className="task-menu__caret" aria-hidden="true">
+                          ›
+                        </span>
+                      </button>
+                      {ouvert && (
+                        <div className="task-menu__flyout">
+                          {g.boards.map((b) => (
+                            <button key={b.id} className="board-btn" onClick={() => onMoveBoard(b)}>
+                              {b.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </>
           )}
           {focus &&

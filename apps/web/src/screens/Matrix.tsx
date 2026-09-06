@@ -392,6 +392,7 @@ export function MatrixScreen({
         quad={q}
         tasks={tasks}
         otherBoards={otherBoards}
+        universes={store.universes}
         pinnedCard={pinnedCard}
         flash={flash === t.id}
         attachments={{

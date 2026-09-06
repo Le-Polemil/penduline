@@ -210,6 +210,7 @@ export function ReviewScreen({
           quad={q}
           tasks={tasks}
           otherBoards={store.boards.filter((b) => b.id !== t.board_id)}
+        universes={store.universes}
           pinnedCard={t.pinned}
           menuOpen={menuTask === t.id}
           onMenu={(open) => setMenuTask(open ? t.id : null)}
