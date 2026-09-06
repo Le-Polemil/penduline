@@ -130,6 +130,9 @@ button { font: inherit; }
 .board-gap__line { flex: 1; border-top: 3px dotted transparent; }
 .board-gap--active .board-gap__line { border-top-color: var(--color-accent); }
 .board-row--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); }
+/* `position: relative` + `z-index` quand un menu est ouvert : sans ça, les
+   lignes SUIVANTES se peignent après, et leurs `⋯` traversaient le menu. */
+.board-row:has(.board-menu) { position: relative; z-index: 40; }
 .board-row {
   display: flex; align-items: center; width: 100%;
   background: var(--card-warm); border-radius: var(--radius-lg);
@@ -156,34 +159,26 @@ button { font: inherit; }
   user-select: none;
   touch-action: manipulation;
 }
-/* Les actions restent discrètes jusqu'au survol, mais toujours atteignables
-   au clavier — d'où le :focus-within plutôt qu'un simple :hover. */
-/* Au repos la zone est repliée (largeur 0), pour que les pastilles restent
-   collées au bord droit ; elle se déplie au survol ou au focus clavier.
-   `max-width` plutôt que `width: auto`, qui ne s'anime pas. */
-.board-row__actions {
-  display: flex; align-items: center; gap: 4px;
-  max-width: 0; padding-right: 0; overflow: hidden;
-  transition: max-width 0.26s cubic-bezier(0.22, 1, 0.36, 1), padding-right 0.26s;
+/* Il ne reste que `⋯` en ligne, et il est toujours visible — comme sur une carte
+   de tâche. L'animation de largeur qui dépliait quatre boutons a disparu avec
+   eux : plus rien à déplier, donc plus rien à animer. C'était d'ailleurs elle
+   qu'on trouvait trop rapide. */
+.board-row__actions { position: relative; display: flex; align-items: center; flex: none; }
+.board-more {
+  flex: none; color: var(--color-neutral-700); font: 700 14px/1 var(--font-body);
+  padding: 6px 8px; border-radius: 999px; cursor: pointer; background: none; border: none;
+  transition: background 0.15s, color 0.15s;
 }
-/* 400 et non 260 : la ligne porte désormais ↑ ↓ ⋯ en plus de Renommer / Supprimer. */
-.board-row:hover .board-row__actions,
-.board-row:focus-within .board-row__actions { max-width: 400px; padding-right: 20px; }
-.board-row__actions .board-act { opacity: 0; transition: opacity 0.18s; }
-.board-row:hover .board-act,
-.board-row:focus-within .board-act { opacity: 1; }
+.board-more:hover,
+.board-more[aria-expanded='true'] { background: var(--color-accent-100); color: var(--color-accent-800); }
 
-/* Sans survol (tactile), ces actions ne se déplient pas : on passe par l'appui
-   long, qui ouvre `.sheet`.
-   Mais elles restent DANS le document. Un `display: none` les retirerait de
-   l'arbre d'accessibilité — or une tablette munie d'un clavier rapporte elle
-   aussi `hover: none`, et perdrait ainsi le seul chemin clavier (#38). Le focus
-   les révèle donc, le survol non. */
+/* Le menu d'une matrice EST celui d'une tâche : il en porte la classe et ne
+   redéfinit que son ancrage. Deux menus qui font la même chose doivent se
+   ressembler — et n'avoir qu'une seule feuille de style. */
+.board-menu { right: 0; top: calc(100% + 6px); width: 210px; }
+
 @media (hover: none) {
-  .board-row:hover .board-row__actions { max-width: 0; padding-right: 0; }
-  .board-row:hover .board-act { opacity: 0; }
-  .board-row:focus-within .board-row__actions { max-width: 400px; padding-right: 20px; }
-  .board-row:focus-within .board-act { opacity: 1; }
+  .board-more { min-width: 44px; min-height: 44px; }
 }
 
 /* ── Menu d'actions tactile (appui long) ──────────────────────────────────── */
