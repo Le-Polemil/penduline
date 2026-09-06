@@ -87,13 +87,21 @@ export interface CardRename {
  * et une signature qui ne saurait qu'en dessiner obligerait à convertir les
  * autres à la main — donc à les réécrire, donc à s'écarter de l'original.
  */
-function Icon({ size = 15, children }: { size?: number; children: React.ReactNode }) {
+function Icon({
+  size = 15,
+  fill = 'none',
+  children,
+}: {
+  size?: number;
+  fill?: string;
+  children: React.ReactNode;
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
       width={size}
       height={size}
-      fill="none"
+      fill={fill}
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
@@ -127,11 +135,17 @@ function IconPaperclip({ size }: { size?: number }) {
   );
 }
 
-/** `flag` — l'engagement du jour (#49). Un fanion : c'est ce qu'on plante sur ce
- *  qu'on a décidé de faire. */
-function IconFlag({ size }: { size?: number }) {
+/**
+ * `flag` — l'engagement du jour (#49). Un fanion : c'est ce qu'on plante sur ce
+ * qu'on a décidé de faire.
+ *
+ * `filled` le remplit quand l'engagement est pris. Un contour et un aplat se
+ * distinguent d'un coup d'oeil, là où deux contours de teintes différentes
+ * demandent de comparer — et ne se distinguent plus du tout en niveaux de gris.
+ */
+function IconFlag({ size, filled }: { size?: number; filled?: boolean }) {
   return (
-    <Icon size={size}>
+    <Icon size={size} fill={filled ? 'currentColor' : 'none'}>
       <path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528" />
     </Icon>
   );
@@ -412,7 +426,7 @@ export function TaskCard({
             disabled={!focus.on && !!focus.refusal}
             onClick={focus.toggle}
           >
-            <IconFlag size={14} />
+            <IconFlag size={14} filled={focus.on} />
           </button>
         )}
         <button
@@ -603,7 +617,7 @@ export function TaskCard({
           {focus &&
             (focus.on || !focus.refusal ? (
               <button className="task-menu__action task-menu__action--focus" onClick={focus.toggle}>
-                <IconFlag size={13} />
+                <IconFlag size={13} filled={focus.on} />
                 {focus.on ? "Retirer d'aujourd'hui" : "Faire aujourd'hui"}
               </button>
             ) : (
