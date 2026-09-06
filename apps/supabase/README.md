@@ -226,6 +226,79 @@ Si l'environnement `production` exige une revue, le run demande **deux**
 approbations : une avant de toucher à la base, une avant de publier le front. Ce
 n'est pas une gêne à contourner — ce sont deux risques distincts.
 
+## Le planificateur (#20)
+
+`pg_cron` appelle `public.penduline_tick()` **toutes les heures**. Rien d'autre ne
+tourne côté serveur.
+
+> ⚠️ `pg_cron` doit figurer dans `shared_preload_libraries` — une ligne de
+> `postgresql.conf` et un **redémarrage** de Postgres, qu'aucune migration ne peut
+> faire. C'est déjà le cas sur cette instance comme en local (l'image
+> `supabase/postgres` la charge d'origine), donc `create extension` suffit. À
+> revérifier si l'image change :
+>
+> ```bash
+> docker exec -i <conteneur-db> psql -U postgres -d postgres \
+>   -c "show shared_preload_libraries" \
+>   -c "select setting from pg_settings where name='cron.database_name'"
+> ```
+>
+> `cron.database_name` doit valoir `postgres` : pg_cron ne planifie que dans
+> **une** base, et c'est celle où vivent les tables.
+
+### Le tick converge, il n'avance pas d'un pas
+
+Il traite « tout ce qui est dû à cet instant », jamais « ce qui s'est passé depuis
+la dernière fois ». Deux propriétés en découlent sans code supplémentaire :
+
+- **Rattrapage** — une exécution manquée signifie seulement que la suivante a plus
+  à faire. Aucun curseur à maintenir, donc aucun curseur qui puisse dériver.
+- **Idempotence** — relancer aussitôt ne trouve plus rien à faire, puisque le
+  travail n'est plus dû.
+
+C'est la règle à ne pas casser en branchant #21 et #22 dans le corps de la
+fonction.
+
+### Regarder ce qu'il fait
+
+```bash
+# Les dernières exécutions, vues par Penduline
+docker exec -i <conteneur-db> psql -U postgres -d postgres \
+  -c "select started_at, ran, rows_touched, error
+      from public.job_runs where job='penduline_tick'
+      order by started_at desc limit 20"
+
+# Les mêmes, vues par pg_cron
+docker exec -i <conteneur-db> psql -U postgres -d postgres \
+  -c "select jobname, schedule, active from cron.job" \
+  -c "select status, return_message, start_time
+      from cron.job_run_details order by runid desc limit 10"
+```
+
+Comment lire `job_runs` :
+
+| Ligne | Ce qu'elle dit |
+|---|---|
+| `ran = true`, `error` vide | Exécution normale. |
+| `ran = false` | Le verrou était pris : un tick précédent tournait encore. Ni succès ni panne — il a cédé la place, le suivant rattrapera. |
+| `error` renseigné | Le travail a échoué, mais la trace a survécu (le bloc `exception` la préserve). |
+| `finished_at` vide depuis longtemps | **Le cas le plus grave** : processus tué ou verrou tenu. Aucun message d'erreur ne le signalera. |
+| Plus aucune ligne récente | Le cron ne passe plus du tout. Vérifier `cron.job.active`. |
+
+### Sécurité de la fonction
+
+`security definer` est nécessaire — le job n'a pas d'`auth.uid()` et agit pour
+tous les comptes. Trois garde-fous l'encadrent, à ne pas relâcher :
+
+- `search_path = ''` figé, toutes les références qualifiées. Sans lui, un schéma
+  placé devant `public` ferait exécuter le code d'un tiers avec les droits du
+  propriétaire.
+- `execute` révoqué à `public`, `anon`, `authenticated` **et `service_role`**. Ce
+  dernier est le piège : les *default privileges* de Supabase le lui accordent
+  d'office, et il faut le retirer explicitement.
+- `job_runs` : RLS activée **sans aucune policy**, et aucun droit pour
+  `anon`/`authenticated` — la table est invisible à l'API.
+
 ## Sécurité
 
 - Les clés `VITE_SUPABASE_*` (URL + anon) sont **publiques**. L'isolation entre
