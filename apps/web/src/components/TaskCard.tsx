@@ -333,6 +333,9 @@ export function TaskCard({
   const statut = deadline ? deadlineStatus(task.due_at, deadline.now) : null;
   const cls = [
     'task',
+    // Une tâche du jour se voit SANS survol et sans lire son fanion : c'est un
+    // engagement pris, il doit se repérer d'un balayage de l'écran.
+    focus?.on ? 'task--today' : '',
     drag?.dragging ? 'task--dragging' : '',
     splitActive ? 'task--split' : '',
     task.done ? 'task--done' : '',
@@ -402,33 +405,6 @@ export function TaskCard({
             ⠿
           </span>
         )}
-        {/* L'engagement du jour, en un clic (#49).
-            Le geste reste dans le menu `⋯` — c'est là qu'on le cherche quand on
-            ne le connaît pas — mais il gagne un raccourci ici, parce que c'est
-            le seul du menu qu'on répète tous les matins.
-            Un FANION, et en deuxième position — juste après la poignée, là où
-            se tenait celui de l'épinglage. Ce n'est pas un hasard : une tâche
-            déjà choisie garde son icône visible en permanence, donc le bouton
-            est autant un marqueur d'état qu'une commande, et sa place est du
-            côté des marqueurs. */}
-        {focus && (
-          <button
-            className={`task__act task__today${focus.on ? ' task__today--on' : ''}`}
-            aria-pressed={focus.on}
-            // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
-            // ne se tait pas non plus.
-            title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? "Faire aujourd'hui")}
-            aria-label={
-              focus.on
-                ? `Retirer « ${task.title} » d'aujourd'hui`
-                : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
-            }
-            disabled={!focus.on && !!focus.refusal}
-            onClick={focus.toggle}
-          >
-            <IconFlag size={14} filled={focus.on} />
-          </button>
-        )}
         <button
           className={`task__check${task.done ? ' task__check--done' : ''}`}
           onClick={onCheck}
@@ -492,6 +468,34 @@ export function TaskCard({
             }}
           >
             <IconLayersPlus size={14} />
+          </button>
+        )}
+        {/* L'engagement du jour, en un clic (#49).
+            Le geste reste dans le menu `⋯` — c'est là qu'on le cherche quand on
+            ne le connaît pas — mais il gagne un raccourci ici, parce que c'est
+            le seul du menu qu'on répète tous les matins.
+            Un FANION, collé au `⋯`. Il avait d'abord été mis en tête de carte,
+            là où se tenait celui de l'épinglage — mais masqué au repos il y
+            creusait un trou bien visible entre la poignée et la case à cocher.
+            Contre le `⋯`, qui est toujours là, son absence ne se remarque plus.
+            Une tâche déjà choisie garde son icône visible en permanence : le
+            bouton est alors autant un marqueur d'état qu'une commande. */}
+        {focus && (
+          <button
+            className={`task__act task__today${focus.on ? ' task__today--on' : ''}`}
+            aria-pressed={focus.on}
+            // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
+            // ne se tait pas non plus.
+            title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? "Faire aujourd'hui")}
+            aria-label={
+              focus.on
+                ? `Retirer « ${task.title} » d'aujourd'hui`
+                : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
+            }
+            disabled={!focus.on && !!focus.refusal}
+            onClick={focus.toggle}
+          >
+            <IconFlag size={14} filled={focus.on} />
           </button>
         )}
         {/* Le glyphe seul nommait ce bouton « ⋯ » dans l'arbre d'accessibilité :

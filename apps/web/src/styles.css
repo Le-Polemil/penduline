@@ -30,6 +30,9 @@
   --color-surface: #ebddc5;
   --color-text: #201e1d;
   --color-accent: #c67139;
+  /* Le fond d'une carte engagée pour aujourd'hui. Repris de l'ancien épinglage :
+     la teinte était juste, c'est l'usage qui ne l'était pas. */
+  --card-today: #fdf3e6;
   --color-accent-2: #7a8a5e;
   --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
 
@@ -430,6 +433,16 @@ button { font: inherit; }
 .task--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); transform: rotate(-2deg) scale(1.03); border-color: var(--color-accent); }
 .task--split { transform: scale(0.97); border: 1.5px dotted var(--q-ink); }
 .task--done { opacity: 0.55; }
+/* Une tâche engagée pour aujourd'hui porte le contour et le fond que l'épinglage
+   portait avant elle. Pas son animation de pulsation, en revanche : elle servait
+   à confirmer un geste rare, elle deviendrait du bruit sur une liste qu'on
+   reconstitue chaque matin. */
+.task--today {
+  background: var(--card-today);
+  border-color: var(--color-accent);
+  box-shadow: var(--shadow-md);
+}
+
 .task__grip { color: var(--color-neutral-400); letter-spacing: 1px; flex: none; }
 .task__check {
   width: 18px; height: 18px; border: 2px solid var(--q-ink); border-radius: 50%; flex: none;
@@ -1417,7 +1430,9 @@ button.uni-head__name:focus-visible {
 
 /* Une tâche DÉJÀ du jour garde son icône visible : ce n'est plus une commande,
    c'est une information — même règle que le compteur d'étapes. */
-.task__today--on { opacity: 1; color: var(--color-accent-700); }
+/* Même teinte que le contour de la carte : le fanion et le cadre disent la
+   même chose, ils ne doivent pas le dire de deux couleurs. */
+.task__today--on { opacity: 1; color: var(--color-accent); }
 .card-wrap:hover .task__today--on:hover { background: var(--color-accent-100); }
 
 @media (hover: none) {
