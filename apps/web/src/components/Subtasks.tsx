@@ -83,11 +83,15 @@ export function Subtasks({
   /**
    * Une tâche SANS étape n'affiche rien tant qu'on ne demande pas l'ajout.
    *
-   * La pastille « ＋ étape » était invisible au repos mais occupait sa ligne :
-   * chaque tâche de la grille était rallongée d'un cran pour un geste rare. Le
-   * geste vit désormais dans la carte, à côté de `⋯` (voir `TaskCard`).
+   * ⚠️ La condition porte sur `adding`, PAS sur `open`. `open` est le dépliage
+   * mémorisé par l'écran (et persisté) : il reste vrai après la suppression de
+   * la dernière étape, et il reste vrai après le premier clic sur le bouton
+   * d'ajout. Dans les deux cas le bloc restait donc dans le DOM, vide, à
+   * occuper sa ligne — exactement la dépense qu'on venait de supprimer.
+   *
+   * Il n'y a de toute façon rien à déplier quand il n'y a pas d'étape.
    */
-  if (vide && !open) return null;
+  if (vide && !adding) return null;
 
   return (
     <div className={`sub${vide ? '' : ' sub--filled'}`}>

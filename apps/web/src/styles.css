@@ -546,7 +546,9 @@ button { font: inherit; }
    ⚠️ Quand une tâche n'a aucune étape, l'entrée « ＋ étape » ne se montre qu'au
    survol ou au focus clavier. Un bouton visible sous chacune des cartes ferait
    d'une matrice de trente tâches une matrice de soixante lignes. */
-.sub { padding: 2px 0 0 30px; }
+/* Pas de retrait ici : c'est le filet de `.sub__list` qui décale les étapes, et
+   les deux se cumulaient. Le tronc tombe alors sous le chevron du compteur. */
+.sub { padding: 2px 0 0; }
 .sub__toggle {
   display: inline-flex; align-items: center; gap: 4px;
   font: 600 11px/1.6 var(--font-body); color: var(--color-neutral-700);
