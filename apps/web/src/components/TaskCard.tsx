@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   deadlineStatus,
   formatDeadline,
@@ -127,15 +127,49 @@ function IconPaperclip({ size }: { size?: number }) {
   );
 }
 
-/** `calendar-check` — s'engager à la faire aujourd'hui (#49). */
-function IconCalendarCheck({ size }: { size?: number }) {
+/** `flag` — l'engagement du jour (#49). Un fanion : c'est ce qu'on plante sur ce
+ *  qu'on a décidé de faire. */
+function IconFlag({ size }: { size?: number }) {
   return (
     <Icon size={size}>
-      <path d="M8 2v3" />
-      <path d="M16 2v3" />
-      <rect x="3" y="3" width="18" height="18" rx="2" />
-      <path d="M3 9h18" />
-      <path d="m9 15 2 2 4-4" />
+      <path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528" />
+    </Icon>
+  );
+}
+
+/** `alarm-clock` — poser une échéance. */
+function IconAlarmClock({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2 2" />
+      <path d="M5 3 2 6" />
+      <path d="m22 6-3-3" />
+      <path d="M6.38 18.7 4 21" />
+      <path d="M17.64 18.67 20 21" />
+    </Icon>
+  );
+}
+
+/** `pen-line` — renommer. */
+function IconPenLine({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M13 21h8" />
+      <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    </Icon>
+  );
+}
+
+/** `trash-2` — supprimer. */
+function IconTrash({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
     </Icon>
   );
 }
@@ -257,6 +291,24 @@ export function TaskCard({
   const [askAdd, setAskAdd] = useState(0);
   /** L'univers dont le sous-menu est ouvert. `null` = aucun. */
   const [openUni, setOpenUni] = useState<string | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Fermer le menu au clic à côté.
+   *
+   * Il ne se refermait que par un de ses propres boutons : ouvert par erreur, il
+   * fallait choisir une action pour s'en débarrasser. `pointerdown` et non
+   * `click`, pour qu'il disparaisse dès l'appui — attendre le relâchement le
+   * laisse visible pendant tout un glisser.
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+    function dehors(e: PointerEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) onMenu(false);
+    }
+    document.addEventListener('pointerdown', dehors);
+    return () => document.removeEventListener('pointerdown', dehors);
+  }, [menuOpen, onMenu]);
   /**
    * Les matrices d'accueil, rangées par univers et débarrassées des groupes
    * vides. `groupByUniverse` place déjà le groupe « sans univers » en dernier.
@@ -297,7 +349,8 @@ export function TaskCard({
   }
 
   return (
-    <div className="card-wrap" data-task={task.id} onKeyDown={onKeyDown}>
+    <div className="card-wrap" data-task={task.id} ref={wrapRef} onKeyDown={onKeyDown}>
+      <div className="task-anchor">
       <div
         className={cls}
         style={{ viewTransitionName: `vt-${task.id}` } as CSSProperties}
@@ -335,6 +388,33 @@ export function TaskCard({
             ⠿
           </span>
         )}
+        {/* L'engagement du jour, en un clic (#49).
+            Le geste reste dans le menu `⋯` — c'est là qu'on le cherche quand on
+            ne le connaît pas — mais il gagne un raccourci ici, parce que c'est
+            le seul du menu qu'on répète tous les matins.
+            Un FANION, et en deuxième position — juste après la poignée, là où
+            se tenait celui de l'épinglage. Ce n'est pas un hasard : une tâche
+            déjà choisie garde son icône visible en permanence, donc le bouton
+            est autant un marqueur d'état qu'une commande, et sa place est du
+            côté des marqueurs. */}
+        {focus && (
+          <button
+            className={`task__act task__today${focus.on ? ' task__today--on' : ''}`}
+            aria-pressed={focus.on}
+            // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
+            // ne se tait pas non plus.
+            title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? "Faire aujourd'hui")}
+            aria-label={
+              focus.on
+                ? `Retirer « ${task.title} » d'aujourd'hui`
+                : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
+            }
+            disabled={!focus.on && !!focus.refusal}
+            onClick={focus.toggle}
+          >
+            <IconFlag size={14} />
+          </button>
+        )}
         <button
           className={`task__check${task.done ? ' task__check--done' : ''}`}
           onClick={onCheck}
@@ -362,7 +442,16 @@ export function TaskCard({
             />
           </form>
         ) : (
-          <span className={`task__title${task.done ? ' task__title--done' : ''}`}>{task.title}</span>
+          <span
+            className={`task__title${task.done ? ' task__title--done' : ''}`}
+            // Double-clic pour renommer : le geste attendu sur un titre, et il
+            // n'existait nulle part. Le simple clic reste libre — la carte n'a
+            // pas d'action par défaut, et en lui en donnant une on rendrait le
+            // renommage accidentel.
+            onDoubleClick={() => rename.start()}
+          >
+            {task.title}
+          </span>
         )}
         {/* Le badge porte SON TEXTE, pas seulement sa couleur : le rouge seul
             n'informerait pas un daltonien. `<time>` garde la date brute lisible
@@ -371,30 +460,6 @@ export function TaskCard({
           <time className={`due due--${statut}`} dateTime={task.due_at}>
             ⏰ {formatDeadline(task.due_at, deadline?.now)}
           </time>
-        )}
-        {/* L'engagement du jour, en un clic (#49).
-            Le geste reste dans le menu `⋯` — c'est là qu'on le cherche quand on
-            ne le connaît pas — mais il gagne un raccourci ici, parce que c'est
-            le seul du menu qu'on répète tous les matins.
-            Une tâche DÉJÀ choisie garde son icône visible en permanence : elle
-            n'est plus une commande, elle est une information. */}
-        {focus && (
-          <button
-            className={`task__act task__today${focus.on ? ' task__today--on' : ''}`}
-            aria-pressed={focus.on}
-            // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
-            // ne se tait pas non plus.
-            title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? "Faire aujourd'hui")}
-            aria-label={
-              focus.on
-                ? `Retirer « ${task.title} » d'aujourd'hui`
-                : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
-            }
-            disabled={!focus.on && !!focus.refusal}
-            onClick={focus.toggle}
-          >
-            <IconCalendarCheck size={14} />
-          </button>
         )}
         {/* Ajouter une étape, à côté de `⋯` et révélé au survol comme lui.
             Auparavant une pastille « ＋ étape » vivait SOUS la carte : invisible
@@ -426,104 +491,14 @@ export function TaskCard({
           ⋯
         </button>
       </div>
-      {/* Les liens d'abord, les étapes ensuite : le lien qualifie la tâche
-          elle-même, l'étape la décompose. */}
-      {attachments && !renaming && (
-        <Attachments
-          task={task}
-          attachments={attachments.all}
-          adding={attachments.adding}
-          onCancelAdd={attachments.onCancelAdd}
-          onAdd={attachments.onAdd}
-          onRemove={attachments.onRemove}
-        />
-      )}
-      {deadline && !renaming && (
-        <Deadline
-          task={task}
-          editing={deadline.editing}
-          onCancel={deadline.onCancelEdit}
-          onSet={deadline.onSet}
-          onClear={deadline.onClear}
-        />
-      )}
-      {/* Sous la carte, jamais dedans : une étape n'est pas une demi-tâche, elle
-          appartient à un autre niveau de lecture. */}
-      {subtasks && !renaming && (
-        <Subtasks
-          parent={task}
-          tasks={tasks}
-          open={subtasks.open}
-          onToggleOpen={subtasks.onToggleOpen}
-          onAdd={subtasks.onAdd}
-          onCheck={subtasks.onCheck}
-          onDelete={subtasks.onDelete}
-          askAdd={askAdd}
-        />
-      )}
       {menuOpen && (
         <div className="task-menu">
-          <button
-            className="task-menu__action"
-            onClick={() => {
-              rename.start();
-              onMenu(false);
-            }}
-          >
-            Renommer
-          </button>
-          {/* Les deux entrées restent VISIBLES et grisées en bout de liste : un
-              menu dont les lignes apparaissent et disparaissent selon la position
-              se relit à chaque ouverture.
-              Elles portent leur raccourci en clair — c'est ainsi qu'on apprend
-              `Alt`+↑ : en lisant le menu. Un raccourci que rien n'annonce
-              n'existe pas. */}
-          {reorder && (
-            <>
-              <button
-                className="task-menu__action task-menu__action--move"
-                disabled={!reorder.up}
-                onClick={() => reorder.up?.()}
-              >
-                ↑ Monter <kbd className="task-menu__key">Alt+↑</kbd>
-              </button>
-              <button
-                className="task-menu__action task-menu__action--move"
-                disabled={!reorder.down}
-                onClick={() => reorder.down?.()}
-              >
-                ↓ Descendre <kbd className="task-menu__key">Alt+↓</kbd>
-              </button>
-            </>
-          )}
-          {/* L'ajout d'un lien vit ICI et pas sur la carte : une tâche sans
-              lien ne doit rien afficher de plus qu'aujourd'hui. */}
-          {attachments && (
-            <button
-              className="task-menu__action"
-              onClick={() => {
-                attachments.onStartAdd();
-                onMenu(false);
-              }}
-            >
-              <IconPaperclip size={13} />
-              Attacher un lien
-            </button>
-          )}
-          {/* Avec les liens, dans le groupe des gestes qui ENRICHISSENT la
-              tâche — avant « Déplacer vers », qui la range. */}
-          {deadline && (
-            <button
-              className="task-menu__action"
-              onClick={() => {
-                deadline.onStartEdit();
-                onMenu(false);
-              }}
-            >
-              ⏰ {task.due_at ? 'Modifier l’échéance' : 'Fixer une échéance'}
-            </button>
-          )}
-          <div className="task-menu__label">Déplacer vers</div>
+          {/* L'ORDRE DU MENU SUIT CE QU'ON Y FAIT LE PLUS.
+              Classer d'abord — c'est le geste de la matrice, celui pour lequel
+              on ouvre ce menu. Puis déplacer, puis enrichir. Les gestes rares
+              (renommer, supprimer) finissent en bas, où l'on ne clique pas par
+              accident. */}
+          <div className="task-menu__label">Affecter à</div>
           <div className="task-menu__grid">
             {QUADS.map((b) => (
               <button
@@ -546,7 +521,8 @@ export function TaskCard({
               c'est l'état de tout compte qui n'a rien rangé. */}
           {otherBoards.length > 0 && (
             <>
-              <div className="task-menu__label">Vers une autre matrice</div>
+              <div className="task-menu__sep" role="separator" />
+              <div className="task-menu__label">Déplacer vers</div>
               {groupes.length <= 1 ? (
                 <div className="task-menu__boards">
                   {otherBoards.map((b) => (
@@ -595,10 +571,40 @@ export function TaskCard({
               )}
             </>
           )}
+          <div className="task-menu__sep" role="separator" />
+          {/* L'ajout d'un lien vit ICI et pas sur la carte : une tâche sans
+              lien ne doit rien afficher de plus qu'aujourd'hui. */}
+          {attachments && (
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                attachments.onStartAdd();
+                onMenu(false);
+              }}
+            >
+              <IconPaperclip size={13} />
+              Attacher un lien
+            </button>
+          )}
+          {/* Avec les liens, dans le groupe des gestes qui ENRICHISSENT la
+              tâche. */}
+          {deadline && (
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                deadline.onStartEdit();
+                onMenu(false);
+              }}
+            >
+              <IconAlarmClock size={13} />
+              {task.due_at ? 'Modifier l’échéance' : 'Fixer une échéance'}
+            </button>
+          )}
           {focus &&
             (focus.on || !focus.refusal ? (
               <button className="task-menu__action task-menu__action--focus" onClick={focus.toggle}>
-                {focus.on ? "Retirer d'aujourd'hui" : "◷ Faire aujourd'hui"}
+                <IconFlag size={13} />
+                {focus.on ? "Retirer d'aujourd'hui" : "Faire aujourd'hui"}
               </button>
             ) : (
               // Désactivée avec son motif, et non masquée : c'est la limite qui
@@ -608,10 +614,37 @@ export function TaskCard({
                 role="button"
                 aria-disabled="true"
               >
-                ◷ Faire aujourd'hui
+                <IconFlag size={13} />
+                Faire aujourd'hui
                 <span className="task-menu__why">{focus.refusal}</span>
               </span>
             ))}
+          <div className="task-menu__sep" role="separator" />
+          {/* Les deux entrées restent VISIBLES et grisées : un menu dont les
+              lignes apparaissent et disparaissent selon la position se relit à
+              chaque ouverture.
+              Elles portent leur raccourci en clair — c'est ainsi qu'on apprend
+              `Alt`+↑ : en lisant le menu. Un raccourci que rien n'annonce
+              n'existe pas. */}
+          {reorder && (
+            <>
+              <button
+                className="task-menu__action task-menu__action--move"
+                disabled={!reorder.up}
+                onClick={() => reorder.up?.()}
+              >
+                ↑ Monter <kbd className="task-menu__key">Alt+↑</kbd>
+              </button>
+              <button
+                className="task-menu__action task-menu__action--move"
+                disabled={!reorder.down}
+                onClick={() => reorder.down?.()}
+              >
+                ↓ Descendre <kbd className="task-menu__key">Alt+↓</kbd>
+              </button>
+            </>
+          )}
+          <div className="task-menu__sep" role="separator" />
           {/* Seule sortie volontaire du lien : sans elle, il ne se déferait
               plus que par suppression ou complétion — soit par accident. */}
           {task.pair_id && partnerOf(tasks, task) && (
@@ -619,10 +652,57 @@ export function TaskCard({
               Dissocier
             </button>
           )}
+          <button
+            className="task-menu__action"
+            onClick={() => {
+              rename.start();
+              onMenu(false);
+            }}
+          >
+            <IconPenLine size={13} />
+            Renommer
+          </button>
           <button className="task-menu__action task-menu__action--del" onClick={onDelete}>
+            <IconTrash size={13} />
             Supprimer
           </button>
         </div>
+      )}
+      </div>
+      {/* Les liens d'abord, les étapes ensuite : le lien qualifie la tâche
+          elle-même, l'étape la décompose. */}
+      {attachments && !renaming && (
+        <Attachments
+          task={task}
+          attachments={attachments.all}
+          adding={attachments.adding}
+          onCancelAdd={attachments.onCancelAdd}
+          onAdd={attachments.onAdd}
+          onRemove={attachments.onRemove}
+        />
+      )}
+      {deadline && !renaming && (
+        <Deadline
+          task={task}
+          editing={deadline.editing}
+          onCancel={deadline.onCancelEdit}
+          onSet={deadline.onSet}
+          onClear={deadline.onClear}
+        />
+      )}
+      {/* Sous la carte, jamais dedans : une étape n'est pas une demi-tâche, elle
+          appartient à un autre niveau de lecture. */}
+      {subtasks && !renaming && (
+        <Subtasks
+          parent={task}
+          tasks={tasks}
+          open={subtasks.open}
+          onToggleOpen={subtasks.onToggleOpen}
+          onAdd={subtasks.onAdd}
+          onCheck={subtasks.onCheck}
+          onDelete={subtasks.onDelete}
+          askAdd={askAdd}
+        />
       )}
     </div>
   );

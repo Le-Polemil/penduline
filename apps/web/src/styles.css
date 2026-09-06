@@ -550,11 +550,6 @@ button { font: inherit; }
 .sub__chevron { transition: rotate 0.18s ease; flex: none; }
 .sub__chevron--open { rotate: 90deg; }
 
-.sub__list { display: flex; flex-direction: column; gap: 1px; margin-top: 2px; animation: mm-in 0.2s ease backwards; }
-.sub__item { display: flex; align-items: center; gap: 7px; font: 12.5px var(--font-body); color: var(--color-text); padding: 1px 6px; border-radius: 7px; }
-.sub__item:hover { background: var(--color-accent-100); }
-.sub__item--done { opacity: 0.5; }
-.sub__item--done .sub__title { text-decoration: line-through; }
 .sub__check {
   width: 13px; height: 13px; border: 1.5px solid var(--q-ink); border-radius: 50%; flex: none;
   cursor: pointer; background: transparent; padding: 0; transition: background 0.15s, transform 0.12s;
@@ -568,7 +563,6 @@ button { font: inherit; }
   transition: opacity 0.15s;
 }
 .sub__item:hover .sub__del, .sub__del:focus-visible { opacity: 1; }
-.sub__add { display: flex; padding: 1px 6px; }
 .sub__input {
   flex: 1; min-width: 0; font: 12.5px var(--font-body); color: var(--color-text);
   background: none; border: none; border-bottom: 1px dashed var(--color-neutral-400);
@@ -578,12 +572,31 @@ button { font: inherit; }
 .sub__input:focus-visible { border-bottom-color: var(--color-accent); }
 
 /* ── Menu de tâche ────────────────────────────────────────────────────────── */
+/* Le menu s'ancre à la CARTE et non au bloc entier : sans ce conteneur, un
+   `top: 100%` calculé sur `.card-wrap` le faisait tomber SOUS les étapes,
+   parfois à plus de cent pixels du bouton qui l'ouvre. */
+.task-anchor { position: relative; }
+
 .task-menu {
-  position: absolute; right: 0; top: 105%; z-index: 20; background: var(--card-warm);
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; background: var(--card-warm);
   border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 10px; width: 230px;
   animation: mm-pop 0.16s ease both; transform-origin: top right;
 }
-.task-menu__label { font: 600 11px var(--font-body); color: var(--color-neutral-700); margin: 0 0 8px; }
+/* Même retrait que les entrées, sinon les titres flottent à gauche des lignes
+   qu'ils annoncent. `margin-top` généreux : c'est lui qui sépare les groupes. */
+.task-menu__label {
+  font: 600 10.5px var(--font-body); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--color-neutral-700); padding: 0 10px; margin: 10px 0 5px;
+}
+.task-menu__label:first-child { margin-top: 0; }
+/* Séparateurs : ils découpent le menu en groupes de sens — classer, déplacer,
+   enrichir, ordonner, puis les gestes rares. Un filet dilué, jamais une ligne
+   franche : il sépare sans découper. */
+.task-menu__sep {
+  height: 1px; background: var(--color-neutral-200);
+  margin: 8px 6px 4px; border: none;
+}
+
 .task-menu__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .move-btn { border: none; border-radius: 10px; padding: 9px 6px; font: 700 12px var(--font-body); text-align: center; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; }
 .move-btn:hover { box-shadow: var(--shadow-sm); transform: scale(1.05); }
@@ -601,13 +614,24 @@ button { font: inherit; }
   transition: background 0.12s;
 }
 .board-btn:hover { background: var(--color-accent-100); }
-.task-menu__action { width: 100%; margin-top: 8px; font: 600 12px var(--font-body); text-align: center; cursor: pointer; padding: 6px; border-radius: 999px; background: none; border: none; }
-.task-menu__action--del { color: var(--color-neutral-700); margin-top: 2px; }
+/* Alignées à GAUCHE, comme les libellés de section et les matrices — elles
+   étaient centrées, ce qui donnait trois alignements différents dans un même
+   menu. Et `gap` sépare l'icône du texte, qui se touchaient. */
+.task-menu__action {
+  width: 100%; margin-top: 2px; font: 600 12px var(--font-body);
+  display: flex; align-items: center; gap: 9px;
+  text-align: left; cursor: pointer; padding: 7px 10px; border-radius: 9px;
+  background: none; border: none; color: var(--color-text);
+}
+.task-menu__action > svg { flex: none; color: var(--color-neutral-700); }
+.task-menu__action--del { color: var(--color-accent-700); }
+.task-menu__action--del > svg { color: var(--color-accent-700); }
 .task-menu__action:hover:not(:disabled) { background: var(--color-accent-100); }
 /* Visibles mais grisées en bout de liste : un menu dont les lignes vont et
    viennent selon la position se relit à chaque ouverture. */
 .task-menu__action:disabled { opacity: 0.4; cursor: not-allowed; }
-.task-menu__action--move { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.task-menu__action--move { justify-content: space-between; }
+.task-menu__action--move .task-menu__key { margin-left: auto; }
 /* Le raccourci s'apprend en lisant le menu — comme Ctrl+S dans un menu Fichier. */
 .task-menu__key { font: 500 10.5px var(--font-body); color: var(--color-neutral-700); letter-spacing: 0.02em; }
 
@@ -1405,13 +1429,15 @@ button.uni-head__name:focus-visible {
 
 /* ── Sous-menu par univers du menu ⋯ ─────────────────────────────────────── */
 .task-menu__uni { position: relative; }
-.task-menu__uni-head { display: flex; align-items: center; width: 100%; }
+.task-menu__uni-head { width: 100%; }
 .task-menu__caret { margin-left: auto; color: var(--color-neutral-700); font-weight: 700; }
 .task-menu__uni--open > .task-menu__uni-head { background: var(--color-accent-100); }
 
 /* Flyout : ouvert au survol sur pointeur fin, il déborde à droite du menu. */
 .task-menu__flyout {
-  position: absolute; left: 100%; top: -4px; z-index: 1;
+  /* `calc` et non `100%` : le menu a 10 px de rembourrage, et un flyout calé
+     sur la largeur de la LIGNE recouvrait donc le bord droit du menu. */
+  position: absolute; left: calc(100% + 10px); top: -4px; z-index: 1;
   min-width: 150px; max-width: 210px;
   background: var(--card-warm); border-radius: 12px; box-shadow: var(--shadow-lg);
   padding: 4px; display: flex; flex-direction: column; gap: 1px;
@@ -1420,7 +1446,7 @@ button.uni-head__name:focus-visible {
 /* Le menu lui-même s'ouvre à droite de la carte : passé la moitié de l'écran,
    le flyout sortirait de la fenêtre. On le renvoie à gauche. */
 @media (max-width: 900px) {
-  .task-menu__flyout { left: auto; right: 100%; }
+  .task-menu__flyout { left: auto; right: calc(100% + 10px); }
 }
 
 /* Au doigt, `mouseenter` n'arrive jamais et un flyout se vise mal : le
@@ -1432,4 +1458,55 @@ button.uni-head__name:focus-visible {
     border-left: 1.5px solid var(--color-neutral-300); margin-left: 8px;
   }
   .task-menu__uni-head { min-height: 44px; }
+}
+
+/* ── Étapes : de vraies cartes, en plus petit ─────────────────────────────── */
+/* Elles étaient des lignes de texte nues, qui ne ressemblaient à rien d'autre
+   dans l'application. Ce sont désormais des cartes — mêmes fond, rayon et ombre
+   que les tâches — simplement plus petites. La hiérarchie se lit à la TAILLE et
+   au RETRAIT, jamais à un changement de nature : une étape est une tâche
+   subordonnée, pas un autre objet. */
+.sub__list {
+  display: flex; flex-direction: column; gap: 4px;
+  margin: 4px 0 0 10px; padding-left: 14px; position: relative;
+  animation: mm-in 0.2s ease backwards;
+}
+/* Le TRONC : un trait qui descend du parent et s'arrête à la dernière étape. */
+.sub__list::before {
+  content: ''; position: absolute; left: 0; top: -4px; bottom: 16px;
+  border-left: 1.5px solid var(--color-neutral-300);
+}
+.sub__item { position: relative; }
+/* La BRANCHE : elle relie le tronc à sa carte. */
+.sub__item::before {
+  content: ''; position: absolute; left: -14px; top: 50%;
+  width: 12px; border-top: 1.5px solid var(--color-neutral-300);
+}
+
+.sub__item {
+  display: flex; align-items: center; gap: 7px;
+  background: var(--card-warm); border-radius: 9px; box-shadow: var(--shadow-sm);
+  /* Plus courte et plus discrète que la carte parente : 6/9 px de rembourrage
+     contre 9/12, et une police de 12,5 contre 14,5. */
+  padding: 6px 9px; font: 12.5px var(--font-body); color: var(--color-text);
+  transition: box-shadow 0.15s;
+}
+.sub__item:hover { box-shadow: var(--shadow-md); }
+.sub__item--done { opacity: 0.55; }
+.sub__item--done .sub__title { text-decoration: line-through; }
+
+/* Le champ d'ajout EST une carte : même fond, même rayon, même ombre, même
+   gabarit — seul le contour tireté dit qu'elle n'existe pas encore. Il prend
+   ainsi la forme exacte de ce qu'il va produire. */
+.sub__item--add {
+  background: var(--card-warm); box-shadow: none;
+  border: 1.5px dashed var(--color-neutral-400); padding: 5px 8px;
+}
+/* La case à cocher, présente mais inerte : sans elle, la ligne changeait de
+   gabarit au moment de la validation. */
+.sub__check--ghost { border-color: var(--color-neutral-400); opacity: 0.55; cursor: default; }
+.sub__check--ghost:hover { transform: none; }
+.sub__item--add .sub__input {
+  flex: 1; min-width: 0; border: none; background: none; outline: none;
+  font: 12.5px var(--font-body); color: var(--color-text); padding: 0;
 }
