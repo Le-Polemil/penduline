@@ -808,32 +808,32 @@ export function Home({
                               >
                                 ⋯
                               </button>
-                              {menuBoard === board.id && (
-                                <BoardMenu
-                                  board={board}
-                                  boards={boardsOf(board.universe_id)}
-                                  universes={store.universes}
-                                  grouped={grouped}
-                                  onMove={(dir: -1 | 1) => {
-                                    move(board.id, dir);
-                                    setMenuBoard(null);
-                                  }}
-                                  onMoveUniverse={(universeId: string | null) => {
-                                    void store.moveBoard(board.id, universeId, null);
-                                    setMenuBoard(null);
-                                  }}
-                                  onRename={() => {
-                                    setEditing({ id: board.id, name: board.name });
-                                    setMenuBoard(null);
-                                  }}
-                                  onDelete={() => {
-                                    setToDelete(board.id);
-                                    setMenuBoard(null);
-                                  }}
-                                  onClose={() => setMenuBoard(null)}
-                                />
-                              )}
                             </span>
+                            {menuBoard === board.id && (
+                              <BoardMenu
+                                board={board}
+                                boards={boardsOf(board.universe_id)}
+                                universes={store.universes}
+                                grouped={grouped}
+                                onMove={(dir: -1 | 1) => {
+                                  move(board.id, dir);
+                                  setMenuBoard(null);
+                                }}
+                                onMoveUniverse={(universeId: string | null) => {
+                                  void store.moveBoard(board.id, universeId, null);
+                                  setMenuBoard(null);
+                                }}
+                                onRename={() => {
+                                  setEditing({ id: board.id, name: board.name });
+                                  setMenuBoard(null);
+                                }}
+                                onDelete={() => {
+                                  setToDelete(board.id);
+                                  setMenuBoard(null);
+                                }}
+                                onClose={() => setMenuBoard(null)}
+                              />
+                            )}
                           </>
                         )}
                       </div>

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { Board, Universe } from '@penduline/shared';
 import { IconPenLine, IconTrash } from './Icons';
 
@@ -38,6 +38,28 @@ export function BoardMenu({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  /**
+   * Le menu s'ouvre vers le HAUT quand il déborderait par le bas.
+   *
+   * Les dernières lignes de l'accueil n'ont plus la hauteur nécessaire sous
+   * elles : le menu sortait de l'écran, et il fallait faire défiler pour
+   * atteindre « Supprimer ». Mesuré à l'ouverture plutôt que deviné — la
+   * hauteur du menu dépend du nombre d'univers.
+   */
+  const [versLeHaut, setVersLeHaut] = useState(false);
+
+  // `useLayoutEffect` : la mesure doit précéder la peinture, sinon le menu
+  // s'affiche une image en bas avant de sauter en haut.
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const deborde = r.bottom > window.innerHeight - 8;
+    // On ne remonte que s'il y a VRAIMENT la place au-dessus : sinon on
+    // remplacerait un débordement par le bas par un débordement par le haut.
+    const ligne = el.closest('.board-row')?.getBoundingClientRect();
+    setVersLeHaut(deborde && !!ligne && ligne.top > r.height + 8);
+  }, []);
 
   /**
    * Fermer au clic à côté et à Échap.
@@ -65,27 +87,17 @@ export function BoardMenu({
   const dernier = boards[boards.length - 1]?.id === board.id;
 
   return (
-    <div className="task-menu board-menu" ref={ref} role="menu" aria-label={`Actions pour « ${board.name} »`}>
-      {/* Le glisser-déposer HTML5 ne marche pas au doigt : sans ces entrées,
-          réordonner serait impossible sur mobile — et au clavier. */}
-      <button
-        className="task-menu__action task-menu__action--move"
-        disabled={premier}
-        onClick={() => onMove(-1)}
-      >
-        ↑ Monter
-      </button>
-      <button
-        className="task-menu__action task-menu__action--move"
-        disabled={dernier}
-        onClick={() => onMove(1)}
-      >
-        ↓ Descendre
-      </button>
-
+    <div
+      className={`task-menu board-row-menu${versLeHaut ? ' board-row-menu--up' : ''}`}
+      ref={ref}
+      role="menu"
+      aria-label={`Actions pour « ${board.name} »`}
+    >
+      {/* MÊME ORDRE QUE LE MENU D'UNE TÂCHE : ranger d'abord, puis ordonner,
+          puis les gestes rares. Deux menus qui font la même chose doivent se
+          lire de la même façon. */}
       {grouped && (
         <>
-          <div className="task-menu__sep" role="separator" />
           <div className="task-menu__label">Ranger dans</div>
           {universes.map((u) => (
             <button
@@ -106,8 +118,28 @@ export function BoardMenu({
           >
             Sans univers
           </button>
+          {/* Le séparateur n'existe QUE s'il y a quelque chose au-dessus : sans
+              univers, il ouvrirait le menu sur un trait. */}
+          <div className="task-menu__sep" role="separator" />
         </>
       )}
+
+      {/* Le glisser-déposer HTML5 ne marche pas au doigt : sans ces entrées,
+          réordonner serait impossible sur mobile — et au clavier. */}
+      <button
+        className="task-menu__action task-menu__action--move"
+        disabled={premier}
+        onClick={() => onMove(-1)}
+      >
+        ↑ Monter
+      </button>
+      <button
+        className="task-menu__action task-menu__action--move"
+        disabled={dernier}
+        onClick={() => onMove(1)}
+      >
+        ↓ Descendre
+      </button>
 
       <div className="task-menu__sep" role="separator" />
       <button className="task-menu__action" onClick={onRename}>
