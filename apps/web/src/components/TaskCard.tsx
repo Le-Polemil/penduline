@@ -1,4 +1,4 @@
-import type { CSSProperties, DragEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useState, type CSSProperties, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   deadlineStatus,
   formatDeadline,
@@ -70,6 +70,72 @@ export interface CardRename {
   change: (value: string) => void;
   cancel: () => void;
   commit: () => void;
+}
+
+/**
+ * Icônes Lucide recopiées en ligne (tracés officiels, v1.41).
+ *
+ * Pas de dépendance : le dépôt n'en a aucune pour les icônes, s'interdit les CDN
+ * par choix de confidentialité, et #79 — la migration vers Lucide — n'a pas
+ * encore tranché la forme. Le SVG en ligne est la convention déjà en place, du
+ * chevron des étapes à la corbeille de l'en-tête.
+ *
+ * Les formes passent en `children` plutôt qu'en liste de `d` : toutes les icônes
+ * Lucide ne sont pas faites que de `<path>` (`calendar-check` porte un `<rect>`),
+ * et une signature qui ne saurait qu'en dessiner obligerait à convertir les
+ * autres à la main — donc à les réécrire, donc à s'écarter de l'original.
+ */
+function Icon({ size = 15, children }: { size?: number; children: React.ReactNode }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** `layers-plus` — empiler une étape de plus sous la tâche. */
+function IconLayersPlus({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 .83.18 2 2 0 0 0 .83-.18l8.58-3.9a1 1 0 0 0 0-1.831z" />
+      <path d="M16 17h6" />
+      <path d="M19 14v6" />
+      <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 .825.178" />
+      <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l2.116-.962" />
+    </Icon>
+  );
+}
+
+/** `paperclip` — attacher un lien. */
+function IconPaperclip({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551" />
+    </Icon>
+  );
+}
+
+/** `calendar-check` — s'engager à la faire aujourd'hui (#49). */
+function IconCalendarCheck({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M8 2v3" />
+      <path d="M16 2v3" />
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <path d="M3 9h18" />
+      <path d="m9 15 2 2 4-4" />
+    </Icon>
+  );
 }
 
 /**
@@ -174,6 +240,14 @@ export function TaskCard({
     onClear: () => void;
   };
 }) {
+  /**
+   * Nonce d'ajout d'étape, incrémenté à chaque clic sur le bouton dédié.
+   *
+   * Un compteur et non un booléen : deux clics de suite doivent redonner le
+   * focus au champ, même quand la liste est déjà ouverte — un booléen resterait
+   * à `true` et le second clic ne déclencherait rien.
+   */
+  const [askAdd, setAskAdd] = useState(0);
   const renaming = rename.value !== null;
   const splitActive = !!split?.ok && !!split.active;
   const statut = deadline ? deadlineStatus(task.due_at, deadline.now) : null;
@@ -296,6 +370,49 @@ export function TaskCard({
             ⏰ {formatDeadline(task.due_at, deadline?.now)}
           </time>
         )}
+        {/* L'engagement du jour, en un clic (#49).
+            Le geste reste dans le menu `⋯` — c'est là qu'on le cherche quand on
+            ne le connaît pas — mais il gagne un raccourci ici, parce que c'est
+            le seul du menu qu'on répète tous les matins.
+            Une tâche DÉJÀ choisie garde son icône visible en permanence : elle
+            n'est plus une commande, elle est une information. */}
+        {focus && (
+          <button
+            className={`task__act task__today${focus.on ? ' task__today--on' : ''}`}
+            aria-pressed={focus.on}
+            // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
+            // ne se tait pas non plus.
+            title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? "Faire aujourd'hui")}
+            aria-label={
+              focus.on
+                ? `Retirer « ${task.title} » d'aujourd'hui`
+                : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
+            }
+            disabled={!focus.on && !!focus.refusal}
+            onClick={focus.toggle}
+          >
+            <IconCalendarCheck size={14} />
+          </button>
+        )}
+        {/* Ajouter une étape, à côté de `⋯` et révélé au survol comme lui.
+            Auparavant une pastille « ＋ étape » vivait SOUS la carte : invisible
+            au repos mais occupant sa ligne, elle rallongeait chaque tâche d'un
+            cran pour un geste rare. Ici elle ne coûte rien tant qu'on ne survole
+            pas. */}
+        {subtasks && (
+          <button
+            className="task__act task__sub"
+            aria-label={`Ajouter une étape à « ${task.title} »`}
+            onClick={() => {
+              if (!subtasks.open) subtasks.onToggleOpen();
+              // Un compteur plutôt qu'un booléen : deux clics de suite doivent
+              // redonner le focus au champ, même s'il est déjà ouvert.
+              setAskAdd((n) => n + 1);
+            }}
+          >
+            <IconLayersPlus size={14} />
+          </button>
+        )}
         {/* Le glyphe seul nommait ce bouton « ⋯ » dans l'arbre d'accessibilité :
             autant de boutons identiques et anonymes qu'il y a de tâches. */}
         <button
@@ -339,6 +456,7 @@ export function TaskCard({
           onAdd={subtasks.onAdd}
           onCheck={subtasks.onCheck}
           onDelete={subtasks.onDelete}
+          askAdd={askAdd}
         />
       )}
       {menuOpen && (
@@ -386,7 +504,8 @@ export function TaskCard({
                 onMenu(false);
               }}
             >
-              ↗ Attacher un lien
+              <IconPaperclip size={13} />
+              Attacher un lien
             </button>
           )}
           {/* Avec les liens, dans le groupe des gestes qui ENRICHISSENT la

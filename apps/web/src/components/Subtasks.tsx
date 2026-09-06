@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { endPosition, subtasksOf, type Task } from '@penduline/shared';
 
 /**
@@ -20,6 +20,7 @@ export function Subtasks({
   onAdd,
   onCheck,
   onDelete,
+  askAdd,
 }: {
   parent: Task;
   tasks: Task[];
@@ -28,8 +29,21 @@ export function Subtasks({
   onAdd: (title: string, position: number) => void;
   onCheck: (t: Task) => void;
   onDelete: (t: Task) => void;
+  /**
+   * Nonce d'ajout venu de la carte. À chaque incrément, le champ reprend le
+   * focus — c'est ce qui fait du bouton `layers-plus` un geste complet plutôt
+   * qu'un simple dépliage.
+   */
+  askAdd: number;
 }) {
   const [draft, setDraft] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Après peinture : au premier clic, le champ n'existe pas encore au moment où
+  // le nonce change — la liste vient tout juste de s'ouvrir.
+  useEffect(() => {
+    if (askAdd > 0) inputRef.current?.focus();
+  }, [askAdd, open]);
   const etapes = subtasksOf(tasks, parent.id);
   const faites = etapes.filter((t) => t.done).length;
   // Rien à montrer, et rien à replier : le bloc s'efface, et l'entrée d'ajout ne
@@ -44,8 +58,18 @@ export function Subtasks({
     setDraft('');
   }
 
+  /**
+   * Une tâche SANS étape n'affiche plus rien tant qu'on ne demande pas l'ajout.
+   *
+   * La pastille « ＋ étape » était invisible au repos mais occupait sa ligne :
+   * chaque tâche de la grille était donc rallongée d'un cran pour un geste rare.
+   * Le geste vit désormais dans la carte, à côté de `⋯` (voir `TaskCard`).
+   */
+  if (vide && !open) return null;
+
   return (
     <div className={`sub${vide ? '' : ' sub--filled'}`}>
+      {!vide && (
       <button
         className="sub__toggle"
         aria-expanded={open}
@@ -55,8 +79,9 @@ export function Subtasks({
         <svg className={`sub__chevron${open ? ' sub__chevron--open' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" width="10" height="10" aria-hidden="true">
           <path d="m9 6 6 6-6 6" />
         </svg>
-        {vide ? '＋ étape' : `${faites}/${etapes.length}`}
+        {`${faites}/${etapes.length}`}
       </button>
+      )}
 
       {open && (
         <div className="sub__list">
@@ -79,6 +104,7 @@ export function Subtasks({
           ))}
           <form className="sub__add" onSubmit={submit}>
             <input
+              ref={inputRef}
               className="sub__input"
               value={draft}
               maxLength={500}

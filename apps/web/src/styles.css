@@ -1383,3 +1383,34 @@ button.uni-head__name:focus-visible {
   .focus-limit__btn { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; }
   .focus-limit__field input { min-height: 44px; }
 }
+
+/* ── Actions de la barre de tâche, révélées au survol ─────────────────────── */
+/* `⋯` était seul ; il est rejoint par l'ajout d'étape et l'engagement du jour.
+   Tous trois sont des COMMANDES : elles ne s'affichent qu'au survol ou au focus
+   clavier, pour qu'une grille de trente tâches reste une grille de trente
+   titres. */
+.task__act {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  color: var(--color-neutral-700); background: none; border: none;
+  padding: 3px; border-radius: 999px; cursor: pointer;
+  opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s;
+}
+.card-wrap:hover .task__act,
+.task__act:focus-visible { opacity: 1; }
+.task__act:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+/* Désactivé : visible au survol comme les autres, mais inerte et sans promesse.
+   Son `title` porte le motif — un bouton qui disparaît n'explique rien. */
+.task__act:disabled { cursor: not-allowed; color: var(--color-neutral-400); }
+.task__act:disabled:hover { background: none; color: var(--color-neutral-400); }
+
+/* Une tâche DÉJÀ du jour garde son icône visible : ce n'est plus une commande,
+   c'est une information — même règle que le compteur d'étapes. */
+.task__today--on { opacity: 1; color: var(--color-accent-700); }
+.card-wrap:hover .task__today--on:hover { background: var(--color-accent-100); }
+
+@media (hover: none) {
+  /* Sans survol, les commandes seraient inatteignables : elles restent là,
+     atténuées, et la cible fait 44 px (#90). */
+  .task__act { opacity: 0.55; min-width: 44px; min-height: 44px; padding: 0; }
+  .task__today--on { opacity: 1; }
+}
