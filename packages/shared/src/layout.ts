@@ -42,7 +42,7 @@ export function isVisible(t: Task, quad: QuadrantKey, pending?: string | null): 
   // filtre est ici plutôt que dans les composants, pour que les cinq écrans en
   // héritent sans avoir à y penser.
   if (t.parent_id) return false;
-  if (t.quadrant !== quad || t.pinned || t.deleted) return false;
+  if (t.quadrant !== quad || t.deleted) return false;
   return !t.done || t.id === pending;
 }
 
@@ -59,28 +59,6 @@ export function visibleTasks(
 ): Task[] {
   return tasks
     .filter((t) => t.board_id === boardId && isVisible(t, quad, pending))
-    .sort((a, b) => a.position - b.position);
-}
-
-export function pinnedTasks(
-  tasks: Task[],
-  boardId: string,
-  quad: QuadrantKey,
-  pending?: string | null,
-): Task[] {
-  return tasks
-    .filter(
-      (t) =>
-        t.board_id === boardId &&
-        t.quadrant === quad &&
-        t.pinned &&
-        !t.deleted &&
-        // Une sous-tâche ne s'épingle pas : elle n'a pas de case à surmonter.
-        !t.parent_id &&
-        // Cocher une épinglée doit lui laisser le même délai d'annulation
-        // qu'aux autres.
-        (!t.done || t.id === pending),
-    )
     .sort((a, b) => a.position - b.position);
 }
 
@@ -128,7 +106,7 @@ export function subtasksOf(tasks: Task[], parentId: string): Task[] {
  * définitif de la corbeille, où la ligne part pour de bon.
  */
 export function planDelete(tasks: Task[], task: Task): TaskWrite[] {
-  const writes = planPairDetach(tasks, task, { deleted: true, pinned: false });
+  const writes = planPairDetach(tasks, task, { deleted: true });
   for (const s of subtasksOf(tasks, task.id)) writes.push({ id: s.id, patch: { deleted: true } });
   return writes;
 }
@@ -274,12 +252,7 @@ export function summarizeUniverse(boards: Board[], tasks: Task[]): UniverseSumma
 /** Les tâches d'une case appartenant à une même matrice, en lignes prêtes à rendre. */
 export interface BoardGroup {
   board: Board;
-  /** Lignes épinglées, à rendre en tête du groupe. */
-  pinned: Task[][];
-  /**
-   * Lignes en retard (#19), à rendre juste après les épinglées : l'épinglage est
-   * un geste explicite qui veut déjà dire « en haut », il garde la préséance.
-   */
+  /** Lignes en retard (#19), à rendre en tête du groupe. */
   overdue: Task[][];
   rows: Task[][];
 }
@@ -316,7 +289,6 @@ export function groupTasksByBoard(
 ): BoardGroup[] {
   const groups: BoardGroup[] = [];
   for (const board of boards) {
-    const pinned = buildRows(pinnedTasks(tasks, board.id, quad, pending));
     // Le découpage se fait matrice par matrice, comme le reste : une échéance
     // est comparable d'une matrice à l'autre, mais `position` ne l'est pas, et
     // c'est elle qui ordonne la zone manuelle. Regrouper reste la seule
@@ -325,8 +297,8 @@ export function groupTasksByBoard(
       buildRows(visibleTasks(tasks, board.id, quad, pending)),
       now,
     );
-    if (pinned.length || overdue.length || rest.length) {
-      groups.push({ board, pinned, overdue, rows: rest });
+    if (overdue.length || rest.length) {
+      groups.push({ board, overdue, rows: rest });
     }
   }
   return groups;
@@ -483,12 +455,13 @@ export function planReorder(
   dir: -1 | 1,
   now: number = Date.now(),
 ): ReorderPlan | null {
-  if (!task.pinned && isOverdue(task, now)) return null;
-  const siblings = task.pinned
-    ? pinnedTasks(tasks, task.board_id, task.quadrant)
-    : // Zone 3 seule : la zone « en retard » est écartée du calcul, sinon
-      // `insertPosition` moyennerait des positions qui ne se suivent plus.
-      splitOverdue(buildRows(visibleTasks(tasks, task.board_id, task.quadrant)), now).rest.flat();
+  if (isOverdue(task, now)) return null;
+  // La zone « en retard » est écartée du calcul, sinon `insertPosition`
+  // moyennerait des positions qui ne se suivent plus.
+  const siblings = splitOverdue(
+    buildRows(visibleTasks(tasks, task.board_id, task.quadrant)),
+    now,
+  ).rest.flat();
   const rows = buildRows(siblings);
   const from = rows.findIndex((r) => r.some((t) => t.id === task.id));
   const to = from + dir;

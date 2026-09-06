@@ -8,7 +8,6 @@ import {
   planDelete,
   planPairDetach,
   planPairMove,
-  planPairPatch,
   quadrant,
   reviewSignals,
   signalCount,
@@ -155,15 +154,6 @@ export function ReviewScreen({
     else moveToBoard(task, target);
   }
 
-  function togglePin(t: Task) {
-    if (t.pinned) {
-      const pos = endPosition(visibleTasks(tasks, t.board_id, t.quadrant));
-      withVT(() => apply('Désépinglée', planPairMove(tasks, t, { pinned: false }, pos)));
-    } else {
-      withVT(() => apply('Épinglée', planPairPatch(tasks, t, { pinned: true })));
-    }
-    setMenuTask(null);
-  }
 
   function unpair(task: Task) {
     withVT(() => apply('Dissociée', planPairDetach(tasks, task)));
@@ -210,7 +200,7 @@ export function ReviewScreen({
           quad={q}
           tasks={tasks}
           otherBoards={store.boards.filter((b) => b.id !== t.board_id)}
-          pinnedCard={t.pinned}
+        universes={store.universes}
           menuOpen={menuTask === t.id}
           onMenu={(open) => setMenuTask(open ? t.id : null)}
           rename={{
@@ -226,7 +216,6 @@ export function ReviewScreen({
           }}
           onMoveQuad={(key) => moveQuad(t, key)}
           onMoveBoard={(b) => askMoveToBoard(t, b)}
-          onTogglePin={() => togglePin(t)}
           onUnpair={() => unpair(t)}
           onDelete={() => askRemoveTask(t)}
           attachments={{

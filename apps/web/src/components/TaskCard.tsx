@@ -1,7 +1,8 @@
-import type { CSSProperties, DragEvent, KeyboardEvent as ReactKeyboardEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import {
   deadlineStatus,
   formatDeadline,
+  groupByUniverse,
   partnerOf,
   QUADS,
   type Attachment,
@@ -9,6 +10,7 @@ import {
   type Quadrant,
   type QuadrantKey,
   type Task,
+  type Universe,
 } from '@penduline/shared';
 import { Attachments } from './Attachments';
 import { Deadline } from './Deadline';
@@ -73,6 +75,120 @@ export interface CardRename {
 }
 
 /**
+ * Icônes Lucide recopiées en ligne (tracés officiels, v1.41).
+ *
+ * Pas de dépendance : le dépôt n'en a aucune pour les icônes, s'interdit les CDN
+ * par choix de confidentialité, et #79 — la migration vers Lucide — n'a pas
+ * encore tranché la forme. Le SVG en ligne est la convention déjà en place, du
+ * chevron des étapes à la corbeille de l'en-tête.
+ *
+ * Les formes passent en `children` plutôt qu'en liste de `d` : toutes les icônes
+ * Lucide ne sont pas faites que de `<path>` (`calendar-check` porte un `<rect>`),
+ * et une signature qui ne saurait qu'en dessiner obligerait à convertir les
+ * autres à la main — donc à les réécrire, donc à s'écarter de l'original.
+ */
+function Icon({
+  size = 15,
+  fill = 'none',
+  children,
+}: {
+  size?: number;
+  fill?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={size}
+      height={size}
+      fill={fill}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {children}
+    </svg>
+  );
+}
+
+/** `layers-plus` — empiler une étape de plus sous la tâche. */
+function IconLayersPlus({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 .83.18 2 2 0 0 0 .83-.18l8.58-3.9a1 1 0 0 0 0-1.831z" />
+      <path d="M16 17h6" />
+      <path d="M19 14v6" />
+      <path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 .825.178" />
+      <path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l2.116-.962" />
+    </Icon>
+  );
+}
+
+/** `paperclip` — attacher un lien. */
+function IconPaperclip({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="m16 6-8.414 8.586a2 2 0 0 0 2.829 2.829l8.414-8.586a4 4 0 1 0-5.657-5.657l-8.379 8.551a6 6 0 1 0 8.485 8.485l8.379-8.551" />
+    </Icon>
+  );
+}
+
+/**
+ * `flag` — l'engagement du jour (#49). Un fanion : c'est ce qu'on plante sur ce
+ * qu'on a décidé de faire.
+ *
+ * `filled` le remplit quand l'engagement est pris. Un contour et un aplat se
+ * distinguent d'un coup d'oeil, là où deux contours de teintes différentes
+ * demandent de comparer — et ne se distinguent plus du tout en niveaux de gris.
+ */
+function IconFlag({ size, filled }: { size?: number; filled?: boolean }) {
+  return (
+    <Icon size={size} fill={filled ? 'currentColor' : 'none'}>
+      <path d="M4 22V4a1 1 0 0 1 .4-.8A6 6 0 0 1 8 2c3 0 5 2 7.333 2q2 0 3.067-.8A1 1 0 0 1 20 4v10a1 1 0 0 1-.4.8A6 6 0 0 1 16 16c-3 0-5-2-8-2a6 6 0 0 0-4 1.528" />
+    </Icon>
+  );
+}
+
+/** `alarm-clock` — poser une échéance. */
+function IconAlarmClock({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <circle cx="12" cy="13" r="8" />
+      <path d="M12 9v4l2 2" />
+      <path d="M5 3 2 6" />
+      <path d="m22 6-3-3" />
+      <path d="M6.38 18.7 4 21" />
+      <path d="M17.64 18.67 20 21" />
+    </Icon>
+  );
+}
+
+/** `pen-line` — renommer. */
+function IconPenLine({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M13 21h8" />
+      <path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
+    </Icon>
+  );
+}
+
+/** `trash-2` — supprimer. */
+function IconTrash({ size }: { size?: number }) {
+  return (
+    <Icon size={size}>
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+    </Icon>
+  );
+}
+
+/**
  * Une carte de tâche et son menu `⋯`.
  *
  * Extraite de l'écran matrice pour que la vue globale ne la recopie pas. La
@@ -86,14 +202,13 @@ export function TaskCard({
   quad,
   tasks,
   otherBoards,
-  pinnedCard,
+  universes,
   menuOpen,
   onMenu,
   rename,
   onCheck,
   onMoveQuad,
   onMoveBoard,
-  onTogglePin,
   onUnpair,
   onDelete,
   focus,
@@ -111,14 +226,20 @@ export function TaskCard({
   tasks: Task[];
   /** Les matrices proposées par « Vers une autre matrice » (la sienne exclue). */
   otherBoards: Board[];
-  pinnedCard: boolean;
+  /**
+   * Les univers, pour ranger les matrices comme l'accueil le fait (#62).
+   *
+   * Facultatif : absent — ou vide — la liste reste PLATE, exactement celle
+   * d'aujourd'hui. C'est l'état de tout compte qui n'a pas rangé ses matrices,
+   * et il ne doit pas se compliquer pour rien.
+   */
+  universes?: Universe[];
   menuOpen: boolean;
   onMenu: (open: boolean) => void;
   rename: CardRename;
   onCheck: () => void;
   onMoveQuad: (key: QuadrantKey) => void;
   onMoveBoard: (board: Board) => void;
-  onTogglePin: () => void;
   onUnpair: () => void;
   onDelete: () => void;
   /** Absent = la carte ne propose pas l'engagement du jour (#49). */
@@ -174,12 +295,47 @@ export function TaskCard({
     onClear: () => void;
   };
 }) {
+  /**
+   * Nonce d'ajout d'étape, incrémenté à chaque clic sur le bouton dédié.
+   *
+   * Un compteur et non un booléen : deux clics de suite doivent redonner le
+   * focus au champ, même quand la liste est déjà ouverte — un booléen resterait
+   * à `true` et le second clic ne déclencherait rien.
+   */
+  const [askAdd, setAskAdd] = useState(0);
+  /** L'univers dont le sous-menu est ouvert. `null` = aucun. */
+  const [openUni, setOpenUni] = useState<string | null>(null);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * Fermer le menu au clic à côté.
+   *
+   * Il ne se refermait que par un de ses propres boutons : ouvert par erreur, il
+   * fallait choisir une action pour s'en débarrasser. `pointerdown` et non
+   * `click`, pour qu'il disparaisse dès l'appui — attendre le relâchement le
+   * laisse visible pendant tout un glisser.
+   */
+  useEffect(() => {
+    if (!menuOpen) return;
+    function dehors(e: PointerEvent) {
+      if (!wrapRef.current?.contains(e.target as Node)) onMenu(false);
+    }
+    document.addEventListener('pointerdown', dehors);
+    return () => document.removeEventListener('pointerdown', dehors);
+  }, [menuOpen, onMenu]);
+  /**
+   * Les matrices d'accueil, rangées par univers et débarrassées des groupes
+   * vides. `groupByUniverse` place déjà le groupe « sans univers » en dernier.
+   */
+  const groupes = groupByUniverse(universes ?? [], otherBoards).filter((g) => g.boards.length > 0);
   const renaming = rename.value !== null;
   const splitActive = !!split?.ok && !!split.active;
   const statut = deadline ? deadlineStatus(task.due_at, deadline.now) : null;
   const cls = [
     'task',
-    pinnedCard ? 'task--pinned' : '',
+    // Une tâche du jour se voit SANS survol et sans lire son fanion : c'est un
+    // engagement pris, il doit se repérer d'un balayage de l'écran.
+    focus?.on ? 'task--today' : '',
     drag?.dragging ? 'task--dragging' : '',
     splitActive ? 'task--split' : '',
     task.done ? 'task--done' : '',
@@ -210,12 +366,13 @@ export function TaskCard({
   }
 
   return (
-    <div className="card-wrap" data-task={task.id} onKeyDown={onKeyDown}>
+    <div className="card-wrap" data-task={task.id} ref={wrapRef} onKeyDown={onKeyDown}>
+      <div className="task-anchor">
       <div
         className={cls}
         style={{ viewTransitionName: `vt-${task.id}` } as CSSProperties}
         // Pas de déplacement pendant une saisie : le glisser volerait le curseur.
-        draggable={!!drag && !task.pinned && !task.done && !renaming}
+        draggable={!!drag && !task.done && !renaming}
         onDragStart={(e: DragEvent) => {
           if (!drag) return;
           e.dataTransfer.effectAllowed = 'move';
@@ -240,25 +397,14 @@ export function TaskCard({
           }
         }}
       >
-        {/* Le drapeau PORTE une information — épinglée — là où la poignée n'est
-            qu'un rappel décoratif du glisser. D'où le traitement inverse : l'un
-            est nommé, l'autre masqué. Sans quoi un lecteur d'écran énonce les
-            points braille de « ⠿ » sur chaque carte. */}
-        {/* La poignée est conditionnée à `drag`, comme le geste qu'elle annonce.
-            Sans cette garde, la revue (#47) — premier écran à ne pas passer
-            `drag` — affichait une poignée sur des cartes portant
-            `draggable="false"` : une affordance qui ne mène à rien. Aucun effet
-            sur l'écran matrice ni sur la vue globale, qui passent tous deux
-            `drag`. */}
-        {pinnedCard ? (
-          <span className="task__flag" role="img" aria-label="Épinglée">
-            ⚑
-          </span>
-        ) : drag ? (
+        {/* La poignée est conditionnée à `drag`, comme le geste qu'elle annonce :
+            absente, elle mènerait à rien. Masquée au lecteur d'écran — sans quoi
+            il énonce les points braille de « ⠿ » sur chaque carte. */}
+        {drag && (
           <span className="task__grip" aria-hidden="true">
             ⠿
           </span>
-        ) : null}
+        )}
         <button
           className={`task__check${task.done ? ' task__check--done' : ''}`}
           onClick={onCheck}
@@ -286,7 +432,16 @@ export function TaskCard({
             />
           </form>
         ) : (
-          <span className={`task__title${task.done ? ' task__title--done' : ''}`}>{task.title}</span>
+          <span
+            className={`task__title${task.done ? ' task__title--done' : ''}`}
+            // Double-clic pour renommer : le geste attendu sur un titre, et il
+            // n'existait nulle part. Le simple clic reste libre — la carte n'a
+            // pas d'action par défaut, et en lui en donnant une on rendrait le
+            // renommage accidentel.
+            onDoubleClick={() => rename.start()}
+          >
+            {task.title}
+          </span>
         )}
         {/* Le badge porte SON TEXTE, pas seulement sa couleur : le rouge seul
             n'informerait pas un daltonien. `<time>` garde la date brute lisible
@@ -295,6 +450,53 @@ export function TaskCard({
           <time className={`due due--${statut}`} dateTime={task.due_at}>
             ⏰ {formatDeadline(task.due_at, deadline?.now)}
           </time>
+        )}
+        {/* Ajouter une étape, à côté de `⋯` et révélé au survol comme lui.
+            Auparavant une pastille « ＋ étape » vivait SOUS la carte : invisible
+            au repos mais occupant sa ligne, elle rallongeait chaque tâche d'un
+            cran pour un geste rare. Ici elle ne coûte rien tant qu'on ne survole
+            pas. */}
+        {subtasks && (
+          <button
+            className="task__act task__sub"
+            aria-label={`Ajouter une étape à « ${task.title} »`}
+            onClick={() => {
+              if (!subtasks.open) subtasks.onToggleOpen();
+              // Un compteur plutôt qu'un booléen : deux clics de suite doivent
+              // redonner le focus au champ, même s'il est déjà ouvert.
+              setAskAdd((n) => n + 1);
+            }}
+          >
+            <IconLayersPlus size={14} />
+          </button>
+        )}
+        {/* L'engagement du jour, en un clic (#49).
+            Le geste reste dans le menu `⋯` — c'est là qu'on le cherche quand on
+            ne le connaît pas — mais il gagne un raccourci ici, parce que c'est
+            le seul du menu qu'on répète tous les matins.
+            Un FANION, collé au `⋯`. Il avait d'abord été mis en tête de carte,
+            là où se tenait celui de l'épinglage — mais masqué au repos il y
+            creusait un trou bien visible entre la poignée et la case à cocher.
+            Contre le `⋯`, qui est toujours là, son absence ne se remarque plus.
+            Une tâche déjà choisie garde son icône visible en permanence : le
+            bouton est alors autant un marqueur d'état qu'une commande. */}
+        {focus && (
+          <button
+            className={`task__act task__today${focus.on ? ' task__today--on' : ''}`}
+            aria-pressed={focus.on}
+            // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
+            // ne se tait pas non plus.
+            title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? "Faire aujourd'hui")}
+            aria-label={
+              focus.on
+                ? `Retirer « ${task.title} » d'aujourd'hui`
+                : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
+            }
+            disabled={!focus.on && !!focus.refusal}
+            onClick={focus.toggle}
+          >
+            <IconFlag size={14} filled={focus.on} />
+          </button>
         )}
         {/* Le glyphe seul nommait ce bouton « ⋯ » dans l'arbre d'accessibilité :
             autant de boutons identiques et anonymes qu'il y a de tâches. */}
@@ -306,6 +508,184 @@ export function TaskCard({
         >
           ⋯
         </button>
+      </div>
+      {menuOpen && (
+        <div className="task-menu">
+          {/* L'ORDRE DU MENU SUIT CE QU'ON Y FAIT LE PLUS.
+              Classer d'abord — c'est le geste de la matrice, celui pour lequel
+              on ouvre ce menu. Puis déplacer, puis enrichir. Les gestes rares
+              (renommer, supprimer) finissent en bas, où l'on ne clique pas par
+              accident. */}
+          <div className="task-menu__label">Affecter à</div>
+          <div className="task-menu__grid">
+            {QUADS.map((b) => (
+              <button
+                key={b.key}
+                className="move-btn"
+                style={{ background: b.bg, color: b.dark }}
+                disabled={b.key === quad.key}
+                onClick={() => onMoveQuad(b.key)}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+          {/* Les matrices sont RANGÉES PAR UNIVERS, dans l'ordre de l'accueil.
+              La liste plate d'avant tenait tant qu'on avait trois matrices ;
+              passé quelques univers elle n'avait plus ni ordre ni repère, alors
+              que l'accueil les range depuis #62. Même principe que #96 côté
+              menu contextuel de l'extension.
+              Sans aucun univers, on retombe EXACTEMENT sur la liste d'avant :
+              c'est l'état de tout compte qui n'a rien rangé. */}
+          {otherBoards.length > 0 && (
+            <>
+              <div className="task-menu__sep" role="separator" />
+              <div className="task-menu__label">Déplacer vers</div>
+              {groupes.length <= 1 ? (
+                <div className="task-menu__boards">
+                  {otherBoards.map((b) => (
+                    <button key={b.id} className="board-btn" onClick={() => onMoveBoard(b)}>
+                      {b.name}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                groupes.map((g) => {
+                  const cle = g.universe?.id ?? 'sans-univers';
+                  const ouvert = openUni === cle;
+                  return (
+                    <div
+                      className={`task-menu__uni${ouvert ? ' task-menu__uni--open' : ''}`}
+                      key={cle}
+                      // Le survol ouvre sur pointeur fin ; le clic sert de
+                      // repli au doigt, où `mouseenter` n'arrive jamais (#90).
+                      onMouseEnter={() => setOpenUni(cle)}
+                      onMouseLeave={() => setOpenUni((c) => (c === cle ? null : c))}
+                    >
+                      <button
+                        className="task-menu__action task-menu__uni-head"
+                        aria-expanded={ouvert}
+                        onClick={() => setOpenUni(ouvert ? null : cle)}
+                      >
+                        {/* « Sans univers » plutôt que « Autre » : c'est le mot
+                            que l'accueil emploie déjà pour ce même groupe. */}
+                        {g.universe?.name ?? 'Sans univers'}
+                        <span className="task-menu__caret" aria-hidden="true">
+                          ›
+                        </span>
+                      </button>
+                      {ouvert && (
+                        <div className="task-menu__flyout">
+                          {g.boards.map((b) => (
+                            <button key={b.id} className="board-btn" onClick={() => onMoveBoard(b)}>
+                              {b.name}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </>
+          )}
+          <div className="task-menu__sep" role="separator" />
+          {/* L'ajout d'un lien vit ICI et pas sur la carte : une tâche sans
+              lien ne doit rien afficher de plus qu'aujourd'hui. */}
+          {attachments && (
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                attachments.onStartAdd();
+                onMenu(false);
+              }}
+            >
+              <IconPaperclip size={13} />
+              Attacher un lien
+            </button>
+          )}
+          {/* Avec les liens, dans le groupe des gestes qui ENRICHISSENT la
+              tâche. */}
+          {deadline && (
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                deadline.onStartEdit();
+                onMenu(false);
+              }}
+            >
+              <IconAlarmClock size={13} />
+              {task.due_at ? 'Modifier l’échéance' : 'Fixer une échéance'}
+            </button>
+          )}
+          {focus &&
+            (focus.on || !focus.refusal ? (
+              <button className="task-menu__action task-menu__action--focus" onClick={focus.toggle}>
+                <IconFlag size={13} filled={focus.on} />
+                {focus.on ? "Retirer d'aujourd'hui" : "Faire aujourd'hui"}
+              </button>
+            ) : (
+              // Désactivée avec son motif, et non masquée : c'est la limite qui
+              // fait la valeur du mode, elle doit se voir (#49).
+              <span
+                className="task-menu__action task-menu__action--off"
+                role="button"
+                aria-disabled="true"
+              >
+                <IconFlag size={13} />
+                Faire aujourd'hui
+                <span className="task-menu__why">{focus.refusal}</span>
+              </span>
+            ))}
+          <div className="task-menu__sep" role="separator" />
+          {/* Les deux entrées restent VISIBLES et grisées : un menu dont les
+              lignes apparaissent et disparaissent selon la position se relit à
+              chaque ouverture.
+              Elles portent leur raccourci en clair — c'est ainsi qu'on apprend
+              `Alt`+↑ : en lisant le menu. Un raccourci que rien n'annonce
+              n'existe pas. */}
+          {reorder && (
+            <>
+              <button
+                className="task-menu__action task-menu__action--move"
+                disabled={!reorder.up}
+                onClick={() => reorder.up?.()}
+              >
+                ↑ Monter <kbd className="task-menu__key">Alt+↑</kbd>
+              </button>
+              <button
+                className="task-menu__action task-menu__action--move"
+                disabled={!reorder.down}
+                onClick={() => reorder.down?.()}
+              >
+                ↓ Descendre <kbd className="task-menu__key">Alt+↓</kbd>
+              </button>
+            </>
+          )}
+          <div className="task-menu__sep" role="separator" />
+          {/* Seule sortie volontaire du lien : sans elle, il ne se déferait
+              plus que par suppression ou complétion — soit par accident. */}
+          {task.pair_id && partnerOf(tasks, task) && (
+            <button className="task-menu__action" onClick={onUnpair}>
+              Dissocier
+            </button>
+          )}
+          <button
+            className="task-menu__action"
+            onClick={() => {
+              rename.start();
+              onMenu(false);
+            }}
+          >
+            <IconPenLine size={13} />
+            Renommer
+          </button>
+          <button className="task-menu__action task-menu__action--del" onClick={onDelete}>
+            <IconTrash size={13} />
+            Supprimer
+          </button>
+        </div>
+      )}
       </div>
       {/* Les liens d'abord, les étapes ensuite : le lien qualifie la tâche
           elle-même, l'étape la décompose. */}
@@ -339,131 +719,8 @@ export function TaskCard({
           onAdd={subtasks.onAdd}
           onCheck={subtasks.onCheck}
           onDelete={subtasks.onDelete}
+          askAdd={askAdd}
         />
-      )}
-      {menuOpen && (
-        <div className="task-menu">
-          <button
-            className="task-menu__action"
-            onClick={() => {
-              rename.start();
-              onMenu(false);
-            }}
-          >
-            Renommer
-          </button>
-          {/* Les deux entrées restent VISIBLES et grisées en bout de liste : un
-              menu dont les lignes apparaissent et disparaissent selon la position
-              se relit à chaque ouverture.
-              Elles portent leur raccourci en clair — c'est ainsi qu'on apprend
-              `Alt`+↑ : en lisant le menu. Un raccourci que rien n'annonce
-              n'existe pas. */}
-          {reorder && (
-            <>
-              <button
-                className="task-menu__action task-menu__action--move"
-                disabled={!reorder.up}
-                onClick={() => reorder.up?.()}
-              >
-                ↑ Monter <kbd className="task-menu__key">Alt+↑</kbd>
-              </button>
-              <button
-                className="task-menu__action task-menu__action--move"
-                disabled={!reorder.down}
-                onClick={() => reorder.down?.()}
-              >
-                ↓ Descendre <kbd className="task-menu__key">Alt+↓</kbd>
-              </button>
-            </>
-          )}
-          {/* L'ajout d'un lien vit ICI et pas sur la carte : une tâche sans
-              lien ne doit rien afficher de plus qu'aujourd'hui. */}
-          {attachments && (
-            <button
-              className="task-menu__action"
-              onClick={() => {
-                attachments.onStartAdd();
-                onMenu(false);
-              }}
-            >
-              ↗ Attacher un lien
-            </button>
-          )}
-          {/* Avec les liens, dans le groupe des gestes qui ENRICHISSENT la
-              tâche — avant « Déplacer vers », qui la range. */}
-          {deadline && (
-            <button
-              className="task-menu__action"
-              onClick={() => {
-                deadline.onStartEdit();
-                onMenu(false);
-              }}
-            >
-              ⏰ {task.due_at ? 'Modifier l’échéance' : 'Fixer une échéance'}
-            </button>
-          )}
-          <div className="task-menu__label">Déplacer vers</div>
-          <div className="task-menu__grid">
-            {QUADS.map((b) => (
-              <button
-                key={b.key}
-                className="move-btn"
-                style={{ background: b.bg, color: b.dark }}
-                disabled={b.key === quad.key}
-                onClick={() => onMoveQuad(b.key)}
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
-          {/* Les autres matrices sont listées à plat plutôt qu'en sous-menu :
-              un menu déjà flottant qui en ouvrirait un second serait pénible
-              à viser, et la liste reste courte dans l'usage réel. */}
-          {otherBoards.length > 0 && (
-            <>
-              <div className="task-menu__label">Vers une autre matrice</div>
-              <div className="task-menu__boards">
-                {otherBoards.map((b) => (
-                  <button key={b.id} className="board-btn" onClick={() => onMoveBoard(b)}>
-                    {b.name}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-          {focus &&
-            (focus.on || !focus.refusal ? (
-              <button className="task-menu__action task-menu__action--focus" onClick={focus.toggle}>
-                {focus.on ? "Retirer d'aujourd'hui" : "◷ Faire aujourd'hui"}
-              </button>
-            ) : (
-              // Désactivée avec son motif, et non masquée : c'est la limite qui
-              // fait la valeur du mode, elle doit se voir (#49).
-              <span
-                className="task-menu__action task-menu__action--off"
-                role="button"
-                aria-disabled="true"
-              >
-                ◷ Faire aujourd'hui
-                <span className="task-menu__why">{focus.refusal}</span>
-              </span>
-            ))}
-          {quad.key !== 'parking' && (
-            <button className="task-menu__action task-menu__action--pin" onClick={onTogglePin}>
-              {task.pinned ? 'Désépingler' : '⚑ Épingler en haut'}
-            </button>
-          )}
-          {/* Seule sortie volontaire du lien : sans elle, il ne se déferait
-              plus que par suppression ou complétion — soit par accident. */}
-          {task.pair_id && partnerOf(tasks, task) && (
-            <button className="task-menu__action" onClick={onUnpair}>
-              Dissocier
-            </button>
-          )}
-          <button className="task-menu__action task-menu__action--del" onClick={onDelete}>
-            Supprimer
-          </button>
-        </div>
       )}
     </div>
   );

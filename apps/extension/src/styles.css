@@ -65,7 +65,6 @@
   --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
 
   --card-warm: #fdf6e9;
-  --card-pinned: #fdf3e6;
 }
 
 * { box-sizing: border-box; }
@@ -271,14 +270,9 @@ input::placeholder { color: inherit; opacity: 0.55; }
   cursor: grab; transition: box-shadow 0.15s, transform 0.15s, opacity 0.15s; animation: mm-in 0.22s ease backwards;
 }
 .task:hover { box-shadow: var(--shadow-md); }
-.task--pinned { background: var(--card-pinned); border: 2px solid var(--color-accent); }
-.task--pinned .task__title { font-weight: 600; }
 .task--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); transform: rotate(-2deg) scale(1.03); border: 1.5px solid var(--color-accent); }
 .task__check { width: 15px; height: 15px; border: 2px solid var(--q-ink); border-radius: 50%; flex: none; cursor: pointer; background: transparent; padding: 0; transition: background 0.15s; }
 .task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
-.task__pin { margin-left: auto; flex: none; font-size: 12px; cursor: pointer; padding: 1px 4px; border-radius: 999px; color: var(--color-neutral-400); opacity: 0.45; background: none; border: none; transition: opacity 0.15s, transform 0.12s; }
-.task__pin:hover { transform: scale(1.2); opacity: 1; }
-.task__pin--on { color: var(--color-accent); opacity: 1; }
 
 /* ── Échéances (#19) ──────────────────────────────────────────────────────────
    Mêmes classes et mêmes teintes que le web, en plus compact : le popup fait

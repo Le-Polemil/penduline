@@ -1,10 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { localDayBefore, type Task } from '@penduline/shared';
 import { supabase } from '../lib/supabase';
-
-/** Colonnes lues ici — le même jeu que le store, `focus_day` compris. */
-const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, position, pair_id, parent_id, created_at, updated_at, focus_day';
+import { TASK_COLS } from './store';
 
 /**
  * La fenêtre chargée : aujourd'hui, plus de quoi bâtir le bilan de la dernière

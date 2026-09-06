@@ -97,10 +97,7 @@ export function FocusScreen({ store }: { store: Store }) {
           quad={quadrant(t.quadrant)}
           tasks={store.tasks}
           otherBoards={store.boards.filter((b) => b.id !== t.board_id)}
-          // `false` et non `t.pinned` : épingler veut dire « en haut de sa
-          // case », et cet écran n'a pas de case. Le fanion y désignerait un
-          // ordre qui n'existe pas.
-          pinnedCard={false}
+        universes={store.universes}
           menuOpen={menuTask === t.id}
           onMenu={(open) => setMenuTask(open ? t.id : null)}
           rename={{
@@ -119,7 +116,6 @@ export function FocusScreen({ store }: { store: Store }) {
           // sur la matrice, où ils ont leur contexte.
           onMoveQuad={() => undefined}
           onMoveBoard={() => undefined}
-          onTogglePin={() => undefined}
           onUnpair={() => undefined}
           onDelete={() => retirer(t)}
           // `focus` présent avec `on: true` : la seule action offerte est de

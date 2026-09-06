@@ -356,7 +356,7 @@ function Home({
                   className="today-check"
                   aria-label={`Terminer « ${t.title} »`}
                   onClick={() =>
-                    void store.patchTask(t.id, { done: true, archived: true, pinned: false })
+                    void store.patchTask(t.id, { done: true, archived: true })
                   }
                 />
                 <span className="today-title">{t.title}</span>
@@ -517,9 +517,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
       .filter((t) => t.quadrant === quad && !t.done && !t.deleted && !t.archived)
       .sort(
         (a, b) =>
-          Number(b.pinned) - Number(a.pinned) ||
-          Number(isOverdue(b, now)) - Number(isOverdue(a, now)) ||
-          a.position - b.position,
+          Number(isOverdue(b, now)) - Number(isOverdue(a, now)) || a.position - b.position,
       );
   }
 
@@ -718,7 +716,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                         <div className="gap__line" />
                       </div>
                       <div
-                        className={`task${t.pinned ? ' task--pinned' : ''}${isDrag ? ' task--dragging' : ''}${
+                        className={`task${isDrag ? ' task--dragging' : ''}${
                           deadlineStatus(t.due_at, now) ? ` task--${deadlineStatus(t.due_at, now)}` : ''
                         }`}
                         style={{ viewTransitionName: `vt-${t.id}` } as CSSProperties}
@@ -767,15 +765,6 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                             ⏰ {formatDeadline(t.due_at, now)}
                           </time>
                         )}
-                        <button
-                          className={`task__pin${t.pinned ? ' task__pin--on' : ''}`}
-                          title={t.pinned ? 'Désépingler' : 'Épingler en haut'}
-                          // Plus de `pair_id: null` : épingler ne doit pas
-                          // détruire un lien créé sur le web.
-                          onClick={() => withVT(() => patchTask(t.id, { pinned: !t.pinned }))}
-                        >
-                          ⚑
-                        </button>
                         <button
                           className="task__more"
                           aria-label="Actions"
