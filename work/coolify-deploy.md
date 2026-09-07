@@ -343,3 +343,91 @@ migration a été passée à la main.
 en SSH. Rien ne le garantit — pare-feu, liste d'adresses autorisées. Si la
 connexion est refusée, l'alternative est un *self-hosted runner* sur la machine,
 ou le maintien de la procédure manuelle.
+
+## L'ordre migrations-puis-front a un angle mort : l'extension (2026-09-07)
+
+Constat de départ : la prod servait la 0.0.26 alors que `main` était en 0.0.27,
+six commits d'avance. Deux causes, indépendantes, et la seconde est la
+généralisable.
+
+### Les secrets du job `migrate` ont disparu
+
+La dernière tentative de déploiement (4 septembre) est tombée en 12 s sur
+`Secret MIGRATE_SSH_KEY absent`. Vérifié : **aucun secret n'existe**, ni au niveau
+dépôt ni dans l'environnement `production` (`gh secret list` et
+`gh secret list --env production` renvoient tous deux du vide). `deploy` dépendant
+de `migrate`, plus rien ne partait — et comme le déclenchement est manuel, rien ne
+le signalait.
+
+La branche `production` avait pourtant avancé jusqu'au 5 septembre sans qu'aucun
+run `Deploy` ne réussisse depuis le 18 août : elle a donc été poussée à la main.
+À savoir quand on lit son état comme la preuve d'un déploiement — ce n'en est pas
+un.
+
+Le chemin automatique reste à remettre en état : `MIGRATE_SSH_KEY`,
+`MIGRATE_SSH_KNOWN_HOSTS`, `MIGRATE_SSH_HOST`, `MIGRATE_SSH_USER`.
+
+### « Migrations avant le front » protège le front, pas l'extension
+
+C'est la leçon qui vaut au-delà de cet épisode.
+
+L'ordre est bon, et pour de bonnes raisons (#45, #39, #50, #78 : un front qui
+interroge une table absente répond 404 sans rien dire). Mais il repose sur une
+hypothèse tacite : **le client se met à jour avec le déploiement**. Vraie pour le
+front web, dont le bundle est remplacé en quelques minutes. Fausse pour
+l'extension, qui vit chez les utilisateurs et dont une correction doit passer la
+revue du Chrome Web Store puis la diffusion par Chrome — des jours.
+
+Donc : **toute migration destructive doit attendre la diffusion de l'extension,
+pas seulement le déploiement du front.** Pour ce type de migration, l'ordre est
+l'inverse de celui du workflow, et le workflow ne peut pas le savoir tout seul.
+
+`20260906100000_retirer_epinglage.sql` (`drop column tasks.pinned`) est le premier
+cas. Elle est restée en attente ; le front 0.0.27 est parti seul, avec
+`migrations=ignorer`.
+
+### Le commentaire qui affirmait le contraire, et pourquoi il était faux
+
+La migration portait ceci, qui a failli suffire à la laisser passer :
+
+> « une version du client lisant encore `pinned` recevrait `undefined` et non une
+> erreur — `pinned` ne servait qu'à trier et à décorer »
+
+Faux. Le raisonnement ne vaudrait que pour un `select *`, et aucun client n'en
+fait : tous nomment leurs colonnes une par une (`apps/web/src/data/store.ts`,
+`useFocus.ts`, et le même motif dans l'extension). Vérifié contre la production :
+
+```
+GET /rest/v1/tasks?select=id,title,colonne_absente
+→ HTTP 400  {"code":"42703","message":"column tasks.colonne_absente does not exist"}
+```
+
+Une colonne absente d'une liste explicite ne dégrade pas la fonctionnalité qui
+s'en servait : elle casse **toute** la requête. Le commentaire a été corrigé dans
+la migration, avec la trace de la vérification — c'est le genre d'affirmation
+qu'on ne relit pas deux fois.
+
+### Deux fausses alertes, pour ne pas les rejouer
+
+- Le renommage de #112 fait réapparaître `20260901110000_review.sql` comme « en
+  attente » côté suivi (la base a `20260901120000`). Sans effet : le fichier n'est
+  que `create or replace function`, le réappliquer est neutre.
+- `20260901140000_stats.sql` est modifiée entre les deux branches — sur un
+  commentaire seul.
+
+### Lire l'état réel de la base sans SSH
+
+Utile quand les secrets manquent et qu'on veut savoir où en est le schéma :
+PostgREST répond sur la clé anonyme, et un `select` ciblé suffit à tester la
+présence d'une colonne ou d'une table.
+
+```bash
+CLE=$(gh variable list --json name,value -q '.[]|select(.name=="VITE_SUPABASE_ANON_KEY").value')
+curl -sS -o /dev/null -w '%{http_code}\n' -H "apikey: $CLE" -H "Authorization: Bearer $CLE" \
+  "https://api.penduline.polemil.dev/rest/v1/tasks?select=pinned&limit=1"
+# 200 = la colonne est là · 400 = absente · 404 sur une table = absente
+```
+
+C'est ainsi qu'a été établi que la base était à jour **sauf** les deux migrations
+du 6 septembre : `focus_day`, `due_at`, `task_attachments` et `pinned` présents,
+`job_runs` absente.
