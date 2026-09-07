@@ -130,6 +130,12 @@ button { font: inherit; }
 .board-gap__line { flex: 1; border-top: 3px dotted transparent; }
 .board-gap--active .board-gap__line { border-top-color: var(--color-accent); }
 .board-row--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); }
+/* Positionnée en permanence : c'est elle qui ancre le menu, sorti de la zone
+   d'actions pour échapper à son `overflow: hidden`.
+   Le `z-index` ne vient qu'avec le menu — sans lui, les lignes SUIVANTES se
+   peignent après, et leurs `⋯` traversaient le menu ouvert. */
+.board-row { position: relative; }
+.board-row:has(.board-row-menu) { z-index: 40; }
 .board-row {
   display: flex; align-items: center; width: 100%;
   background: var(--card-warm); border-radius: var(--radius-lg);
@@ -156,34 +162,57 @@ button { font: inherit; }
   user-select: none;
   touch-action: manipulation;
 }
-/* Les actions restent discrètes jusqu'au survol, mais toujours atteignables
-   au clavier — d'où le :focus-within plutôt qu'un simple :hover. */
-/* Au repos la zone est repliée (largeur 0), pour que les pastilles restent
-   collées au bord droit ; elle se déplie au survol ou au focus clavier.
-   `max-width` plutôt que `width: auto`, qui ne s'anime pas. */
+/* Il ne reste que `⋯` en ligne, et il est toujours visible — comme sur une carte
+   de tâche. L'animation de largeur qui dépliait quatre boutons a disparu avec
+   eux : plus rien à déplier, donc plus rien à animer. C'était d'ailleurs elle
+   qu'on trouvait trop rapide. */
+/* Au repos la zone est repliée : les pastilles de couleur restent collées au
+   bord droit, et se décalent à l'ouverture pour laisser la place au `⋯`. Les
+   laisser décalées en permanence réserverait un vide sur chaque ligne.
+   `max-width` plutôt que `width: auto`, qui ne s'anime pas.
+   ⚠️ `overflow: hidden` est ce qui fait le repli — c'est pourquoi le menu est
+   rendu FRÈRE de cette zone et non dedans : il y serait découpé. */
 .board-row__actions {
-  display: flex; align-items: center; gap: 4px;
+  display: flex; align-items: center; flex: none;
   max-width: 0; padding-right: 0; overflow: hidden;
-  transition: max-width 0.26s cubic-bezier(0.22, 1, 0.36, 1), padding-right 0.26s;
+  transition: max-width 0.34s cubic-bezier(0.22, 1, 0.36, 1), padding-right 0.34s;
 }
-/* 400 et non 260 : la ligne porte désormais ↑ ↓ ⋯ en plus de Renommer / Supprimer. */
+/* `padding-right` : la ligne a 28 px d'arrondi, et le bouton collé au bord
+   tombait dans la courbe — il paraissait coupé en deux. */
 .board-row:hover .board-row__actions,
-.board-row:focus-within .board-row__actions { max-width: 400px; padding-right: 20px; }
-.board-row__actions .board-act { opacity: 0; transition: opacity 0.18s; }
-.board-row:hover .board-act,
-.board-row:focus-within .board-act { opacity: 1; }
+.board-row:focus-within .board-row__actions,
+.board-row:has(.board-row-menu) .board-row__actions { max-width: 60px; padding-right: 14px; }
+/* Discret jusqu'au survol, comme les actions qu'il remplace : une liste de
+   matrices doit se lire comme une liste de noms, pas comme une barre d'outils.
+   Il reste visible tant que SON menu est ouvert — sinon il disparaîtrait sous le
+   curseur qui vient de le quitter pour descendre dans le menu. */
+.board-more {
+  flex: none; color: var(--color-neutral-700); font: 700 14px/1 var(--font-body);
+  padding: 6px 8px; border-radius: 999px; cursor: pointer; background: none; border: none;
+  transition: background 0.15s, color 0.15s;
+}
+.board-more:hover,
+.board-more[aria-expanded='true'] { background: var(--color-accent-100); color: var(--color-accent-800); }
 
-/* Sans survol (tactile), ces actions ne se déplient pas : on passe par l'appui
-   long, qui ouvre `.sheet`.
-   Mais elles restent DANS le document. Un `display: none` les retirerait de
-   l'arbre d'accessibilité — or une tablette munie d'un clavier rapporte elle
-   aussi `hover: none`, et perdrait ainsi le seul chemin clavier (#38). Le focus
-   les révèle donc, le survol non. */
+/* Le menu d'une matrice EST celui d'une tâche : il en porte la classe et ne
+   redéfinit que son ancrage. Deux menus qui font la même chose doivent se
+   ressembler — et n'avoir qu'une seule feuille de style.
+   ⚠️ `board-row-menu` et non `board-menu` : ce dernier existe déjà pour le
+   sélecteur de matrice de l'écran matrice, et sa déclaration plus tardive
+   l'emportait — largeur, ancrage et hauteur du nôtre étaient écrasés. */
+/* Deux classes, et non une : `.task-menu` est déclaré PLUS BAS dans ce fichier
+   et l'emportait à spécificité égale — largeur, ancrage et hauteur du nôtre
+   étaient écrasés. Une spécificité supérieure rend la règle indépendante de
+   l'ordre des déclarations. */
+.task-menu.board-row-menu { right: 14px; top: calc(100% + 6px); width: 210px; }
+/* Retourné : il s'ancre au-dessus du bouton, et son animation part du bas. */
+.task-menu.board-row-menu--up { top: auto; bottom: calc(100% + 6px); transform-origin: bottom right; }
+
 @media (hover: none) {
-  .board-row:hover .board-row__actions { max-width: 0; padding-right: 0; }
-  .board-row:hover .board-act { opacity: 0; }
-  .board-row:focus-within .board-row__actions { max-width: 400px; padding-right: 20px; }
-  .board-row:focus-within .board-act { opacity: 1; }
+  /* Sans survol, la zone ne s'ouvrirait jamais : elle reste dépliée, et le
+     bouton fait 44 px. */
+  .board-row .board-row__actions { max-width: 60px; padding-right: 14px; }
+  .board-more { min-width: 44px; min-height: 44px; }
 }
 
 /* ── Menu d'actions tactile (appui long) ──────────────────────────────────── */

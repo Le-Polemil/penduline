@@ -18,6 +18,7 @@ import {
 } from '@penduline/shared';
 import type { Store } from '../data/store';
 import { readLastReview } from '../data/reviewPrefs';
+import { BoardMenu } from '../components/BoardMenu';
 import { Confirm } from '../components/Confirm';
 import { dropTarget, gapIndexAt } from '../dnd/gap';
 import { ordinal, useAnnounce } from '../a11y/announce';
@@ -130,6 +131,8 @@ export function Home({
   // Menu d'actions ouvert à l'appui long (tactile) : les actions au survol sont
   // inatteignables au doigt.
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
+  /** La matrice dont le menu `⋯` est ouvert. Une seule à la fois. */
+  const [menuBoard, setMenuBoard] = useState<string | null>(null);
   /** Ce qui a ouvert la feuille — pour lui rendre le focus à la fermeture. */
   const sheetOrigin = useRef<HTMLElement | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -298,6 +301,13 @@ export function Home({
 
   /** Ouvre la feuille en retenant d'où l'on vient (clavier), ou de rien (doigt). */
   function openSheet(target: SheetTarget, trigger: HTMLElement | null) {
+    // Une matrice ouvre son menu déroulant, le même qu'au clic sur `⋯` : deux
+    // présentations pour un seul jeu d'actions, c'était deux choses à tenir à
+    // jour. Les univers gardent la feuille pour l'instant.
+    if (target.kind === 'board') {
+      setMenuBoard(target.id);
+      return;
+    }
     sheetOrigin.current = trigger;
     setSheet(target);
   }
@@ -781,55 +791,49 @@ export function Home({
                                 ))}
                               </span>
                             </button>
+                            {/* En ligne, il ne reste que `⋯`.
+                                Monter, Descendre, Renommer et Supprimer y
+                                tenaient tous les quatre, et se dépliaient par une
+                                animation de largeur — beaucoup de place et de
+                                mouvement pour des gestes rares. Ils sont
+                                désormais DANS le menu, comme sur une carte de
+                                tâche. Sans rien à déplier, l'animation disparaît
+                                d'elle-même. */}
                             <span className="board-row__actions">
-                              {/* Même motif que `.uni-head__actions`, qui avait
-                                  déjà ses flèches : réordonner une MATRICE, lui,
-                                  n'existait qu'au glisser et à l'appui long —
-                                  donc pas au clavier. */}
                               <button
-                                className="board-act"
-                                aria-label={`Monter « ${board.name} »`}
-                                disabled={!planBoardReorder(store.boards, board, -1)}
-                                onClick={() => move(board.id, -1)}
-                              >
-                                ↑
-                              </button>
-                              <button
-                                className="board-act"
-                                aria-label={`Descendre « ${board.name} »`}
-                                disabled={!planBoardReorder(store.boards, board, 1)}
-                                onClick={() => move(board.id, 1)}
-                              >
-                                ↓
-                              </button>
-                              {/* La porte clavier d'un chemin déjà écrit : la
-                                  feuille contient « Déplacer vers un univers »,
-                                  et n'était atteignable qu'au doigt. */}
-                              <button
-                                className="board-act"
-                                aria-label={`Autres actions pour « ${board.name} »`}
-                                aria-haspopup="dialog"
-                                onClick={(e) => openSheet({ kind: 'board', id: board.id }, e.currentTarget)}
+                                className="board-more"
+                                aria-label={`Actions pour « ${board.name} »`}
+                                aria-expanded={menuBoard === board.id}
+                                onClick={() => setMenuBoard((m) => (m === board.id ? null : board.id))}
                               >
                                 ⋯
                               </button>
-                              <button
-                                className="board-act"
-                                title="Renommer"
-                                aria-label={`Renommer « ${board.name} »`}
-                                onClick={() => setEditing({ id: board.id, name: board.name })}
-                              >
-                                Renommer
-                              </button>
-                              <button
-                                className="board-act board-act--danger"
-                                title="Supprimer"
-                                aria-label={`Supprimer « ${board.name} »`}
-                                onClick={() => setToDelete(board.id)}
-                              >
-                                Supprimer
-                              </button>
                             </span>
+                            {menuBoard === board.id && (
+                              <BoardMenu
+                                board={board}
+                                boards={boardsOf(board.universe_id)}
+                                universes={store.universes}
+                                grouped={grouped}
+                                onMove={(dir: -1 | 1) => {
+                                  move(board.id, dir);
+                                  setMenuBoard(null);
+                                }}
+                                onMoveUniverse={(universeId: string | null) => {
+                                  void store.moveBoard(board.id, universeId, null);
+                                  setMenuBoard(null);
+                                }}
+                                onRename={() => {
+                                  setEditing({ id: board.id, name: board.name });
+                                  setMenuBoard(null);
+                                }}
+                                onDelete={() => {
+                                  setToDelete(board.id);
+                                  setMenuBoard(null);
+                                }}
+                                onClose={() => setMenuBoard(null)}
+                              />
+                            )}
                           </>
                         )}
                       </div>
@@ -922,100 +926,6 @@ export function Home({
         )}
       </div>
 
-      {sheet?.kind === 'board' && (() => {
-        const b = store.boards.find((x) => x.id === sheet.id);
-        if (!b) return null;
-        const list = boardsOf(b.universe_id);
-        return (
-          <div className="sheet-backdrop" onClick={closeSheet}>
-            <div
-              className="sheet"
-              role="dialog"
-              aria-modal="true"
-              aria-label={`Actions pour « ${b.name} »`}
-              tabIndex={-1}
-              ref={sheetRef}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') closeSheet();
-              }}
-            >
-              <p className="sheet__title">{b.name}</p>
-              {/* Le glisser-déposer HTML5 ne fonctionne pas au doigt : sans ces
-                  entrées, réordonner ET ranger seraient impossibles sur mobile. */}
-              <button
-                className="sheet__item"
-                disabled={list[0]?.id === b.id}
-                onClick={() => {
-                  move(b.id, -1);
-                  closeSheet();
-                }}
-              >
-                ↑ Monter
-              </button>
-              <button
-                className="sheet__item"
-                disabled={list[list.length - 1]?.id === b.id}
-                onClick={() => {
-                  move(b.id, 1);
-                  closeSheet();
-                }}
-              >
-                ↓ Descendre
-              </button>
-              {grouped && (
-                <>
-                  <p className="sheet__label">Déplacer vers un univers</p>
-                  {store.universes.map((u) => (
-                    <button
-                      key={u.id}
-                      className="sheet__item"
-                      disabled={b.universe_id === u.id}
-                      onClick={() => {
-                        void store.moveBoard(b.id, u.id, null);
-                        closeSheet();
-                      }}
-                    >
-                      {u.name}
-                    </button>
-                  ))}
-                  <button
-                    className="sheet__item"
-                    disabled={b.universe_id === null}
-                    onClick={() => {
-                      void store.moveBoard(b.id, null, null);
-                      closeSheet();
-                    }}
-                  >
-                    Sans univers
-                  </button>
-                </>
-              )}
-              <button
-                className="sheet__item"
-                onClick={() => {
-                  setEditing({ id: b.id, name: b.name });
-                  closeSheet();
-                }}
-              >
-                Renommer
-              </button>
-              <button
-                className="sheet__item sheet__item--danger"
-                onClick={() => {
-                  setToDelete(b.id);
-                  closeSheet();
-                }}
-              >
-                Supprimer
-              </button>
-              <button className="sheet__item sheet__item--cancel" onClick={closeSheet}>
-                Annuler
-              </button>
-            </div>
-          </div>
-        );
-      })()}
 
       {/* Le pendant de la feuille des matrices pour les univers. Elle répare un
           trou : `.uni-head__actions` étant masqué au doigt, un univers n'était
