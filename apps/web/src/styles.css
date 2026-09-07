@@ -333,7 +333,17 @@ button { font: inherit; }
 .bin-btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
 
 /* ── Grille des cases ─────────────────────────────────────────────────────── */
-.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 14px; }
+/* ⚠️ `auto auto` et surtout PAS `1fr 1fr`.
+   La grille n'a aucune hauteur imposée : elle s'ajuste à son contenu. Dans ce
+   cas, la spécification dimensionne les pistes `fr` en prenant le plus grand
+   rapport « taille de base / facteur » parmi les pistes flexibles — autrement
+   dit, les deux lignes reçoivent la hauteur de la PLUS HAUTE.
+   Conséquence visible : déplier une étape dans « déléguer » faisait grandir
+   « faire » d'autant, alors qu'il ne s'y passait rien.
+   `auto` dimensionne chaque ligne sur son propre contenu. Les cases d'une MÊME
+   ligne restent alignées (l'étirement par défaut de la grille s'en charge), ce
+   qui préserve le 2×2 et son coin central carré. */
+.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 14px; }
 .quad {
   min-width: 0; background: var(--q-bg); border: 2px dotted var(--q-outline, transparent);
   border-radius: var(--radius-lg); padding: 14px 16px 16px; display: flex; flex-direction: column;
