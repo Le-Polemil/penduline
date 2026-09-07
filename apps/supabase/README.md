@@ -119,6 +119,23 @@ curl -s -o /dev/null -w '%{http_code}\n' -H "apikey: $VITE_SUPABASE_ANON_KEY" \
 Un `404` signifie que le cache n'a pas suivi : `notify pgrst, 'reload schema';`,
 ou redémarrer le conteneur `supabase-rest`.
 
+> **Un horodatage de migration ne se partage pas.** `schema_migrations` a
+> `version` pour clé primaire : deux fichiers datés à la même seconde font
+> échouer `supabase db reset`, donc plus aucune base ne peut être créée de zéro.
+>
+> La panne est sournoise parce qu'elle ne se voit **pas** au déploiement : le
+> script ci-dessous applique les deux fichiers et son `on conflict do nothing`
+> absorbe le doublon, n'enregistrant qu'une version. La production est correcte,
+> sa comptabilité ne l'est plus. C'est arrivé entre #47 et #19, tous deux datés
+> du 1er septembre — d'où le contrôle d'unicité ajouté à `ci.yml`.
+>
+> Pour rattraper une migration **déjà en base mais non enregistrée**, le script a
+> `record`, qui enregistre sans exécuter :
+>
+> ```bash
+> printf '20260901110000\treview\n' | ssh <hôte> record
+> ```
+
 > **La table de suivi peut ne pas exister.** Cette instance n'a pas été créée par
 > le CLI : `supabase_migrations.schema_migrations` était absente jusqu'à ce qu'on
 > la pose à la main. Son absence n'empêche rien — `psql` se moque de ce que

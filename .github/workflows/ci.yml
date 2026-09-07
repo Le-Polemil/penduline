@@ -16,6 +16,28 @@ jobs:
           node-version: 20
           cache: npm
 
+      # Deux migrations ayant le même horodatage, c'est `supabase db reset` qui
+      # cesse de fonctionner : `schema_migrations` a `version` pour clé primaire,
+      # et la seconde échoue sur un doublon. Plus aucune base ne peut alors être
+      # créée de zéro.
+      #
+      # La panne ne se voit NI au typecheck, NI aux tests, NI au déploiement —
+      # le script de la CI absorbe le doublon par un `on conflict do nothing`,
+      # applique les deux fichiers et n'en enregistre qu'un. Le dépôt et la base
+      # divergent en silence. C'est arrivé entre #47 et #19, tous deux datés du
+      # 1er septembre.
+      - name: Horodatages de migration uniques
+        run: |
+          set -euo pipefail
+          doublons=$(ls apps/supabase/migrations/*.sql \
+            | xargs -n1 basename \
+            | cut -d_ -f1 \
+            | sort | uniq -d)
+          if [ -n "$doublons" ]; then
+            echo "::error::Horodatage de migration en double : $doublons — renommez l'une des deux."
+            exit 1
+          fi
+
       - name: Install
         run: npm ci
 
