@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties, type DragEvent, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type DragEvent, type FormEvent } from 'react';
 import { flushSync } from 'react-dom';
 import type { Session } from '@supabase/supabase-js';
 import {
@@ -28,6 +28,7 @@ import { getActiveBoard, setActiveBoard } from './active-board';
 import { Capture } from './Capture';
 import { getPending, watchPending, type PendingCapture } from './pending-capture';
 import { Loader } from './Loader';
+import { clearSnapshot } from './snapshot';
 import { quadBg } from './quad-bg';
 import { useExtStore, type ExtStore } from './store';
 import { TaskMenu } from './TaskMenu';
@@ -123,6 +124,10 @@ export function App() {
    */
   useEffect(() => {
     if (!ready || session) return;
+    // L'instantané part avec : il n'a plus de compte à servir, et le laisser
+    // signifierait garder des titres de tâches lisibles sur le poste après une
+    // déconnexion volontaire.
+    void clearSnapshot();
     try {
       chrome.runtime.sendMessage({ type: 'focus', count: 0 });
     } catch {
@@ -206,6 +211,43 @@ function PanelApp({ userId }: { userId: string }) {
       }
     });
   }, []);
+
+  /**
+   * Relire à CHAQUE changement de vue, sans écran de chargement.
+   *
+   * Le panneau n'a pas le temps réel du web (`useRealtime.ts`) et reste ouvert
+   * des heures : ce qu'on change depuis l'app web, un autre appareil ou le menu
+   * contextuel n'y arrivait jamais. Ouvrir une matrice — ou revenir à la liste —
+   * est le moment naturel pour rattraper : c'est là qu'on va lire les données.
+   *
+   * `premierRendu` écarte le tour initial : `charger` vient tout juste de
+   * répondre pour que `ready` passe à `true`, une seconde lecture au même
+   * instant ne rapporterait rien.
+   */
+  const premierRendu = useRef(true);
+  useEffect(() => {
+    if (!store.ready) return;
+    if (premierRendu.current) {
+      premierRendu.current = false;
+      return;
+    }
+    store.refresh();
+  }, [screen, boardId, store.ready, store.refresh]);
+
+  /**
+   * Et au retour de visibilité — complément, pas remplacement.
+   *
+   * Le panneau survit à la fermeture d'un onglet et à la minimisation de la
+   * fenêtre sans se démonter : on peut le retrouver après une heure SANS changer
+   * de vue, donc sans déclencher la relecture ci-dessus.
+   */
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') store.refresh();
+    }
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [store.refresh]);
 
   // Le service worker a besoin de la liste des matrices pour construire son menu
   // contextuel, qui doit être enregistré AVANT tout clic droit. Plutôt que de le

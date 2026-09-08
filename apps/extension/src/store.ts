@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { classifyWriteFailure, isSafeUrl, normalizeUrl } from '@penduline/shared';
 import type { QuadrantKey, Board, Task, TaskPatch, Universe } from '@penduline/shared';
 import type { PostgrestError } from '@supabase/supabase-js';
+import { readSnapshot, writeSnapshot } from './snapshot';
 import { supabase } from './supabase';
 import { useToast } from './toast';
 
@@ -26,6 +27,20 @@ export interface ExtStore {
    */
   captureTask: (boardId: string, title: string, position: number, url: string) => Promise<boolean>;
   patchTask: (id: string, patch: TaskPatch) => Promise<void>;
+  /**
+   * Relit univers, matrices et tâches SANS repasser par l'écran de chargement.
+   *
+   * Le panneau reste ouvert des heures et n'a pas le temps réel du web
+   * (`apps/web/src/data/useRealtime.ts`) : sans ça, ce qu'on change depuis l'app
+   * web ou un autre appareil n'apparaît jamais. Appelé aux changements de vue,
+   * il rattrape au moment où l'on regarde.
+   *
+   * ⚠️ Silencieux par construction : `ready` n'est jamais rendu à `false`, les
+   * données affichées restent celles d'avant jusqu'à l'arrivée des nouvelles.
+   * Un écran de chargement à chaque navigation ferait clignoter tout le panneau
+   * pour rattraper trois lignes.
+   */
+  refresh: () => void;
 }
 
 /**
@@ -93,37 +108,154 @@ export function useExtStore(userId: string): ExtStore {
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const persist = usePersist();
+  const persistBrut = usePersist();
 
+  /**
+   * L'état des écritures, pour arbitrer entre un rafraîchissement et une
+   * modification locale.
+   *
+   * ⚠️ C'EST LE POINT DÉLICAT du rafraîchissement silencieux. Un `SELECT` parti
+   * avant qu'un `UPDATE` ne soit commité rapporte l'état d'AVANT : appliqué tel
+   * quel, il ferait reculer sous les doigts la case qu'on vient de changer.
+   *
+   * Deux garde-fous, et il faut les deux :
+   * - `gen`, monotone, incrémenté à chaque écriture lancée — détecte une écriture
+   *   survenue PENDANT la lecture ;
+   * - `enVol`, le nombre d'écritures non encore acquittées — détecte celles
+   *   lancées AVANT la lecture et pas encore arrivées en base.
+   *
+   * En cas de doute on JETTE la réponse : perdre un rafraîchissement ne se voit
+   * pas, annuler le geste de l'utilisateur se voit tout de suite. Le prochain
+   * changement de vue rattrapera.
+   */
+  const ecritures = useRef({ gen: 0, enVol: 0 });
+
+  const persist = useCallback(
+    async function persist<T>(op: ExtWriteOp<T>) {
+      ecritures.current.gen += 1;
+      ecritures.current.enVol += 1;
+      try {
+        return await persistBrut(op);
+      } finally {
+        ecritures.current.enVol -= 1;
+      }
+    },
+    [persistBrut],
+  );
+
+  /**
+   * Le tour de lecture, partagé par le chargement initial et les
+   * rafraîchissements. `silencieux` ne change que la façon d'atterrir : la
+   * requête, elle, est la même.
+   */
+  const charger = useCallback(async (silencieux: boolean, vivant: () => boolean) => {
+    const genAvant = ecritures.current.gen;
+    const [universesRes, boardsRes, tasksRes] = await Promise.all([
+      supabase.from('universes').select('*').order('position'),
+      supabase.from('boards').select('*').order('position'),
+      // `parent_id is null` : une étape n'est pas une ligne de liste (#50).
+      // Le panneau n'a pas de corbeille : il filtre déjà `!t.done && !t.deleted`
+      // à l'affichage. Ne charger que ça est donc sans conséquence ici — et
+      // c'est là que le gain est le plus sensible, ce chargement étant le
+      // premier travail à l'ouverture du panneau (#40).
+      supabase
+        .from('tasks')
+        .select(TASK_COLS)
+        .eq('done', false)
+        .eq('deleted', false)
+        .is('parent_id', null)
+        .order('position'),
+    ]);
+    if (!vivant()) return false;
+    // Une erreur réseau ne doit pas VIDER l'écran. `?? []` était acceptable
+    // quand un échec ne coûtait qu'un panneau vide ; avec l'instantané il
+    // effacerait des données qu'on vient de peindre.
+    if (universesRes.error || boardsRes.error || tasksRes.error) return false;
+    if (silencieux && (ecritures.current.gen !== genAvant || ecritures.current.enVol > 0)) return false;
+    setUniverses(universesRes.data ?? []);
+    setBoards(boardsRes.data ?? []);
+    setTasks((tasksRes.data as Task[] | null) ?? []);
+    return true;
+  }, []);
+
+  /**
+   * L'instantané d'abord, le réseau par-dessus.
+   *
+   * Les deux partent EN PARALLÈLE : attendre `chrome.storage` avant d'ouvrir les
+   * requêtes ajouterait sa latence à celle du réseau, alors que le cache n'est là
+   * que pour combler l'attente. Le premier arrivé peint.
+   *
+   * `reseauServi` empêche l'inverse : une lecture de stockage lente ne doit pas
+   * repeindre par-dessus des données fraîches déjà appliquées. Il ne se lève que
+   * si le réseau a VRAIMENT appliqué quelque chose — sinon l'instantané reste le
+   * meilleur état disponible, ce qui est précisément le cas hors ligne.
+   */
   useEffect(() => {
     let alive = true;
-    (async () => {
-      const [universesRes, boardsRes, tasksRes] = await Promise.all([
-        supabase.from('universes').select('*').order('position'),
-        supabase.from('boards').select('*').order('position'),
-        // `parent_id is null` : une étape n'est pas une ligne de liste (#50).
-        // Le panneau n'a pas de corbeille : il filtre déjà `!t.done && !t.deleted`
-        // à l'affichage. Ne charger que ça est donc sans conséquence ici — et
-        // c'est là que le gain est le plus sensible, ce chargement étant le
-        // premier travail à l'ouverture du panneau (#40).
-        supabase
-          .from('tasks')
-          .select(TASK_COLS)
-          .eq('done', false)
-          .eq('deleted', false)
-          .is('parent_id', null)
-          .order('position'),
-      ]);
-      if (!alive) return;
-      setUniverses(universesRes.data ?? []);
-      setBoards(boardsRes.data ?? []);
-      setTasks((tasksRes.data as Task[] | null) ?? []);
+    let reseauServi = false;
+
+    void readSnapshot(userId).then((snap) => {
+      if (!alive || reseauServi || !snap) return;
+      setUniverses(snap.universes);
+      setBoards(snap.boards);
+      setTasks(snap.tasks);
       setReady(true);
-    })();
+    });
+
+    void charger(false, () => alive)
+      .catch(() => false)
+      .then((applique) => {
+        if (applique) reseauServi = true;
+        // `ready` passe même sur échec : sans cache et sans réseau, mieux vaut un
+        // panneau vide qu'un écran de chargement sans fin.
+        if (alive) setReady(true);
+      });
+
     return () => {
       alive = false;
     };
-  }, [userId]);
+  }, [userId, charger]);
+
+  /**
+   * Réécrire l'instantané dès que l'état bouge — y compris sur une modification
+   * LOCALE, et pas seulement après un chargement.
+   *
+   * Sans ça, cocher une tâche puis rouvrir le panneau la ferait réapparaître le
+   * temps du rafraîchissement : le geste le plus courant du panneau produirait
+   * le clignotement que le cache est censé supprimer.
+   *
+   * Temporisé : un réordonnancement au glisser émet une écriture par cran, et
+   * `chrome.storage` n'a pas à les suivre une à une.
+   */
+  useEffect(() => {
+    if (!ready) return;
+    const t = window.setTimeout(() => {
+      void writeSnapshot(userId, { universes, boards, tasks });
+    }, 400);
+    return () => window.clearTimeout(t);
+  }, [ready, userId, universes, boards, tasks]);
+
+  /**
+   * Un seul rafraîchissement à la fois : les déclencheurs sont plusieurs (une
+   * navigation, un retour de visibilité) et peuvent tomber ensemble. Deux
+   * lectures concurrentes n'apporteraient rien et laisseraient la plus lente
+   * écraser la plus fraîche.
+   */
+  const enCours = useRef(false);
+  const monte = useRef(true);
+  useEffect(() => {
+    monte.current = true;
+    return () => {
+      monte.current = false;
+    };
+  }, []);
+  const refresh = useCallback(() => {
+    if (enCours.current) return;
+    enCours.current = true;
+    void charger(true, () => monte.current).finally(() => {
+      enCours.current = false;
+    });
+  }, [charger]);
 
   // Miroir de `addBoard` côté web (apps/web/src/data/store.ts) : même calcul de
   // position, même retour d'identifiant pour que l'appelant puisse enchaîner.
@@ -221,5 +353,5 @@ export function useExtStore(userId: string): ExtStore {
     [persist],
   );
 
-  return { ready, universes, boards, tasks, addBoard, addTask, captureTask, patchTask };
+  return { ready, universes, boards, tasks, addBoard, addTask, captureTask, patchTask, refresh };
 }
