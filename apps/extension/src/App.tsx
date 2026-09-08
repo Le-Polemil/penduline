@@ -18,7 +18,6 @@ import {
   positionBefore,
   QUADS,
   toLocalInput,
-  type Quadrant,
   type QuadrantKey,
   type Board,
   type Task,
@@ -29,22 +28,13 @@ import { getActiveBoard, setActiveBoard } from './active-board';
 import { Capture } from './Capture';
 import { getPending, watchPending, type PendingCapture } from './pending-capture';
 import { Loader } from './Loader';
+import { quadBg } from './quad-bg';
 import { useExtStore, type ExtStore } from './store';
+import { TaskMenu } from './TaskMenu';
 import { ToastProvider } from './toast';
 import { useNow } from './useNow';
 import { listenForSharedSession } from './session-bridge';
 import { WEB_APP_URL } from './web-app';
-
-/**
- * « À trier » n'a pas de fond propre : `PARK.bg` vaut `'transparent'`
- * (packages/shared/src/quadrants.ts), parce que sur le web la zone occupe toute
- * la largeur sous la grille et se fond dans la page. Dans le panneau elle est une
- * case comme les autres, il lui faut donc un fond — même repli neutre que celui
- * déjà appliqué au rendu de la corbeille côté web.
- */
-function quadBg(q: Quadrant): string {
-  return q.bg === 'transparent' ? 'var(--color-neutral-200)' : q.bg;
-}
 
 /**
  * Le disque « À trier », au centre de la grille des quatre cases.
@@ -693,7 +683,8 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                   const gapActive = !!drag && hoverGap?.quad === q.key && hoverGap.before === t.id;
                   const isDrag = drag === t.id;
                   return (
-                    // `position: relative` : le menu ⋯ s'ancre dessus.
+                    // Porte l'interstice, la carte (et son menu) puis l'éditeur
+                    // d'échéance. L'ancrage du menu, lui, vit sur `.task-anchor`.
                     <div className="card-wrap" key={t.id}>
                       <div
                         className={`gap${gapActive ? ' gap--active' : ''}`}
@@ -715,63 +706,92 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                       >
                         <div className="gap__line" />
                       </div>
-                      <div
-                        className={`task${isDrag ? ' task--dragging' : ''}${
-                          deadlineStatus(t.due_at, now) ? ` task--${deadlineStatus(t.due_at, now)}` : ''
-                        }`}
-                        style={{ viewTransitionName: `vt-${t.id}` } as CSSProperties}
-                        draggable
-                        onDragStart={(e: DragEvent) => {
-                          e.dataTransfer.effectAllowed = 'move';
-                          window.setTimeout(() => setDrag(t.id), 0);
-                        }}
-                        onDragEnd={() => {
-                          setDrag(null);
-                          setDragOverQuad(null);
-                          setHoverGap(null);
-                        }}
-                      >
-                        <button
-                          className="task__check"
-                          aria-label="Terminer"
-                          onClick={() => patchTask(t.id, { done: true, archived: true })}
-                        />
-                        {renamingTask?.id === t.id ? (
-                          <form
-                            className="task__rename"
-                            onSubmit={(e) => {
-                              e.preventDefault();
-                              commitRename();
-                            }}
-                          >
-                            <input
-                              className="task__rename-input"
-                              value={renamingTask.title}
-                              autoFocus
-                              maxLength={500}
-                              onChange={(e) => setRenamingTask({ id: t.id, title: e.target.value })}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Escape') setRenamingTask(null);
-                              }}
-                            />
-                          </form>
-                        ) : (
-                          <span className="task__title">{t.title}</span>
-                        )}
-                        {/* Le badge porte son texte, pas seulement sa couleur —
-                            même règle que le web (#19). */}
-                        {t.due_at && deadlineStatus(t.due_at, now) && (
-                          <time className={`due due--${deadlineStatus(t.due_at, now)}`} dateTime={t.due_at}>
-                            ⏰ {formatDeadline(t.due_at, now)}
-                          </time>
-                        )}
-                        <button
-                          className="task__more"
-                          aria-label="Actions"
-                          onClick={() => setMenuTask((m) => (m === t.id ? null : t.id))}
+                      {/* Le menu s'ancre à LA CARTE et non au bloc entier : un
+                          `top: 100%` calculé sur `.card-wrap` le fait tomber sous
+                          l'éditeur d'échéance quand celui-ci est ouvert. Même
+                          conteneur que le web (#114). */}
+                      <div className="task-anchor">
+                        <div
+                          className={`task${isDrag ? ' task--dragging' : ''}${
+                            deadlineStatus(t.due_at, now) ? ` task--${deadlineStatus(t.due_at, now)}` : ''
+                          }`}
+                          style={{ viewTransitionName: `vt-${t.id}` } as CSSProperties}
+                          draggable
+                          onDragStart={(e: DragEvent) => {
+                            e.dataTransfer.effectAllowed = 'move';
+                            window.setTimeout(() => setDrag(t.id), 0);
+                          }}
+                          onDragEnd={() => {
+                            setDrag(null);
+                            setDragOverQuad(null);
+                            setHoverGap(null);
+                          }}
                         >
-                          ⋯
-                        </button>
+                          <button
+                            className="task__check"
+                            aria-label="Terminer"
+                            onClick={() => patchTask(t.id, { done: true, archived: true })}
+                          />
+                          {renamingTask?.id === t.id ? (
+                            <form
+                              className="task__rename"
+                              onSubmit={(e) => {
+                                e.preventDefault();
+                                commitRename();
+                              }}
+                            >
+                              <input
+                                className="task__rename-input"
+                                value={renamingTask.title}
+                                autoFocus
+                                maxLength={500}
+                                onChange={(e) => setRenamingTask({ id: t.id, title: e.target.value })}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Escape') setRenamingTask(null);
+                                }}
+                              />
+                            </form>
+                          ) : (
+                            <span className="task__title">{t.title}</span>
+                          )}
+                          {/* Le badge porte son texte, pas seulement sa couleur —
+                              même règle que le web (#19). */}
+                          {t.due_at && deadlineStatus(t.due_at, now) && (
+                            <time className={`due due--${deadlineStatus(t.due_at, now)}`} dateTime={t.due_at}>
+                              ⏰ {formatDeadline(t.due_at, now)}
+                            </time>
+                          )}
+                          {/* « Actions » tout court nommait autant de boutons
+                              anonymes qu'il y a de tâches dans l'arbre
+                              d'accessibilité — même correctif que le web. */}
+                          <button
+                            className="task__more"
+                            aria-label={`Actions pour « ${t.title} »`}
+                            aria-expanded={menuTask === t.id}
+                            onClick={() => setMenuTask((m) => (m === t.id ? null : t.id))}
+                          >
+                            ⋯
+                          </button>
+                        </div>
+                        {menuTask === t.id && (
+                          <TaskMenu
+                            task={t}
+                            quad={q.key}
+                            boards={store.boards.filter((b) => b.id !== board.id)}
+                            universes={store.universes}
+                            onMoveQuad={(key) => menuMove(t, key)}
+                            onMoveBoard={(b) => moveToBoard(t, b.id)}
+                            onDeadline={() => {
+                              setDating({ id: t.id, value: t.due_at ? toLocalInput(t.due_at) : '' });
+                              setMenuTask(null);
+                            }}
+                            onRename={() => {
+                              setRenamingTask({ id: t.id, title: t.title });
+                              setMenuTask(null);
+                            }}
+                            onClose={() => setMenuTask(null)}
+                          />
+                        )}
                       </div>
                       {/* L'éditeur d'échéance, sous la carte (#19). Il vit hors
                           du menu : celui-ci se referme au choix de l'action, et
@@ -812,60 +832,6 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                             </button>
                           )}
                         </form>
-                      )}
-                      {menuTask === t.id && (
-                        <div className="task-menu">
-                          <button
-                            className="task-menu__action"
-                            onClick={() => {
-                              setRenamingTask({ id: t.id, title: t.title });
-                              setMenuTask(null);
-                            }}
-                          >
-                            Renommer
-                          </button>
-                          <button
-                            className="task-menu__action"
-                            onClick={() => {
-                              setDating({ id: t.id, value: t.due_at ? toLocalInput(t.due_at) : '' });
-                              setMenuTask(null);
-                            }}
-                          >
-                            ⏰ {t.due_at ? 'Modifier l’échéance' : 'Fixer une échéance'}
-                          </button>
-                          <div className="task-menu__label">Déplacer vers</div>
-                          <div className="task-menu__grid">
-                            {ALL.map((b) => (
-                              <button
-                                key={b.key}
-                                className="move-btn"
-                                style={{ background: quadBg(b), color: b.dark }}
-                                disabled={b.key === q.key}
-                                onClick={() => menuMove(t, b.key)}
-                              >
-                                {b.label}
-                              </button>
-                            ))}
-                          </div>
-                          {store.boards.length > 1 && (
-                            <>
-                              <div className="task-menu__label">Vers une autre matrice</div>
-                              <div className="task-menu__boards">
-                                {store.boards
-                                  .filter((b) => b.id !== board.id)
-                                  .map((b) => (
-                                    <button
-                                      key={b.id}
-                                      className="board-btn"
-                                      onClick={() => moveToBoard(t, b.id)}
-                                    >
-                                      {b.name}
-                                    </button>
-                                  ))}
-                              </div>
-                            </>
-                          )}
-                        </div>
                       )}
                     </div>
                   );
