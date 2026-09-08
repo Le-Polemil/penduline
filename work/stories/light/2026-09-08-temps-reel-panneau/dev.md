@@ -13,20 +13,20 @@ status: "In Progress"
 | Tâche | Statut | Date |
 |-------|--------|------|
 | T0 — Établir que le push répond en production (service + migration appliquée) | Terminé | 2026-09-08 |
-| T1 — `packages/shared/src/realtime.ts` : fonctions pures de fusion déplacées depuis `useRealtime.ts` | En attente | |
-| T2 — `packages/shared/src/realtime.test.ts` : tests des fonctions pures (identité préservée, insertion, remplacement, retrait d'un absent) | En attente | |
-| T3 — `subscribeRealtime(client, userId, sink)` : câblage du canal sans React, collections du sink facultatives, retrait du filtre serveur | En attente | |
-| T4 — Export depuis `packages/shared/src/index.ts` | En attente | |
-| T5 — `apps/web/src/data/useRealtime.ts` réduit à l'enveloppe React, sink inchangé côté appelant | En attente | |
+| T1 — `packages/shared/src/realtime.ts` : fonctions pures de fusion déplacées depuis `useRealtime.ts` | Terminé | 2026-09-08 |
+| T2 — `packages/shared/src/realtime.test.ts` : tests des fonctions pures (identité préservée, insertion, remplacement, retrait d'un absent) | Terminé | 2026-09-08 |
+| T3 — `subscribeRealtime(client, userId, sink)` : câblage du canal sans React, collections du sink facultatives, retrait du filtre serveur | Terminé | 2026-09-08 |
+| T4 — Export depuis `packages/shared/src/index.ts` | Terminé | 2026-09-08 |
+| T5 — `apps/web/src/data/useRealtime.ts` réduit à l'enveloppe React, sink inchangé côté appelant | Terminé | 2026-09-08 |
 | T6 — Non-régression web vérifiée à deux onglets avant de toucher à l'extension | En attente | |
-| T7 — `apps/extension/src/store.ts` : abonnement, `admits` propre au panneau, `reload` = `refresh()` de #116 | En attente | |
-| T8 — `apps/extension/src/App.tsx` : relecture au changement de vue conditionnée à l'état du canal | En attente | |
-| T9 — Commentaire anti-régression : pas de canal dans le service worker MV3 | En attente | |
-| T10 — `work/coolify-deploy.md` : documenter le service Realtime (aujourd'hui muet) | En attente | |
-| T11 — `work/architecture.md` : corriger les lignes périmées (temps réel « non branché », épinglage) | En attente | |
-| T12 — Portes qualité : typecheck, tests, build | En attente | |
+| T7 — `apps/extension/src/store.ts` : abonnement, `admits` propre au panneau, `reload` = `refresh()` de #116 | Terminé | 2026-09-08 |
+| T8 — `apps/extension/src/App.tsx` : relecture au changement de vue conditionnée à l'état du canal | Terminé | 2026-09-08 |
+| T9 — Commentaire anti-régression : pas de canal dans le service worker MV3 | Terminé | 2026-09-08 |
+| T10 — `work/coolify-deploy.md` : documenter le service Realtime (aujourd'hui muet) | Terminé | 2026-09-08 |
+| T11 — `work/architecture.md` : corriger les lignes périmées (temps réel « non branché », épinglage) | Terminé | 2026-09-08 |
+| T12 — Portes qualité : typecheck, tests, build | Terminé | 2026-09-08 |
 | T13 — Validation manuelle (plan de test du plan.md) | En attente | |
-| T14 — Reporter dans #53 les six constats d'héritage | En attente | |
+| T14 — Reporter dans #53 les six constats d'héritage | Terminé | 2026-09-08 |
 
 ## Journal
 
@@ -102,3 +102,160 @@ justement en sortir.
 **Notes** : aucun effet observable avant #53. La non-régression est le seul critère
 de ce volet, d'où T6 placée **avant** T7 — on prouve que le web n'a pas bougé avant
 d'ajouter un second consommateur.
+
+### 2026-09-08 : T1–T4 — le module partagé
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+
+- `packages/shared/src/realtime.ts` *(nouveau)* : `identiques`, `fusionner`,
+  `retirer` déplacées telles quelles depuis `useRealtime.ts`, plus
+  `subscribeRealtime(client, userId, getSink, options)` — tout le câblage
+  `postgres_changes` et la règle de rechargement à la reconnexion, sans React ;
+- `packages/shared/src/realtime.test.ts` *(nouveau)* : 12 tests ;
+- export depuis `packages/shared/src/index.ts`.
+
+**Fichiers modifiés** : `packages/shared/src/realtime.ts`,
+`packages/shared/src/realtime.test.ts`, `packages/shared/src/index.ts`.
+
+**Notes** :
+
+- **`getSink` est un GETTER, pas un objet — et c'est une amélioration sur #39,
+  pas une transcription.** Le sink est reconstruit à chaque rendu de l'hôte ; le
+  capturer une fois figerait `reload` et `admits` au premier. #39 évitait le piège
+  par une ref *à l'intérieur* du hook, donc par discipline. Le prendre en
+  paramètre le rend **inatteignable** : `subscribeRealtime` relit le sink à chaque
+  événement et ne peut structurellement pas en tenir un périmé.
+- **`setAttachments` facultatif vaut configuration.** Absent, la table n'est pas
+  abonnée du tout. Pas de drapeau `mode` — même convention que les props
+  facultatives de `TaskCard`. C'est ainsi que le panneau s'en passe.
+- **`onLive` rend un booléen, pas le statut brut** de supabase-js. L'appelant n'a
+  pas à connaître ce vocabulaire pour savoir s'il doit encore relire lui-même, et
+  ça évite de faire fuiter un type de la bibliothèque dans les deux hôtes.
+- **Ce que les tests protègent vraiment : l'identité de référence.** Rendre la
+  MÊME référence quand rien ne change est ce qui empêche React de re-rendre, donc
+  ce qui garde texte et focus dans un champ pendant qu'une écriture distante
+  arrive. C'était la conclusion la plus fine de #39 et elle n'était pas testable —
+  la mécanique vivait dans un hook. Une régression y serait invisible en test
+  classique et se verrait en production par un champ qui se vide sous les doigts.
+- 🐛 Une apostrophe droite non échappée dans un libellé de test (`d'une`) a fait
+  échouer la collecte du fichier entier : 221 tests passaient, mais un fichier
+  était compté en échec. Corrigée en apostrophe typographique.
+
+### 2026-09-08 : T5 — le hook web réduit à son enveloppe
+
+**Statut** : Terminé
+
+**Actions réalisées** : `apps/web/src/data/useRealtime.ts` passe de **150 à 34
+lignes**. Il ne garde que la ref et le `useEffect`. La signature
+`useRealtime(userId, sink)` est **inchangée** : `store.ts` n'a pas été touché, et
+le type `RealtimeSink` est re-exporté pour que rien d'autre ne bouge.
+
+**Fichiers modifiés** : `apps/web/src/data/useRealtime.ts`.
+
+**Notes** : le seul changement de comportement côté web est le **retrait du
+filtre serveur** — d'où T6 avant T7 dans le plan. Le web est le consommateur
+existant : s'il régresse, il faut le savoir avant d'en brancher un second.
+
+### 2026-09-08 : T7–T9 — le panneau s'abonne
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+
+- `apps/extension/src/store.ts` : `admisAuPanneau` au niveau module, sink par ref,
+  `subscribeRealtime` dans un `useEffect [userId]`, et `live` ajouté au contrat
+  `ExtStore` ;
+- `apps/extension/src/App.tsx` : les deux relectures de repli (changement de vue,
+  retour de visibilité) sont **conditionnées** à `store.live` ;
+- `apps/extension/src/background.ts` : garde-fou en tête de fichier — ne pas
+  abonner le service worker.
+
+**Fichiers modifiés** : `apps/extension/src/store.ts`,
+`apps/extension/src/App.tsx`, `apps/extension/src/background.ts`.
+
+**Notes** :
+
+- **`admisAuPanneau` diverge de `inWorkingSet` du web, à dessein.** Le web garde
+  les étapes cochées ; le panneau n'affiche pas d'étapes. Réutiliser la règle du
+  web ferait rentrer par le canal ce que le `select` du panneau sort par la porte.
+  `archived` n'y figure pas non plus — le `select` ne le filtre pas et c'est le
+  rendu (`listFor`) qui l'écarte ; ajouter ici un critère absent du chargement
+  ferait diverger les deux chemins, ce que cette fonction existe pour éviter.
+- **`reload` = le `refresh()` de #116, sans une ligne de neuf.** Il porte déjà le
+  garde-fou `gen`/`enVol` contre l'écrasement d'une écriture locale non
+  acquittée. Bon signe : la frontière de #116 avait été tracée au bon endroit,
+  elle sert un second appelant sans être touchée.
+- ⚠️ **Le piège que j'ai failli poser dans T8** : l'écouteur `visibilitychange`
+  est posé une fois, donc une fermeture sur `store.live` l'aurait figé sur
+  `false` — la valeur au montage, la souscription n'ayant pas encore abouti. Le
+  repli se serait exécuté pour toujours, canal ou pas. Passé par `liveRef`.
+- **Conditionner et non supprimer.** Un socket peut ne jamais s'établir (hors
+  ligne, proxy qui bloque les WebSockets). Sans repli, ce panneau n'aurait plus
+  aucun rattrapage — et c'est précisément le mode de défaillance que le canal ne
+  peut pas signaler lui-même.
+- 🧹 L'objet du sink était écrit deux fois (init de la ref + affectation par
+  rendu). Ramené au motif du hook web : un `const courant`, puis affectation.
+
+### 2026-09-08 : T10–T11 — les deux documents périmés
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+
+- `work/coolify-deploy.md` : nouvelle section « Realtime : le huitième service,
+  celui qu'on a GARDÉ ». Le doc ne contenait **zéro** occurrence de « realtime »
+  alors que ce service porte toute la synchronisation. Y figurent la vérification
+  du 8 septembre, le piège du `SUBSCRIBED` trompeur, la recette de sonde
+  transitive avec témoin négatif, et ce qu'on casse si on le retire un jour du
+  compose pour récupérer de la RAM ;
+- `work/architecture.md` : la ligne « Temps réel Supabase : non branché, à
+  ajouter » est barrée et corrigée.
+
+**Fichiers modifiés** : `work/coolify-deploy.md`, `work/architecture.md`.
+
+**Notes** :
+
+- **Corroboration inattendue de T0.** `work/coolify-deploy.md` documentait déjà
+  la sonde PostgREST `200`/`400`, et concluait que la base était à jour **sauf les
+  deux migrations du 6 septembre**. La migration realtime datant du 29 août, elle
+  est donc appliquée — établi une seconde fois, par un chemin indépendant du mien.
+- ⚖️ **La section « État » d'`architecture.md` n'a PAS été réécrite.** Elle est
+  un instantané du 24 juillet : elle parle de « pièces » et de `rooms`, liste
+  comme non couverts le temps réel, l'édition de titre et l'extension, et
+  mentionne l'épinglage retiré depuis. Un avertissement daté a été ajouté en
+  tête plutôt qu'une réécriture : ce document porte des **décisions datées**, et
+  réviser un instantané au fil de l'eau lui ferait perdre ce qui en fait la
+  valeur. Le pointeur va vers `README.md` et `work/stories/`.
+
+### 2026-09-08 : T12 — portes qualité
+
+**Statut** : Terminé
+
+- `npm run typecheck --workspaces` : ✅ shared, extension, web
+- `npm test --workspaces` : ✅ **260 tests** (233 shared dont 12 nouveaux, 27 web)
+- `npm run build` : ✅ shared, web, extension
+
+**Notes** : le bundle du panneau passe de 169,8 Ko à 171,5 Ko (+1,7 Ko) — le
+câblage du canal, la bibliothèque Realtime étant déjà embarquée avec
+supabase-js.
+
+### 2026-09-08 : T14 — l'héritage déposé dans #53
+
+**Statut** : Terminé
+
+**Actions réalisées** : commentaire sur l'issue #53 avec **six** constats (le plan
+en annonçait trois ; l'exploration architecturale en a ajouté trois).
+
+**Notes** : le constat qui compte le plus n'est pas technique. Le client ne porte
+plus **aucune** décision d'accès — excellente nouvelle pour #53, qui n'aura rien à
+retoucher côté client, mais la RLS devient de ce fait le **point de défaillance
+unique**. Il n'y a plus de filtre client pour masquer une policy trop large : le
+critère « audit RLS vérifié par des tests dédiés » de #53 passe de recommandé à
+seul garde-fou restant. C'est dit explicitement là-bas.
+
+Les deux constats d'infrastructure valaient aussi le déplacement : `jwt_expiry`
+sans rotation fait traîner la révocation d'un partage jusqu'à une heure — **y
+compris sur le socket temps réel**, qui porte le jeton avec lequel il a été
+ouvert. Le critère « révoquer un accès » de #53 doit trancher ce qu'on en fait.

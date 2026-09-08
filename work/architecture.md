@@ -80,9 +80,24 @@ antérieures :
   drop tactile reste à éprouver).
 - Flow d'auth dans l'extension : formulaire embarqué vs délégation à l'onglet web.
 - Rappels/notifications : PWA Web Push vs autre canal ; quoi rappeler, quand.
-- Temps réel Supabase (sync multi-onglets/devices) : non branché, à ajouter.
+- ~~Temps réel Supabase (sync multi-onglets/devices) : non branché, à ajouter.~~
+  **Livré** — `20260829140000_realtime.sql` + `useRealtime` côté web (#39), puis
+  branché sur le panneau d'extension et débarrassé de son filtre serveur (#117).
+  Le service `supabase-realtime` est documenté dans `work/coolify-deploy.md`.
 
 ## État
+
+> ⚠️ **Cette section est un instantané du 24 juillet 2026 et n'est plus à jour.**
+> Elle parle encore de « pièces » et de `rooms` (renommés en matrices/`boards` par
+> `20260810100000_rooms_to_boards.sql`), et liste comme non couverts l'édition du
+> titre, le temps réel et l'extension — tous les trois livrés depuis. L'épinglage
+> qu'elle mentionne a par ailleurs été **retiré** (#110,
+> `20260906100000_retirer_epinglage.sql`).
+>
+> Elle est conservée telle quelle plutôt que réécrite : ce document porte des
+> **décisions datées**, et réviser un instantané au fil de l'eau lui ferait perdre
+> ce qui en fait la valeur. Pour l'état courant, la source est le `README.md` et
+> les synthèses de `work/stories/`.
 
 App fonctionnelle : accueil (pièces + pastilles), matrice 2×2 + « À trier »,
 drag & drop (déplacement, insertion, appairage), épinglage, complétion + toast

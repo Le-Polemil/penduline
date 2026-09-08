@@ -215,6 +215,49 @@ Coolify : une mise à jour du template Supabase l'écraserait. Et redéployer un
 stack recrée les conteneurs, donc provoque un pic — c'est cette opération qui a
 tué la machine la deuxième fois. La faire à froid, avec de la marge.
 
+## Realtime : le huitième service, celui qu'on a GARDÉ (2026-09-08)
+
+Le dégraissage ci-dessus dit ce qui est parti. Il ne disait pas ce qui reste, et
+`supabase-realtime` restait documenté **nulle part** — le seul endroit qui
+l'attestait était un commentaire dans
+`apps/supabase/migrations/20260829140000_realtime.sql`. Or ce service porte toute
+la synchronisation multi-onglets et multi-appareils : sans lui, l'app web et le
+panneau d'extension se figent sur l'état du chargement, en silence.
+
+**Il tourne, et il est exposé.** Vérifié le 8 septembre 2026 depuis un client :
+un abonnement `postgres_changes` sur `api.penduline.polemil.dev` atteint
+`SUBSCRIBED`.
+
+⚠️ **`SUBSCRIBED` ne prouve pas que ça marche.** C'est le piège que #39 a payé :
+si la publication `supabase_realtime` est vide, un client s'abonne, reçoit
+`SUBSCRIBED`, et **rien d'autre** — aucune erreur, aucun symptôme, juste
+l'absence de synchronisation. Il faut donc vérifier DEUX choses, pas une : le
+service répond, **et** la migration qui peuple la publication est appliquée.
+
+**Comment vérifier la seconde sans SSH.** La migration realtime n'ajoute aucune
+colonne, donc la sonde PostgREST plus bas ne peut pas la viser directement. On
+passe par une migration **postérieure** : les migrations étant appliquées dans
+l'ordre par `apps/supabase/deploy/penduline-migrate.sh`, la présence d'un artefact
+plus récent établit celle du realtime.
+
+```bash
+CLE=$(gh variable list --json name,value -q '.[]|select(.name=="VITE_SUPABASE_ANON_KEY").value')
+# `parent_id` vient de 20260829160000_subtasks.sql, POSTÉRIEURE au realtime
+curl -sS -o /dev/null -w '%{http_code}\n' -H "apikey: $CLE" \
+  "https://api.penduline.polemil.dev/rest/v1/tasks?select=parent_id&limit=1"
+# 200 ⇒ subtasks appliquée ⇒ realtime appliquée avant elle
+```
+
+Toujours accompagner d'un **témoin négatif** (une colonne inventée doit répondre
+`400` / `42703`), sinon on ne sait pas si la sonde discrimine ou répond `200` à
+tout.
+
+**Si Realtime est un jour retiré du compose** — pour récupérer de la RAM, la
+machine étant le facteur limitant (voir plus haut) — il faut savoir ce qu'on
+casse : la synchronisation entre onglets et appareils s'arrête. Côté panneau
+d'extension, un repli existe (relecture au changement de vue, #116) ; côté web,
+il n'y en a aucun.
+
 ## CI et image GHCR
 
 `.github/workflows/ci.yml` typecheck et build à chaque PR, puis **construit et
