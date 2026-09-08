@@ -20,6 +20,7 @@ import {
   IconPenLine,
   IconTrash,
 } from './Icons';
+import { useTitreDepliable } from '../data/useTitreDepliable';
 import { Attachments } from './Attachments';
 import { Deadline } from './Deadline';
 import { Subtasks } from './Subtasks';
@@ -200,6 +201,8 @@ export function TaskCard({
   /** L'univers dont le sous-menu est ouvert. `null` = aucun. */
   const [openUni, setOpenUni] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  /** Lire un titre tronqué d'un clic (#95). Voir le hook pour les trois pièges. */
+  const titre = useTitreDepliable(task.title);
 
   /**
    * Fermer le menu au clic à côté.
@@ -327,11 +330,23 @@ export function TaskCard({
           </form>
         ) : (
           <span
-            className={`task__title${task.done ? ' task__title--done' : ''}`}
+            ref={titre.ref}
+            className={[
+              'task__title',
+              task.done ? 'task__title--done' : '',
+              titre.deplie ? 'task__title--deplie' : '',
+              titre.tronque ? 'task__title--tronque' : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            /* L'infobulle native ne sert QUE quand le titre est coupé : la
+               poser sur tous les titres doublerait un texte déjà lisible, et le
+               ferait énoncer deux fois par un lecteur d'écran. */
+            title={titre.tronque && !titre.deplie ? task.title : undefined}
             // Double-clic pour renommer : le geste attendu sur un titre, et il
-            // n'existait nulle part. Le simple clic reste libre — la carte n'a
-            // pas d'action par défaut, et en lui en donnant une on rendrait le
-            // renommage accidentel.
+            // n'existait nulle part. Il PARTAGE son premier clic avec le
+            // dépliage — c'est le hook qui désarme son minuteur, en écoutant le
+            // `dblclick` sur la carte.
             onDoubleClick={() => rename.start()}
           >
             {task.title}

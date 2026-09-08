@@ -32,6 +32,7 @@ import { clearSnapshot } from './snapshot';
 import { quadBg } from './quad-bg';
 import { useExtStore, type ExtStore } from './store';
 import { TaskMenu } from './TaskMenu';
+import { TaskTitle } from './TaskTitle';
 import { ToastProvider } from './toast';
 import { useNow } from './useNow';
 import { listenForSharedSession } from './session-bridge';
@@ -811,7 +812,7 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                               />
                             </form>
                           ) : (
-                            <span className="task__title">{t.title}</span>
+                            <TaskTitle title={t.title} />
                           )}
                           {/* Le badge porte son texte, pas seulement sa couleur —
                               même règle que le web (#19). */}
