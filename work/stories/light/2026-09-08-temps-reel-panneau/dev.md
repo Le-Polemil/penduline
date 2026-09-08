@@ -321,3 +321,31 @@ aucune CI ici n'a de serveur. Résultat des deux modes :
   vérifié dans le module transformé avant d'ouvrir quoi que ce soit, pour ne
   prendre aucun risque d'écrire en production. `.env` n'a pas été modifié : les
   variables ont été passées en ligne.
+
+### 2026-09-08 : PR #118 ouverte, CI verte
+
+**Statut** : Terminé
+
+- PR **#118**, base `chore/extension-1.5.0-et-garde-fou-pinned` — ⛓️ **empilée sur
+  #115** et pas par commodité : le `reload` de reconnexion réutilise le
+  `refresh()` livré là-bas. `MERGEABLE`.
+- CI : `check` **pass** (30 s), `image` `skipping`. Idem sur #115 après les
+  commits de la 1.5.0.
+
+**🐛 Un commit poussé cassé, et c'est une erreur de méthode.** `3b66135` ne
+compilait pas : `process.env` dans le test live, alors que `@penduline/shared` n'a
+pas `@types/node` — et `npm run build` commençant par le build de shared, toute la
+chaîne tombait derrière. Après avoir ajouté le test, j'avais relancé `npm test`
+mais **pas le typecheck**. Corrigé par `b537bf5` (lecture par `globalThis`, pas de
+dépendance nouvelle).
+
+Ce qui l'a laissé passer est instructif : ma commande de contrôle comptait des
+lignes (`grep -c`) au lieu de lire la sortie. Le décompte disait « 2 » et
+« 0 builds » — l'information était là, mais mise en forme pour ne pas être lue.
+**Lire la sortie, ne pas la compter.**
+
+**Il reste T13**, la validation navigateur, que je ne peux pas exécuter (MCP
+chrome-devtools bloqué par une instance Chrome occupant son profil ; tuer la
+session de l'utilisateur n'était pas une option). La synthèse n'est
+volontairement PAS écrite avant ce retour : elle affirmerait une validation qui
+n'a pas eu lieu.
