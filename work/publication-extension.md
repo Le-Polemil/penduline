@@ -426,10 +426,12 @@ notes 1.3.0 ci-dessus, qui restent valables.
 
 ## Version 1.5.0 — notes de publication
 
-**Un seul commit d'écart avec le paquet 1.4.0** : #110, le retrait de
-l'épinglage. Vingt-cinq lignes, dont une seule compte vraiment.
+> ⚠️ **Cette section a été écrite quand la 1.5.0 n'avait qu'un commit d'écart
+> avec la 1.4.0.** Elle en a trois : le retrait de l'épinglage, plus deux
+> rattrapages ajoutés avant soumission. Le zip a été régénéré en conséquence — ne
+> pas se fier à une lecture partielle de ces notes.
 
-### Ce que l'utilisateur voit changer
+### 1. Le retrait de l'épinglage (#110)
 
 - le bouton **⚑** disparaît de chaque carte de tâche ;
 - le tri « épinglées en tête » disparaît d'une case — il reste « en retard
@@ -442,6 +444,47 @@ qu'elles n'avaient jamais quitté. Le pourquoi du retrait est argumenté dans la
 migration `20260906100000_retirer_epinglage.sql` — en résumé : un second
 mécanisme d'ordre posé sur un premier plus fin, une priorité sur une priorité, et
 rien qui le faisait jamais retomber.
+
+### 2. Le menu ⋯ d'une tâche, replié comme celui du web
+
+Le menu du panneau était resté à l'ordre d'avant #110. Il suit maintenant celui
+du web : classer, déplacer, enrichir, puis les gestes rares. Les autres matrices
+ne s'empilent plus à plat mais se rangent par univers, il se ferme au clic à côté
+et à Échap, et **il ne sort plus de la vue** — il se retourne vers le haut ou
+borne sa hauteur selon la place restante.
+
+Ce dernier point était un vrai défaut de la 1.4.0 en ligne : la liste de toutes
+les matrices suffisait à pousser le menu hors du panneau, et `.detail-list`
+défilant en `overflow: auto`, elle en était rognée sans que rien ne le dise.
+
+Deux écarts assumés avec le web, imposés par la largeur du panneau (Chrome le
+laisse descendre à ~240 px) : les univers se déplient **en place** plutôt qu'en
+sous-menu flottant, et la hauteur est bornée par une **mesure** et pas seulement
+retournée. Détail dans `apps/extension/src/TaskMenu.tsx`.
+
+Cette livraison couvre le **point 1 de #95** et rien d'autre : le dépliage du
+titre, le double-clic, l'appairage et les vues transversales restent à faire, et
+la description de #95 est par ailleurs périmée sur l'épinglage.
+
+### 3. Fraîcheur des données : relecture silencieuse et cache local
+
+Deux manques que chaque ouverture rendait visibles.
+
+- **Le panneau relit à chaque changement de vue** et au retour de visibilité, sans
+  écran de chargement. Il ne lisait qu'une fois au montage, et n'a pas le temps
+  réel du web : resté ouvert des heures, il ne voyait jamais ce qu'on changeait
+  ailleurs. Ce n'est pas de la synchronisation — c'est un rattrapage au moment où
+  l'on regarde. Le temps réel a son propre ticket.
+- **Le dernier état connu est peint immédiatement**, depuis
+  `chrome.storage.local` : plus de « Chargement des matrices… » à chaque
+  ouverture. L'instantané porte une version de format — ⚠️ **à incrémenter avec
+  `TASK_COLS`** — une péremption d'une semaine, le compte auquel il appartient, et
+  il est effacé à la déconnexion.
+
+Les deux mécaniques sont documentées dans `store.ts` et `snapshot.ts`, en
+particulier l'arbitrage entre une relecture et une écriture locale non encore
+acquittée — c'est là que se cachait le risque de faire reculer une carte sous les
+doigts de l'utilisateur.
 
 ### Rien à toucher sur la fiche du Store
 
@@ -464,7 +507,9 @@ fonctionnalité qui s'en va de l'interface.
 
 Un `1.4.1` annoncerait « mêmes fonctionnalités, un bug corrigé ». Faux sur les
 deux moitiés : aucun bug n'est corrigé côté extension, et les fonctionnalités ne
-sont pas les mêmes. Quelqu'un qui lit les notes chercherait un correctif
+sont pas les mêmes. (Les deux rattrapages ajoutés depuis ne font que renforcer la
+conclusion : le menu et la fraîcheur des données sont bien du changement
+fonctionnel.) Quelqu'un qui lit les notes chercherait un correctif
 inexistant, et ne serait pas prévenu que l'épingle a disparu.
 
 Le semver strict dirait plutôt `2.0.0`, un retrait n'étant pas rétrocompatible.
