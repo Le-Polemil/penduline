@@ -92,31 +92,31 @@ export function retirer<T extends { id: string }>(liste: T[], id: string): T[] {
  * prendre en paramètre rend le piège **inatteignable** au lieu de compter sur la
  * discipline de chaque appelant.
  *
- * ⚠️ **Aucun filtre serveur.** L'abonnement ne déclare pas
- * `user_id=eq.<moi>` — ce qu'il faisait jusqu'ici. Ce filtre n'a jamais été la
- * frontière de sécurité : la frontière est la RLS, que Realtime évalue **par
- * abonné et pour chaque événement**. C'était une simple économie de réveils, et
- * elle coûtait deux choses :
+ * ⚠️ **LE FILTRE SERVEUR EST LA SEULE BARRIÈRE DES ÉVÉNEMENTS `DELETE`.**
+ * Ne pas le retirer. Mesuré contre un Supabase réel le 2026-09-08 :
  *
- *   1. sous un partage de matrice (#53), une tâche porte le `user_id` de son
- *      propriétaire. La RLS dirait oui à l'invité, le filtre dirait non AVANT —
- *      et l'événement ne serait jamais livré. Sans erreur, sans log ;
- *   2. `tasks.user_id` change de sens avec #53 (« propriétaire » → « auteur ») :
- *      un client qui filtre là-dessus devient faux sans que rien ne le signale.
+ * | Événement | Ce qui décide de la délivrance |
+ * |---|---|
+ * | INSERT / UPDATE | la RLS — le filtre y est bien redondant |
+ * | **DELETE** | **le filtre SEUL** — la RLS n'y est PAS appliquée |
  *
- * C'est déjà le parti du dépôt : `search_tasks`, `review_boards` et
- * `completion_stats` sont toutes `security invoker` et n'ont AUCUN prédicat
- * `user_id` — elles reposent entièrement sur la RLS.
+ * Le protocole exact, établi par sonde : Realtime évalue le filtre contre la
+ * ligne ENTIÈRE (il l'a, grâce à `replica identity full`), puis **caviarde** la
+ * charge utile à la seule clé primaire avant de l'envoyer. Mais il n'évalue
+ * aucune policy pour les DELETE. Donc, sans filtre, tout client authentifié
+ * reçoit l'identifiant et l'horodatage de CHAQUE suppression de la base — celles
+ * des autres comptes comprises.
  *
- * Contrepartie assumée : le serveur évalue la RLS pour chaque abonné au lieu
- * d'écarter d'abord ceux dont le filtre ne correspond pas. À cette échelle
- * (auto-hébergé, poignée de comptes, aucun plafond Realtime dans `config.toml`)
- * c'est négligeable. Si le volume devenait un sujet, le levier serait un filtre
- * `board_id=in.(<matrices accessibles>)` — écarté ici, et pas par paresse :
- * `task_attachments` ne porte pas de `board_id`, il faudrait se réabonner à
- * chaque changement du jeu de matrices (avec une fenêtre d'événements perdus à
- * chaque fois), et ça remettrait dans le client une décision d'accès que #53 va
- * justement en sortir.
+ * Vérifié dans les deux sens : avec `user_id=eq.<intrus>`, un compte tiers ne
+ * reçoit RIEN quand on supprime ailleurs ; sans filtre, il reçoit `{id}`.
+ *
+ * ⚠️ Corollaire pour le partage de matrice (#53) : on ne peut pas se contenter
+ * de RETIRER ce filtre pour qu'un invité reçoive les événements — il faut le
+ * rendre CONFORME À L'ACCÈS. Le levier est `board_id=in.(<matrices
+ * accessibles>)` : comme le filtre est évalué avant caviardage, il trancherait
+ * correctement même sur un DELETE. Le prix est un réabonnement à chaque
+ * changement du jeu de matrices. `task_attachments`, qui ne porte pas de
+ * `board_id`, demandera une colonne dénormalisée ou son propre traitement.
  *
  * ⚠️ Suppose la migration `20260829140000_realtime.sql`. Sans elle, la
  * publication est vide : l'abonnement se connecte et ne reçoit RIEN — aucune
@@ -139,12 +139,15 @@ export function subscribeRealtime(
    */
   let dejaAbonne = false;
 
+  // Le filtre serveur : redondant avec la RLS pour INSERT/UPDATE, mais SEULE
+  // barrière pour les DELETE (voir l'avertissement ci-dessus).
+  const filtre = `user_id=eq.${userId}`;
   // Une seule connexion pour toutes les tables — un canal par table
   // multiplierait les WebSockets sans rien apporter.
   const canal = client.channel(`penduline:${userId}`);
 
   canal
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks' }, (msg) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tasks', filter: filtre }, (msg) => {
       const sink = getSink();
       if (msg.eventType === 'DELETE') {
         // La ligne supprimée arrive entière grâce à `replica identity full` —
@@ -165,7 +168,7 @@ export function subscribeRealtime(
         return fusionner(ts, t);
       });
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'boards' }, (msg) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'boards', filter: filtre }, (msg) => {
       const sink = getSink();
       if (msg.eventType === 'DELETE') {
         const id = (msg.old as Partial<Board>).id;
@@ -180,7 +183,7 @@ export function subscribeRealtime(
       }
       sink.setBoards((bs) => fusionner(bs, msg.new as Board));
     })
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'universes' }, (msg) => {
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'universes', filter: filtre }, (msg) => {
       const sink = getSink();
       if (msg.eventType === 'DELETE') {
         const id = (msg.old as Partial<Universe>).id;
@@ -200,7 +203,7 @@ export function subscribeRealtime(
   if (getSink().setAttachments) {
     canal.on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'task_attachments' },
+      { event: '*', schema: 'public', table: 'task_attachments', filter: filtre },
       (msg) => {
         const set = getSink().setAttachments;
         if (!set) return;

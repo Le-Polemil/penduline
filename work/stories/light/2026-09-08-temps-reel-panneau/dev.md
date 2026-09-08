@@ -26,7 +26,8 @@ status: "In Progress"
 | T11 — `work/architecture.md` : corriger les lignes périmées (temps réel « non branché », épinglage) | Terminé | 2026-09-08 |
 | T12 — Portes qualité : typecheck, tests, build | Terminé | 2026-09-08 |
 | T15 — `realtime.live.test.ts` : vérification de bout en bout contre un Supabase réel | Terminé | 2026-09-08 |
-| T13 — Validation manuelle navigateur (deux onglets web + panneau réel) | En attente | |
+| T13 — Validation navigateur (deux onglets web + panneau réel) | Terminé | 2026-09-08 |
+| T16 — ⚠️ Fuite `DELETE` inter-comptes : filtre serveur rétabli + verrou | Terminé | 2026-09-08 |
 | T14 — Reporter dans #53 les six constats d'héritage | Terminé | 2026-09-08 |
 
 ## Journal
@@ -349,3 +350,95 @@ chrome-devtools bloqué par une instance Chrome occupant son profil ; tuer la
 session de l'utilisateur n'était pas une option). La synthèse n'est
 volontairement PAS écrite avant ce retour : elle affirmerait une validation qui
 n'a pas eu lieu.
+
+### 2026-09-08 : T13 — validation navigateur, contre le Supabase local
+
+**Statut** : Terminé
+
+Le MCP chrome-devtools libéré, la recette a pu être jouée pour de vrai. Deux
+serveurs de dev visant l'instance **locale** — vérifié dans le module transformé
+avant d'ouvrir quoi que ce soit, `.env` jamais modifié (variables passées en
+ligne). Le panneau tourne en **aperçu web**, ce que le code prévoit déjà (replis
+`localStorage`, `try/catch` autour de `chrome.*`).
+
+| Vérification | Résultat |
+|---|---|
+| Web, deux onglets : création | ✅ apparaît dans l'autre onglet sans rechargement (Éliminer 0→1, compteur 3→4) |
+| Web, deux onglets : cochage | ✅ disparaît de l'autre onglet |
+| **Web → panneau** | ✅ tâche créée sur le web, apparue dans le panneau **sans y toucher** (Faire 1→2) |
+| Panneau, `admits` | ✅ cocher sur le web la retire ; elle ne revient pas |
+| Menu `⋯` à 240 px, dernière case | ✅ `task-menu--up`, `max-height` 379,5 px en ligne, largeur 190 px, **aucun débordement** dans les 4 directions |
+| Univers déplié | ✅ `position: static`, contenu dans les bornes, n'offre que les AUTRES matrices |
+| Fermetures | ✅ Échap, clic à côté, et 2ᵉ clic sur `⋯` ferme (ne rouvre pas) |
+
+**Notes** : le viewport a dû passer par l'émulation — `resize_page` est plafonné
+par la largeur minimale d'une fenêtre Chrome (500 px), qui n'aurait pas éprouvé
+la contrainte réelle. Tâches de sonde supprimées de la base locale après coup.
+
+Non couvert, et ça reste vrai : l'extension **empaquetée** (MV3). Le panneau a
+été testé en aperçu web, donc ni le cache `chrome.storage`, ni la capture par le
+service worker, ni le badge n'ont été exercés.
+
+### 2026-09-08 : ⚠️ T16 — la fuite `DELETE`, et le renversement du cadrage
+
+**Statut** : Terminé
+
+**C'est le fait marquant de cette story, et il invalide la décision de cadrage.**
+
+En voulant PROUVER la non-délivrance croisée plutôt que l'affirmer, j'ai trouvé
+l'inverse de ce que j'avançais.
+
+**Le constat, mesuré dans les deux sens contre un Supabase réel :**
+
+| Événement | Ce qui décide de la délivrance |
+|---|---|
+| INSERT / UPDATE | la RLS — le filtre y est bien redondant |
+| **DELETE** | **le filtre SEUL** — la RLS n'y est PAS appliquée |
+
+Le protocole exact : Realtime évalue le filtre contre la ligne **entière** (il
+l'a, grâce à `replica identity full`), puis **caviarde** la charge utile à la
+seule clé primaire avant l'envoi. Mais il n'évalue aucune policy pour les DELETE.
+
+Vérifié dans les deux sens :
+
+- avec `user_id=eq.<intrus>` → un compte tiers ne reçoit **RIEN** ;
+- sans filtre → il reçoit `{"id": "<uuid>"}`.
+
+**Donc, sans filtre, tout client authentifié recevait l'identifiant et
+l'horodatage de chaque suppression de la base — celles des autres comptes
+comprises.** Pas de contenu, mais de la métadonnée inter-comptes, et qui empire
+avec le nombre de comptes.
+
+**Ce qui a été fait** : filtre rétabli sur les quatre tables, avec le constat
+mesuré en commentaire à l'endroit où quelqu'un serait tenté de le retirer à
+nouveau. Plus un cinquième test live qui **verrouille** la propriété — vérifié
+qu'il échoue bien sans le filtre (`expected 1 to be +0`, exactement une fuite) et
+passe avec. Un test de non-régression qui ne casse pas sans le correctif ne vaut
+rien.
+
+`seed.sql` gagne un second compte **volontairement sans données**,
+`intrus@penduline.test` : sans lui, le test s'ABSTIENT au lieu d'échouer, et le
+verrou serait inerte — pire qu'absent.
+
+**⚖️ Le renversement de cadrage, et il faut le dire clairement.** L'option que
+j'avais recommandée — « retirer le filtre, la RLS seule juge » — était **fausse**.
+L'option que l'utilisateur avait choisie en premier lieu, **`board_id=in.(…)`**,
+était la bonne, pour une raison que ni lui ni moi n'avions : le filtre étant
+évalué AVANT caviardage, c'est le seul levier capable de trancher un DELETE. On ne
+peut donc pas retirer ce filtre pour servir le partage (#53) — il faut le rendre
+**conforme à l'accès**. Les trois objections que j'avais opposées à cette forme
+restent vraies (réabonnement à chaque changement du jeu de matrices,
+`task_attachments` sans `board_id`, décision d'accès dans le client), mais elles
+deviennent le **prix à payer** plutôt qu'un motif de refus.
+
+**Ce que la story livre finalement** : le temps réel du panneau, entièrement. Le
+volet « délivrance scopée à l'accès » est **retiré du périmètre** — il ne se
+réduit pas au retrait d'une ligne, et il appartient à #53 avec la forme
+`board_id=in.(…)`.
+
+**La leçon de méthode** : j'ai bâti une décision de cadrage sur une lecture du
+code (« le commentaire dit que le filtre double la RLS ») et sur une analogie
+(« les RPC `security invoker` n'ont pas de prédicat `user_id` »). Les deux étaient
+vraies et la conclusion fausse, parce que les DELETE ne suivent pas la même règle.
+Une sonde de trente lignes a tranché ce que deux paragraphes de raisonnement
+avaient mal tranché.

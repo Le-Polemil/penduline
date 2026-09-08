@@ -33,6 +33,41 @@ insert into auth.identities (
   'email', now(), now(), now()
 ) on conflict (provider_id, provider) do nothing;
 
+-- ── Second compte, VOLONTAIREMENT SANS DONNÉES ───────────────────────────────
+-- Il n'existe que pour une chose : vérifier le CLOISONNEMENT. Le temps réel de
+-- Supabase n'applique aucune policy aux événements `DELETE` — il caviarde
+-- seulement la charge utile à la clé primaire — de sorte que le filtre serveur
+-- `user_id=eq.<moi>` est la SEULE barrière qui empêche un compte de recevoir
+-- l'identifiant de chaque suppression des autres. Mesuré le 2026-09-08 (#117).
+--
+-- `packages/shared/src/realtime.live.test.ts` verrouille cette propriété, et il
+-- lui faut un second compte pour le faire. Sans ce bloc, ce test s'ABSTIENT au
+-- lieu d'échouer : le verrou serait inerte, ce qui est pire qu'absent.
+--
+-- Aucune matrice, aucune tâche : il ne doit rien voir, et n'a donc rien à voir.
+insert into auth.users (
+  instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
+  created_at, updated_at, raw_app_meta_data, raw_user_meta_data,
+  confirmation_token, recovery_token, email_change, email_change_token_new
+) values (
+  '00000000-0000-0000-0000-000000000000',
+  '22222222-2222-2222-2222-222222222222',
+  'authenticated', 'authenticated', 'intrus@penduline.test',
+  extensions.crypt('password123', extensions.gen_salt('bf')),
+  now(), now(), now(),
+  '{"provider":"email","providers":["email"]}', '{}',
+  '', '', '', ''
+) on conflict (id) do nothing;
+
+insert into auth.identities (
+  provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at
+) values (
+  '22222222-2222-2222-2222-222222222222',
+  '22222222-2222-2222-2222-222222222222',
+  '{"sub":"22222222-2222-2222-2222-222222222222","email":"intrus@penduline.test"}',
+  'email', now(), now(), now()
+) on conflict (provider_id, provider) do nothing;
+
 -- ── Univers ──────────────────────────────────────────────────────────────────
 -- Deux univers seulement, et une matrice qui n'appartient à aucun : « sans
 -- univers » n'est pas un cas dégradé à corriger, c'est un état normal que le

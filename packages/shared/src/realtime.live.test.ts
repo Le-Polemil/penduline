@@ -25,8 +25,10 @@ import type { Board, Task, Universe } from './types';
  * étroit — dans les trois cas l'abonnement atteint `SUBSCRIBED` et ne reçoit
  * rien, sans erreur ni log. #39 a payé une journée de débogage pour cette
  * leçon. Aucun test unitaire ne peut l'attraper : il faut un vrai WAL. C'est
- * aussi la seule preuve automatisée que le retrait du filtre serveur (#117)
- * délivre réellement.
+ * C'est aussi ici qu'a été établi, par sonde, que le filtre serveur est la SEULE
+ * barrière des événements `DELETE` — la RLS ne leur est pas appliquée. Le
+ * dernier test de ce fichier verrouille cette propriété : il échouera si
+ * quelqu'un retire le filtre en croyant la RLS suffisante.
  */
 /**
  * L'environnement, lu par `globalThis` plutôt que par `process` : ce paquet n'a
@@ -113,7 +115,7 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     if (cree.length) await ecrivain.from('tasks').delete().in('id', cree);
   });
 
-  it('délivre un INSERT distant SANS filtre serveur', async () => {
+  it('délivre un INSERT distant', async () => {
     const { data, error } = await ecrivain
       .from('tasks')
       .insert({
@@ -158,6 +160,67 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     await new Promise((r) => setTimeout(r, 3000));
     expect(taches.some((t) => t.title === 'sonde-cochee')).toBe(false);
   }, 20000);
+
+  it('ne délivre RIEN à un autre compte — y compris les DELETE', async () => {
+    // ⚠️ LE TEST QUI VERROUILLE LA LEÇON DU 8 SEPTEMBRE. Le filtre serveur avait
+    // été retiré, au motif qu'il doublait la RLS. C'est vrai pour INSERT et
+    // UPDATE. C'est FAUX pour DELETE : Realtime n'y applique aucune policy, il
+    // caviarde seulement la charge utile à la clé primaire. Sans filtre, tout
+    // client authentifié recevait donc l'identifiant de chaque suppression de la
+    // base — celles des autres comptes comprises.
+    //
+    // Le compte tiers est provisionné à la demande, faute de figurer dans
+    // `seed.sql` : sans lui, ce test s'abstient plutôt que de mentir.
+    const tiers = createClient(URL, ANON, { auth: { persistSession: false } });
+    const { error: refus } = await tiers.auth.signInWithPassword({
+      email: 'intrus@penduline.test',
+      password: 'password123',
+    });
+    if (refus) {
+      console.warn('[live] compte « intrus@penduline.test » absent — cloisonnement non vérifié');
+      return;
+    }
+    const tiersId = (await tiers.auth.getUser()).data.user!.id;
+    /**
+     * On compte les APPELS AU SINK, et non les charges utiles : c'est le chemin
+     * livré de bout en bout. Une fuite `DELETE` appellerait `setTasks` même si
+     * `retirer` renvoie ensuite la même référence — l'appel suffit à la trahir.
+     */
+    let appels = 0;
+    const compteur = () => {
+      appels += 1;
+    };
+    let live = false;
+    const arret = subscribeRealtime(
+      tiers,
+      tiersId,
+      () => ({
+        setTasks: compteur,
+        setBoards: compteur,
+        setUniverses: compteur,
+        admits: () => true,
+        reload: async () => {},
+      }),
+      { onLive: (l) => { live = l; } },
+    );
+    if (!(await attendre(() => live, 15000))) throw new Error('tiers non abonné');
+
+    const { data } = await ecrivain
+      .from('tasks')
+      .insert({
+        user_id: userId,
+        board_id: boardId,
+        title: 'sonde-cloisonnement',
+        quadrant: 'faire',
+        position: 9003,
+      })
+      .select('id')
+      .single();
+    await ecrivain.from('tasks').delete().eq('id', data!.id as string);
+    await new Promise((r) => setTimeout(r, 4000));
+    arret();
+    expect(appels).toBe(0);
+  }, 30000);
 
   it('délivre un DELETE distant — `replica identity full` en place', async () => {
     const id = cree[0];
