@@ -17,6 +17,16 @@
  *    `chrome.notifications`, qui coûterait une permission de plus. Le manifeste
  *    est resté minimal à dessein (cf. work/publication-extension.md) : il n'y a
  *    pas de raison de l'entamer pour un accusé de réception.
+ *
+ * ⚠️ **N'ABONNEZ PAS ce worker au temps réel** (#117). La tentation est réelle —
+ * c'est lui qui écrit lors d'une capture — mais MV3 le tue en permanence : un
+ * WebSocket y serait rompu en boucle, et le chunk `session-bridge` (221 Ko) est
+ * déjà rechargé à chaque réveil. Ce n'est pas une surface, c'est un processus
+ * jetable.
+ *
+ * Et c'est inutile : ce que ce worker écrit remonte au panneau **par le canal du
+ * panneau**, via le WAL puis Realtime. Une tâche capturée apparaît donc dans un
+ * panneau déjà ouvert sans qu'aucun pont de messages n'ait à l'annoncer.
  */
 import { supabase, isConfigured } from './supabase';
 import { getActiveBoard } from './active-board';
