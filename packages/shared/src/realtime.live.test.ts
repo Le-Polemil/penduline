@@ -28,8 +28,17 @@ import type { Board, Task, Universe } from './types';
  * aussi la seule preuve automatisée que le retrait du filtre serveur (#117)
  * délivre réellement.
  */
-const ACTIF = !!process.env.PENDULINE_LIVE;
-const URL = process.env.PENDULINE_LIVE_URL ?? 'http://127.0.0.1:54321';
+/**
+ * L'environnement, lu par `globalThis` plutôt que par `process` : ce paquet n'a
+ * pas `@types/node` et n'a aucune raison de l'acquérir — c'est de la logique
+ * partagée entre un navigateur et un service worker. Un `process.env` nu ne
+ * compile pas ici.
+ */
+const ENV =
+  (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env ?? {};
+
+const ACTIF = !!ENV.PENDULINE_LIVE;
+const URL = ENV.PENDULINE_LIVE_URL ?? 'http://127.0.0.1:54321';
 /** Clé anonyme du stack LOCAL : identique sur toute installation, non secrète. */
 const ANON =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0';
