@@ -18,14 +18,15 @@ status: "In Progress"
 | T3 — `subscribeRealtime(client, userId, sink)` : câblage du canal sans React, collections du sink facultatives, retrait du filtre serveur | Terminé | 2026-09-08 |
 | T4 — Export depuis `packages/shared/src/index.ts` | Terminé | 2026-09-08 |
 | T5 — `apps/web/src/data/useRealtime.ts` réduit à l'enveloppe React, sink inchangé côté appelant | Terminé | 2026-09-08 |
-| T6 — Non-régression web vérifiée à deux onglets avant de toucher à l'extension | En attente | |
+| T6 — Non-régression du chemin de délivrance, prouvée automatiquement | Terminé | 2026-09-08 |
 | T7 — `apps/extension/src/store.ts` : abonnement, `admits` propre au panneau, `reload` = `refresh()` de #116 | Terminé | 2026-09-08 |
 | T8 — `apps/extension/src/App.tsx` : relecture au changement de vue conditionnée à l'état du canal | Terminé | 2026-09-08 |
 | T9 — Commentaire anti-régression : pas de canal dans le service worker MV3 | Terminé | 2026-09-08 |
 | T10 — `work/coolify-deploy.md` : documenter le service Realtime (aujourd'hui muet) | Terminé | 2026-09-08 |
 | T11 — `work/architecture.md` : corriger les lignes périmées (temps réel « non branché », épinglage) | Terminé | 2026-09-08 |
 | T12 — Portes qualité : typecheck, tests, build | Terminé | 2026-09-08 |
-| T13 — Validation manuelle (plan de test du plan.md) | En attente | |
+| T15 — `realtime.live.test.ts` : vérification de bout en bout contre un Supabase réel | Terminé | 2026-09-08 |
+| T13 — Validation manuelle navigateur (deux onglets web + panneau réel) | En attente | |
 | T14 — Reporter dans #53 les six constats d'héritage | Terminé | 2026-09-08 |
 
 ## Journal
@@ -259,3 +260,64 @@ Les deux constats d'infrastructure valaient aussi le déplacement : `jwt_expiry`
 sans rotation fait traîner la révocation d'un partage jusqu'à une heure — **y
 compris sur le socket temps réel**, qui porte le jeton avec lequel il a été
 ouvert. Le critère « révoquer un accès » de #53 doit trancher ce qu'on en fait.
+
+### 2026-09-08 : T6 + T15 — la vérification de bout en bout, sans navigateur
+
+**Statut** : Terminé
+
+**Le problème à résoudre.** Le plan faisait de la non-régression web « le point le
+plus important », et je ne pouvais pas piloter un navigateur : le MCP
+chrome-devtools refuse de démarrer, une instance Chrome occupant déjà le profil
+(`/Users/polemil/.cache/chrome-devtools-mcp/chrome-profile`). Tuer la session du
+navigateur de l'utilisateur n'était pas une option.
+
+**Ce qui a été fait à la place** — et c'est mieux que ce que le plan prévoyait :
+un test d'intégration réel, `packages/shared/src/realtime.live.test.ts`, qui
+exerce `subscribeRealtime` contre un vrai Supabase avec **deux clients
+authentifiés distincts** — on veut voir arriver l'écriture d'autrui, pas l'écho
+de la sienne.
+
+Quatre assertions, chacune sur un mode de défaillance silencieux :
+
+| Test | Ce qu'il attrape |
+|---|---|
+| INSERT distant délivré **sans filtre serveur** | la seule preuve automatisée que le retrait du filtre délivre |
+| UPDATE distant délivré | le cheminement WAL → RLS → socket |
+| `admits` refuse une tâche cochée | le temps réel ne réintroduit pas ce que #40 a sorti |
+| DELETE distant délivré | `replica identity full` — sans elle l'événement n'est même pas émis |
+
+**Désactivé par défaut** (`describe.skipIf`), activé par `PENDULINE_LIVE=1` :
+aucune CI ici n'a de serveur. Résultat des deux modes :
+
+- `npm test -w @penduline/shared` → **233 passés, 4 ignorés**
+- `PENDULINE_LIVE=1 … ` → **237 passés**
+
+**Fichiers modifiés** : `packages/shared/src/realtime.live.test.ts` *(nouveau)*.
+
+**Notes** :
+
+- 🐛 **Première version fausse, et instructive.** Elle patientait 2,5 s en dur
+  avant d'écrire. L'INSERT échouait — mais l'UPDATE et le DELETE passaient. Le
+  diagnostic n'est pas un bug produit : **Realtime ne rejoue pas les
+  événements**, donc l'écriture partie avant que la souscription n'aboutisse
+  était perdue. Corrigé en attendant le vrai `onLive` — ce qui exerce au passage
+  ce rappel, et fait tomber la durée de 12 s à 3,7 s. La leçon vaut pour toute
+  vérification manuelle : **ouvrir le panneau, puis écrire** — pas l'inverse.
+- ⚖️ **Pourquoi ce test reste dans le dépôt** alors que le reste de
+  `packages/shared` est purement unitaire. Le mode de défaillance du temps réel
+  est le SILENCE : publication vide, `replica identity` par défaut, ou filtre trop
+  étroit — dans les trois cas l'abonnement atteint `SUBSCRIBED` et ne reçoit rien,
+  sans erreur ni log. Aucun test unitaire ne peut l'attraper, il faut un vrai WAL.
+  Une paragraphe de journal aurait pourri ; une commande qui se relance tient.
+- ⚠️ **Piège d'environnement consigné dans le fichier** : un autre projet
+  Supabase occupait 54321, et `supabase status` annonce le port **configuré**, pas
+  celui réellement publié par Docker. La vérité est dans
+  `docker ps` sur `supabase_kong_penduline` — ici 55321. D'où
+  `PENDULINE_LIVE_URL`.
+- **Ce que ça ne couvre PAS**, et qui reste en T13 : le câblage React de chaque
+  hôte (les deux `useEffect`), et le comportement du panneau dans un vrai
+  navigateur. Le fond est prouvé, l'intégration visuelle non.
+- Le serveur de dev lancé pour l'occasion visait bien le Supabase **local** —
+  vérifié dans le module transformé avant d'ouvrir quoi que ce soit, pour ne
+  prendre aucun risque d'écrire en production. `.env` n'a pas été modifié : les
+  variables ont été passées en ligne.
