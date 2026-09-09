@@ -300,11 +300,21 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .due-edit__del { background: none; color: #a63d2a; text-decoration: underline; padding-left: 3px; }
 
 /* ── Menu d'actions d'une tâche ───────────────────────────────────────────────
-   Le ⋯ ne s'affiche qu'au survol : la carte fait 376 px et porte déjà la case, le
-   titre et l'épingle — un bouton permanent rognerait le titre, seul contenu utile
-   au repos. `:focus-within` le garde atteignable au clavier, sans quoi renommer
-   deviendrait impossible sans souris. */
+   Le ⋯ ne s'affiche qu'au survol : la carte porte déjà la case à cocher, le titre
+   et le badge d'échéance, et le panneau peut descendre à ~240 px — un bouton
+   permanent rognerait le titre, seul contenu utile au repos. `:focus-within` le
+   garde atteignable au clavier, sans quoi renommer deviendrait impossible sans
+   souris.
+
+   La structure du menu lui-même suit celle du web (`TaskCard.tsx`, réordonné en
+   #110 puis aligné sur le menu des matrices en #114). Voir `TaskMenu.tsx` pour
+   les deux écarts que l'hôte impose : univers dépliés en place, et hauteur
+   bornée par la mesure. */
 .card-wrap { position: relative; }
+/* Le menu s'ancre à la CARTE, pas au bloc entier : `top: 100%` sur `.card-wrap`
+   le faisait tomber SOUS l'éditeur d'échéance quand celui-ci était ouvert. Même
+   conteneur que le web (#114). */
+.task-anchor { position: relative; }
 .task__more {
   flex: none; background: none; border: none; cursor: pointer;
   color: var(--color-neutral-400); font: 700 13px/1 var(--font-body);
@@ -319,12 +329,34 @@ input::placeholder { color: inherit; opacity: 0.55; }
   /* 210 px reste la largeur voulue, mais elle ne peut plus être un plancher :
      dans un panneau réduit au minimum, la carte est plus étroite que ça et le
      menu déborderait par la droite. `min()` le borne à sa carte. */
-  position: absolute; right: 0; top: 100%; z-index: 20; width: min(210px, 100%);
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; width: min(210px, 100%);
   background: var(--card-warm); border-radius: 14px; box-shadow: var(--shadow-lg);
   padding: 9px; animation: mm-in 0.16s ease both;
+  /* ⚠️ La hauteur MAXIMALE est posée en ligne par `TaskMenu`, qui mesure la
+     place restante dans `.detail-list` — le conteneur qui défile, et donc celui
+     qui rogne ce menu. Ici on ne pose que la conséquence : passé cette hauteur,
+     le menu défile au lieu de sortir de la vue. */
+  overflow-y: auto; overscroll-behavior: contain;
+  transform-origin: top right;
 }
-.task-menu__label { font: 600 10.5px var(--font-body); color: var(--color-neutral-600); margin: 8px 0 6px; }
+/* Retourné au-dessus de la carte quand il n'y a plus la place en dessous. */
+.task-menu--up { top: auto; bottom: calc(100% + 4px); transform-origin: bottom right; }
+
+/* Même retrait que les entrées, sinon les titres flottent à gauche des lignes
+   qu'ils annoncent. Capitales et interlettrage repris du web : les deux menus
+   annoncent leurs groupes de la même façon. */
+.task-menu__label {
+  font: 600 10px var(--font-body); text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--color-neutral-600); padding: 0 9px; margin: 9px 0 5px;
+}
 .task-menu__label:first-child { margin-top: 0; }
+/* Séparateurs : ils découpent le menu en groupes de sens — classer, déplacer,
+   enrichir, puis les gestes rares. Un filet dilué, jamais une ligne franche. */
+.task-menu__sep {
+  height: 1px; background: var(--color-neutral-200);
+  margin: 7px 5px 3px; border: none;
+}
+
 .task-menu__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; }
 .move-btn {
   border: none; border-radius: 9px; padding: 7px 5px;
@@ -344,12 +376,33 @@ input::placeholder { color: inherit; opacity: 0.55; }
   transition: background 0.12s;
 }
 .board-btn:hover { background: var(--color-accent-100); }
+/* Alignées à GAUCHE, comme les libellés de section et les matrices — elles
+   étaient centrées, ce qui donnait trois alignements différents dans un même
+   menu. Et `gap` sépare l'icône du texte. */
 .task-menu__action {
-  width: 100%; font: 600 11.5px var(--font-body); text-align: center;
-  cursor: pointer; padding: 6px; border-radius: 999px;
+  width: 100%; font: 600 11.5px var(--font-body);
+  display: flex; align-items: center; gap: 8px;
+  text-align: left; cursor: pointer; padding: 6px 9px; border-radius: 9px;
   background: none; border: none; color: var(--color-text);
 }
+.task-menu__action > svg { flex: none; color: var(--color-neutral-600); }
 .task-menu__action:hover { background: var(--color-accent-100); }
+
+/* ── Les univers du menu, dépliés EN PLACE ───────────────────────────────────
+   Et non en sous-menu flottant comme le web sur pointeur fin : Chrome laisse
+   réduire le panneau à ~240 px, le menu occupe déjà `min(210px, 100%)`, et il
+   ne reste pas la largeur d'un `flyout` sur le côté. C'est exactement le repli
+   que le web applique déjà au doigt (`@media (hover: none)`), et la classe garde
+   son nom pour que les deux feuilles restent comparables. */
+.task-menu__uni { position: relative; }
+.task-menu__uni-head { justify-content: space-between; }
+.task-menu__caret { flex: none; color: var(--color-neutral-600); font-weight: 700; }
+.task-menu__uni--open > .task-menu__uni-head { background: var(--color-accent-100); }
+.task-menu__flyout {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: 3px 0 3px 9px; margin: 2px 0 2px 9px;
+  border-left: 1.5px solid var(--color-neutral-300);
+}
 
 /* Renommage en place : le champ prend la place du titre, la carte ne saute pas. */
 .task__rename { flex: 1; min-width: 0; display: flex; }

@@ -26,9 +26,31 @@
 -- que les tâches jusque-là hissées en tête retrouvent leur rang dans l'ordre
 -- manuel de leur case, qu'elles n'avaient jamais quitté.
 --
--- Le déploiement applique les migrations AVANT le frontend : entre les deux, une
--- version du client lisant encore `pinned` recevrait `undefined` et non une
--- erreur — `pinned` ne servait qu'à trier et à décorer, jamais à filtrer une
--- écriture. La fenêtre est donc sans danger.
+-- ⚠️ NE PAS APPLIQUER AVANT QUE L'EXTENSION SANS `pinned` SOIT DIFFUSÉE.
+--
+-- Ce paragraphe disait l'inverse, et il avait tort. Il affirmait qu'un client
+-- lisant encore `pinned` recevrait `undefined` et non une erreur, donc que la
+-- fenêtre entre les migrations et le frontend était sans danger. Vérifié contre
+-- la production, c'est faux :
+--
+--   GET /rest/v1/tasks?select=id,title,pinned
+--   → HTTP 400  {"code":"42703","message":"column tasks.pinned does not exist"}
+--
+-- Le raisonnement ne vaudrait que pour un `select *`. Or aucun client n'en fait :
+-- tous NOMMENT leurs colonnes une par une (`store.ts`, `useFocus.ts`, et le même
+-- motif dans l'extension). Une colonne absente d'une liste explicite n'est pas
+-- ignorée, elle casse la requête — donc TOUTE lecture de tâches, pas seulement
+-- le tri et la décoration.
+--
+-- Pour le front web, la fenêtre reste courte : le déploiement qui applique cette
+-- migration sert le nouveau bundle quelques minutes plus tard. L'EXTENSION, elle,
+-- ne suit pas ce rythme — elle vit chez les utilisateurs, et une version
+-- corrective doit passer la revue du Chrome Web Store puis être diffusée par
+-- Chrome. Des jours, pas des minutes. Appliquer cette migration pendant que la
+-- version en ligne réclame encore `pinned` met l'extension à 400 sur chaque
+-- lecture, pour tous ses utilisateurs, sans recours.
+--
+-- Préalable, donc : extension **1.5.0 ou plus** publiée ET diffusée. Le paquet
+-- 1.4.0 est le dernier à demander `pinned` — voir work/publication-extension.md.
 alter table public.tasks
   drop column pinned;

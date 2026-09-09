@@ -1,18 +1,23 @@
 # Publier l'extension sur le Chrome Web Store
 
 Paquet produit par `npm run build:ext` puis un zip du contenu de
-`apps/extension/dist`. Version courante : **1.4.0** (voir les notes de publication
+`apps/extension/dist`. Version courante : **1.5.0** (voir les notes de publication
 plus bas) ; les versions antérieures restent décrites ici pour l'historique des
 arbitrages.
 
-> ⚠️ **La version publiée sur le Store est la 1.1.0.** Ni la 1.2.0 ni la 1.3.0
-> n'ont jamais été soumises : la 1.4.0 emporte donc leurs changements, et la
-> revue portera sur **trois versions d'un coup**. Voir les notes 1.4.0 plus bas,
-> qui couvrent tout l'écart — c'est la seule section à lire pour remplir le
-> formulaire.
+> **La version publiée sur le Store est la 1.4.0**, envoyée le 7 septembre 2026.
+> Elle emportait la 1.2.0 et la 1.3.0, jamais soumises — le bandeau qui annonçait
+> « la fiche est en 1.1.0 » est donc caduc, et les notes 1.4.0 plus bas décrivent
+> bien ce qui est en ligne.
 >
 > Pour mémoire : **1.2.0 = #87** (capture avec lien, dans un formulaire),
 > **1.3.0 = #102** (passage au panneau latéral).
+
+> ⚠️ **La 1.5.0 n'est pas une soumission ordinaire : une migration l'attend.**
+> `apps/supabase/migrations/20260906100000_retirer_epinglage.sql` supprime la
+> colonne `tasks.pinned`, et la 1.4.0 en ligne la réclame encore nommément. Le
+> drop ne peut pas partir avant que la 1.5.0 soit **publiée ET diffusée**. Voir
+> les notes 1.5.0.
 
 ## Le numéro de version appartient à la SOUMISSION, pas à la PR
 
@@ -418,6 +423,130 @@ notes 1.3.0 ci-dessus, qui restent valables.
 > sous les yeux pendant que vous naviguez. Votre icône affiche ce qu'il vous
 > reste à faire aujourd'hui, et vous n'avez plus à vous connecter deux fois —
 > ouvrir Penduline sur le web connecte aussi l'extension.
+
+## Version 1.5.0 — notes de publication
+
+> ⚠️ **Cette section a été écrite quand la 1.5.0 n'avait qu'un commit d'écart
+> avec la 1.4.0.** Elle en a trois : le retrait de l'épinglage, plus deux
+> rattrapages ajoutés avant soumission. Le zip a été régénéré en conséquence — ne
+> pas se fier à une lecture partielle de ces notes.
+
+### 1. Le retrait de l'épinglage (#110)
+
+- le bouton **⚑** disparaît de chaque carte de tâche ;
+- le tri « épinglées en tête » disparaît d'une case — il reste « en retard
+  d'abord, puis l'ordre manuel » ;
+- la carte épinglée n'est plus surlignée.
+
+Rien ne se perd d'autre : aucune tâche, aucun titre, aucun lien. Les tâches
+jusque-là hissées en tête retrouvent leur rang dans l'ordre manuel de leur case,
+qu'elles n'avaient jamais quitté. Le pourquoi du retrait est argumenté dans la
+migration `20260906100000_retirer_epinglage.sql` — en résumé : un second
+mécanisme d'ordre posé sur un premier plus fin, une priorité sur une priorité, et
+rien qui le faisait jamais retomber.
+
+### 2. Le menu ⋯ d'une tâche, replié comme celui du web
+
+Le menu du panneau était resté à l'ordre d'avant #110. Il suit maintenant celui
+du web : classer, déplacer, enrichir, puis les gestes rares. Les autres matrices
+ne s'empilent plus à plat mais se rangent par univers, il se ferme au clic à côté
+et à Échap, et **il ne sort plus de la vue** — il se retourne vers le haut ou
+borne sa hauteur selon la place restante.
+
+Ce dernier point était un vrai défaut de la 1.4.0 en ligne : la liste de toutes
+les matrices suffisait à pousser le menu hors du panneau, et `.detail-list`
+défilant en `overflow: auto`, elle en était rognée sans que rien ne le dise.
+
+Deux écarts assumés avec le web, imposés par la largeur du panneau (Chrome le
+laisse descendre à ~240 px) : les univers se déplient **en place** plutôt qu'en
+sous-menu flottant, et la hauteur est bornée par une **mesure** et pas seulement
+retournée. Détail dans `apps/extension/src/TaskMenu.tsx`.
+
+Cette livraison couvre le **point 1 de #95** et rien d'autre : le dépliage du
+titre, le double-clic, l'appairage et les vues transversales restent à faire, et
+la description de #95 est par ailleurs périmée sur l'épinglage.
+
+### 3. Fraîcheur des données : relecture silencieuse et cache local
+
+Deux manques que chaque ouverture rendait visibles.
+
+- **Le panneau relit à chaque changement de vue** et au retour de visibilité, sans
+  écran de chargement. Il ne lisait qu'une fois au montage, et n'a pas le temps
+  réel du web : resté ouvert des heures, il ne voyait jamais ce qu'on changeait
+  ailleurs. Ce n'est pas de la synchronisation — c'est un rattrapage au moment où
+  l'on regarde. Le temps réel a son propre ticket.
+- **Le dernier état connu est peint immédiatement**, depuis
+  `chrome.storage.local` : plus de « Chargement des matrices… » à chaque
+  ouverture. L'instantané porte une version de format — ⚠️ **à incrémenter avec
+  `TASK_COLS`** — une péremption d'une semaine, le compte auquel il appartient, et
+  il est effacé à la déconnexion.
+
+Les deux mécaniques sont documentées dans `store.ts` et `snapshot.ts`, en
+particulier l'arbitrage entre une relecture et une écriture locale non encore
+acquittée — c'est là que se cachait le risque de faire reculer une carte sous les
+doigts de l'utilisateur.
+
+### Rien à toucher sur la fiche du Store
+
+Le manifeste ne change **que** sur le numéro de version — vérifié au diff. Aucune
+permission nouvelle, donc aucune justification à rédiger, et rien à faire relire
+de ce côté.
+
+> ⚠️ Les captures `store/01-liste.png` et `store/02-matrice.png` datent toujours
+> du 16 août et sont exactes pour la **1.1.0** — elles n'ont pas été refaites pour
+> la 1.4.0 malgré l'avertissement plus haut. La 1.5.0 ajoute une raison de s'en
+> occuper : si l'une d'elles montre le bouton ⚑, elle documente désormais une
+> fonctionnalité qui n'existe plus.
+
+### Pourquoi 1.5.0 et pas 1.4.1
+
+La question est légitime, parce que le **motif** de cette soumission est de la
+plomberie : arrêter de demander une colonne qu'on veut supprimer. Mais le numéro
+ne parle pas du motif, il parle du **contenu** — et le contenu, c'est une
+fonctionnalité qui s'en va de l'interface.
+
+Un `1.4.1` annoncerait « mêmes fonctionnalités, un bug corrigé ». Faux sur les
+deux moitiés : aucun bug n'est corrigé côté extension, et les fonctionnalités ne
+sont pas les mêmes. (Les deux rattrapages ajoutés depuis ne font que renforcer la
+conclusion : le menu et la fraîcheur des données sont bien du changement
+fonctionnel.) Quelqu'un qui lit les notes chercherait un correctif
+inexistant, et ne serait pas prévenu que l'épingle a disparu.
+
+Le semver strict dirait plutôt `2.0.0`, un retrait n'étant pas rétrocompatible.
+Écarté : rien ne consomme cette version par programme, aucun contrat n'est rompu,
+un majeur surjouerait l'événement. L'historique du projet a tranché pour « minor
+= changement fonctionnel » (1.1.0 menu contextuel, 1.2.0 capture, 1.3.0 panneau,
+1.4.0 badge), et c'en est un.
+
+### ⚠️ Ce qui attend cette publication — à ne pas oublier
+
+`20260906100000_retirer_epinglage.sql` est **bloquée** sur cette soumission. Elle
+fait `drop column tasks.pinned`, et le paquet 1.4.0 en ligne nomme cette colonne
+dans sa liste de `select` :
+
+```
+id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, …
+```
+
+PostgREST ne l'ignore pas, il refuse la requête — vérifié contre la production :
+
+```
+GET /rest/v1/tasks?select=id,title,pinned
+→ HTTP 400  {"code":"42703","message":"column tasks.pinned does not exist"}
+```
+
+Donc appliquer la migration trop tôt met **toute lecture de tâches** à 400 dans
+l'extension, pour tous ses utilisateurs, sans recours de leur côté. L'ordre est
+contraint, et il est l'inverse de celui du workflow de déploiement (qui applique
+les migrations avant le front) :
+
+1. soumettre la 1.5.0 → revue du Store → **diffusion par Chrome** (des jours, pas
+   des minutes) ;
+2. vérifier que la 1.5.0 est bien installée chez les utilisateurs ;
+3. **alors seulement**, appliquer `retirer_epinglage.sql`.
+
+Le front web, lui, ne pose pas ce problème : son déploiement remplace le bundle
+en quelques minutes, et la version 0.0.27 en production ne lit déjà plus `pinned`.
 
 ## Le point à peser avant de publier
 
