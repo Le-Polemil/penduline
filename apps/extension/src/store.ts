@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { classifyWriteFailure, isSafeUrl, normalizeUrl } from '@penduline/shared';
+import {
+  classifyWriteFailure,
+  isSafeUrl,
+  normalizeUrl,
+  subscribeRealtime,
+  type RealtimeSink,
+} from '@penduline/shared';
 import type { QuadrantKey, Board, Task, TaskPatch, Universe } from '@penduline/shared';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { readSnapshot, writeSnapshot } from './snapshot';
@@ -27,6 +33,14 @@ export interface ExtStore {
    */
   captureTask: (boardId: string, title: string, position: number, url: string) => Promise<boolean>;
   patchTask: (id: string, patch: TaskPatch) => Promise<void>;
+  /**
+   * Le canal temps réel est-il établi ? (#117)
+   *
+   * Exposé parce que l'écran s'en sert : tant que le flux arrive, la relecture au
+   * changement de vue n'a plus rien à rattraper. Elle reste le repli quand le
+   * socket est down — hors ligne, ou WebSocket bloqué par un proxy.
+   */
+  live: boolean;
   /**
    * Relit univers, matrices et tâches SANS repasser par l'écran de chargement.
    *
@@ -103,11 +117,29 @@ function usePersist() {
   );
 }
 
+/**
+ * Une tâche reçue par le canal a-t-elle sa place en mémoire ?
+ *
+ * ⚠️ Miroir EXACT du `select` de chargement ci-dessous — et volontairement
+ * DIFFÉRENT de `inWorkingSet` côté web, qui garde les étapes cochées. Le panneau
+ * n'affiche pas d'étapes : réutiliser la règle du web ferait rentrer par le canal
+ * ce que ce `select` sort par la porte, et le panneau se remplirait de lignes
+ * qu'il ne sait pas rendre.
+ *
+ * `archived` n'y figure pas, comme dans le `select` : le rendu l'écarte déjà
+ * (`listFor`), et ajouter ici un critère que le chargement n'a pas ferait diverger
+ * les deux chemins — exactement ce que cette fonction existe pour éviter.
+ */
+function admisAuPanneau(t: Task): boolean {
+  return !t.done && !t.deleted && t.parent_id === null;
+}
+
 export function useExtStore(userId: string): ExtStore {
   const [ready, setReady] = useState(false);
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [live, setLive] = useState(false);
   const persistBrut = usePersist();
 
   /**
@@ -257,6 +289,42 @@ export function useExtStore(userId: string): ExtStore {
     });
   }, [charger]);
 
+  /**
+   * L'abonnement temps réel (#117).
+   *
+   * ⚠️ Tout le fond vit dans `packages/shared/src/realtime.ts` — fusion des
+   * lignes, neutralisation de l'écho par comparaison, rechargement à la
+   * reconnexion, et l'absence délibérée de filtre serveur. Ici il ne reste que le
+   * branchement.
+   *
+   * #39 avait écarté l'extension, et pour une bonne raison : « son popup charge à
+   * chaque ouverture et vit quelques secondes ». #101 a supprimé ce motif — le
+   * panneau ne se ferme plus, il reste ouvert des heures.
+   *
+   * Pas de `setAttachments` : le panneau ne porte pas les liens, et l'absence de
+   * la clé suffit à ne pas abonner la table.
+   *
+   * `reload` est le `refresh()` silencieux ci-dessus, qui porte déjà le garde-fou
+   * contre l'écrasement d'une écriture locale non acquittée. Rien à écrire de
+   * neuf : la frontière avait été tracée au bon endroit.
+   */
+  const courant: RealtimeSink = {
+    setTasks,
+    setBoards,
+    setUniverses,
+    admits: admisAuPanneau,
+    reload: async () => refresh(),
+  };
+  const sink = useRef(courant);
+  sink.current = courant;
+
+  useEffect(
+    // `subscribeRealtime` prend un GETTER : il relit le sink à chaque événement,
+    // donc `reload` n'est jamais figé sur un rendu passé.
+    () => subscribeRealtime(supabase, userId, () => sink.current, { onLive: setLive }),
+    [userId],
+  );
+
   // Miroir de `addBoard` côté web (apps/web/src/data/store.ts) : même calcul de
   // position, même retour d'identifiant pour que l'appelant puisse enchaîner.
   const addBoard = useCallback(
@@ -353,5 +421,5 @@ export function useExtStore(userId: string): ExtStore {
     [persist],
   );
 
-  return { ready, universes, boards, tasks, addBoard, addTask, captureTask, patchTask, refresh };
+  return { ready, live, universes, boards, tasks, addBoard, addTask, captureTask, patchTask, refresh };
 }

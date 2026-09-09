@@ -213,12 +213,19 @@ function PanelApp({ userId }: { userId: string }) {
   }, []);
 
   /**
-   * Relire à CHAQUE changement de vue, sans écran de chargement.
+   * Relire au changement de vue — mais SEULEMENT quand le canal ne le fait pas
+   * déjà (#116, puis #117).
    *
-   * Le panneau n'a pas le temps réel du web (`useRealtime.ts`) et reste ouvert
-   * des heures : ce qu'on change depuis l'app web, un autre appareil ou le menu
-   * contextuel n'y arrivait jamais. Ouvrir une matrice — ou revenir à la liste —
-   * est le moment naturel pour rattraper : c'est là qu'on va lire les données.
+   * Le panneau reste ouvert des heures : ce qu'on change depuis l'app web, un
+   * autre appareil ou le menu contextuel n'y arrivait jamais. Depuis #117 le
+   * canal temps réel s'en charge, et cette relecture devient redondante tant
+   * qu'il est établi.
+   *
+   * ⚠️ **Conditionnée, et non supprimée.** Un socket peut très bien ne jamais
+   * s'établir — hors ligne, ou WebSocket bloqué par un proxy d'entreprise. Sans
+   * ce repli, un panneau dans ce cas n'aurait plus AUCUN rattrapage, et la
+   * panne serait muette : c'est exactement le mode de défaillance que le canal
+   * ne peut pas signaler lui-même.
    *
    * `premierRendu` écarte le tour initial : `charger` vient tout juste de
    * répondre pour que `ready` passe à `true`, une seconde lecture au même
@@ -231,19 +238,29 @@ function PanelApp({ userId }: { userId: string }) {
       premierRendu.current = false;
       return;
     }
+    if (store.live) return;
     store.refresh();
-  }, [screen, boardId, store.ready, store.refresh]);
+  }, [screen, boardId, store.ready, store.live, store.refresh]);
 
   /**
-   * Et au retour de visibilité — complément, pas remplacement.
+   * Et au retour de visibilité — même repli, même condition.
    *
    * Le panneau survit à la fermeture d'un onglet et à la minimisation de la
    * fenêtre sans se démonter : on peut le retrouver après une heure SANS changer
    * de vue, donc sans déclencher la relecture ci-dessus.
+   *
+   * ⚠️ `store.live` est lu dans une REF et non capturé dans la fermeture :
+   * l'écouteur est posé une fois, et une fermeture le figerait sur l'état du
+   * canal au montage — c'est-à-dire `false`, puisque la souscription n'a pas
+   * encore abouti. Le repli s'exécuterait alors pour toujours, canal ou pas.
    */
+  const liveRef = useRef(store.live);
+  liveRef.current = store.live;
   useEffect(() => {
     function onVisible() {
-      if (document.visibilityState === 'visible') store.refresh();
+      if (document.visibilityState !== 'visible') return;
+      if (liveRef.current) return;
+      store.refresh();
     }
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
