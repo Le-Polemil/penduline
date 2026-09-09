@@ -489,8 +489,31 @@ button { font: inherit; }
 }
 .task__check:hover { transform: scale(1.15); }
 .task__check--done { background: var(--q-ink); animation: mm-check 0.3s ease; }
-.task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .task__title--done { text-decoration: line-through; }
+/* Un titre coupé n'est pas seulement inélégant, il est INUTILE : « Appeler le
+   plombier pour la fuite sous l'… » ne dit pas quoi faire. Un clic sur la carte
+   le déplie (#95) — voir `useTitreDepliable` pour les trois pièges du geste.
+   Le retour à la ligne systématique a été écarté : il ferait varier la hauteur
+   de TOUTES les cartes pour un cas minoritaire, alors que la grande majorité des
+   titres tiennent sur une ligne. */
+.task__title--deplie {
+  white-space: normal; overflow: visible; text-overflow: clip;
+  /* Une césure est préférable à un débordement : un mot plus large que la
+     colonne — une URL collée, un nom de fichier — sortirait sinon de la carte. */
+  overflow-wrap: anywhere;
+}
+/* L'affordance. Sans elle, rien n'annoncerait qu'il y a quelque chose à lire :
+   le curseur ne change que là où le clic produira un effet, jamais sur un titre
+   court — un pointeur qui promet et ne tient rien vaut moins que pas de
+   pointeur. L'infobulle native, posée par le composant, suit la même règle. */
+.task__title--tronque { cursor: zoom-in; }
+.task__title--deplie { cursor: zoom-out; }
+/* Déplié, la carte grandit : les contrôles se recalent en HAUT, sinon la case à
+   cocher flotte au milieu d'un pavé de trois lignes, loin du début du texte
+   qu'elle concerne. */
+.task:has(.task__title--deplie) { align-items: flex-start; }
+.task:has(.task__title--deplie) .task__check { margin-top: 2px; }
 /* Renommage en place : le champ prend exactement la place du titre, pour que la
    carte ne saute pas au basculement. */
 .task__rename { flex: 1; min-width: 0; display: flex; }

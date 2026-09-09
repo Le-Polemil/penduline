@@ -272,7 +272,27 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .task:hover { box-shadow: var(--shadow-md); }
 .task--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); transform: rotate(-2deg) scale(1.03); border: 1.5px solid var(--color-accent); }
 .task__check { width: 15px; height: 15px; border: 2px solid var(--q-ink); border-radius: 50%; flex: none; cursor: pointer; background: transparent; padding: 0; transition: background 0.15s; }
-.task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+/* Un titre coupé n'est pas seulement inélégant, il est INUTILE — et le panneau
+   descend à ~240 px, donc il coupe bien plus souvent que le web. Un clic sur la
+   carte le déplie (#95) ; voir `useTitreDepliable` pour les trois pièges du
+   geste, et `TaskTitle` pour l'absence de minuteur ici. Mêmes classes que le
+   web, à dessein. */
+.task__title--deplie {
+  white-space: normal; overflow: visible; text-overflow: clip;
+  /* Une césure vaut mieux qu'un débordement : un mot plus large que la colonne —
+     une URL collée, un nom de fichier — sortirait sinon de la carte. */
+  overflow-wrap: anywhere;
+}
+/* L'affordance : le curseur ne change que là où le clic produira un effet. Un
+   pointeur qui promet et ne tient rien vaut moins que pas de pointeur. */
+.task__title--tronque { cursor: zoom-in; }
+.task__title--deplie { cursor: zoom-out; }
+/* Déplié, la carte grandit : les contrôles se recalent en HAUT, sinon la case à
+   cocher flotte au milieu d'un pavé de lignes, loin du début du texte qu'elle
+   concerne. */
+.task:has(.task__title--deplie) { align-items: flex-start; }
+.task:has(.task__title--deplie) .task__check { margin-top: 2px; }
 
 /* ── Échéances (#19) ──────────────────────────────────────────────────────────
    Mêmes classes et mêmes teintes que le web, en plus compact : le popup fait
