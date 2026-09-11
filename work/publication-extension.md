@@ -427,9 +427,9 @@ notes 1.3.0 ci-dessus, qui restent valables.
 ## Version 1.5.0 — notes de publication
 
 > ⚠️ **Cette section a été écrite quand la 1.5.0 n'avait qu'un commit d'écart
-> avec la 1.4.0.** Elle en a trois : le retrait de l'épinglage, plus deux
-> rattrapages ajoutés avant soumission. Le zip a été régénéré en conséquence — ne
-> pas se fier à une lecture partielle de ces notes.
+> avec la 1.4.0.** Elle en a **quatre** : le retrait de l'épinglage, plus trois
+> rattrapages ajoutés avant soumission. Le zip a été régénéré depuis `main` le
+> 2026-09-10 — ne pas se fier à une lecture partielle de ces notes.
 
 ### 1. Le retrait de l'épinglage (#110)
 
@@ -466,15 +466,18 @@ Cette livraison couvre le **point 1 de #95** et rien d'autre : le dépliage du
 titre, le double-clic, l'appairage et les vues transversales restent à faire, et
 la description de #95 est par ailleurs périmée sur l'épinglage.
 
-### 3. Fraîcheur des données : relecture silencieuse et cache local
+### 3. Fraîcheur des données : temps réel, relecture silencieuse et cache local
 
 Deux manques que chaque ouverture rendait visibles.
 
-- **Le panneau relit à chaque changement de vue** et au retour de visibilité, sans
-  écran de chargement. Il ne lisait qu'une fois au montage, et n'a pas le temps
-  réel du web : resté ouvert des heures, il ne voyait jamais ce qu'on changeait
-  ailleurs. Ce n'est pas de la synchronisation — c'est un rattrapage au moment où
-  l'on regarde. Le temps réel a son propre ticket.
+- **Le panneau s'abonne au TEMPS RÉEL** (#117) : une tâche cochée sur le web, une
+  capture par le menu contextuel, une modification depuis un autre appareil
+  apparaissent sans qu'on touche au panneau. C'est ce que #39 avait livré au web
+  seulement, en écartant l'extension parce que « son popup vit quelques
+  secondes » — motif tombé avec le passage en panneau latéral.
+- **Le panneau relit aussi à chaque changement de vue** et au retour de
+  visibilité, sans écran de chargement. Ce rattrapage reste le repli quand le
+  socket ne s'établit pas — hors ligne, ou WebSocket bloqué par un proxy.
 - **Le dernier état connu est peint immédiatement**, depuis
   `chrome.storage.local` : plus de « Chargement des matrices… » à chaque
   ouverture. L'instantané porte une version de format — ⚠️ **à incrémenter avec
@@ -485,6 +488,23 @@ Les deux mécaniques sont documentées dans `store.ts` et `snapshot.ts`, en
 particulier l'arbitrage entre une relecture et une écriture locale non encore
 acquittée — c'est là que se cachait le risque de faire reculer une carte sous les
 doigts de l'utilisateur.
+
+### 4. Un titre de tâche coupé se lit enfin
+
+`.task__title` coupait aux points de suspension et **rien** ne permettait de voir
+la suite : ni infobulle, ni dépliage. Un titre coupé n'est pas seulement
+inélégant, il est inutile — et le panneau descend à ~240 px, donc il coupait
+souvent.
+
+Un clic sur la carte déplie le titre entier, un second le replie. Le curseur et
+l'infobulle n'apparaissent que sur un titre **réellement** coupé : sur un titre
+court, le clic ne produit aucun mouvement.
+
+⚠️ Le panneau déplie **sans délai**, contrairement au web qui attend 220 ms pour
+laisser passer le double-clic de renommage. Ce n'est pas une incohérence : le
+panneau renomme par son menu `⋯`, il n'a rien à désambiguïser. Si le double-clic
+y devient un renommage (point 3 de #95), il faudra repasser l'option
+`doubleClic` à `true`.
 
 ### Rien à toucher sur la fiche du Store
 
@@ -507,9 +527,9 @@ fonctionnalité qui s'en va de l'interface.
 
 Un `1.4.1` annoncerait « mêmes fonctionnalités, un bug corrigé ». Faux sur les
 deux moitiés : aucun bug n'est corrigé côté extension, et les fonctionnalités ne
-sont pas les mêmes. (Les deux rattrapages ajoutés depuis ne font que renforcer la
-conclusion : le menu et la fraîcheur des données sont bien du changement
-fonctionnel.) Quelqu'un qui lit les notes chercherait un correctif
+sont pas les mêmes. (Les trois rattrapages ajoutés depuis ne font que renforcer
+la conclusion : menu, fraîcheur des données, temps réel et lecture des titres
+sont tous du changement fonctionnel.) Quelqu'un qui lit les notes chercherait un correctif
 inexistant, et ne serait pas prévenu que l'épingle a disparu.
 
 Le semver strict dirait plutôt `2.0.0`, un retrait n'étant pas rétrocompatible.
@@ -547,6 +567,28 @@ les migrations avant le front) :
 
 Le front web, lui, ne pose pas ce problème : son déploiement remplace le bundle
 en quelques minutes, et la version 0.0.27 en production ne lit déjà plus `pinned`.
+
+### Vérifications faites sur le paquet du 2026-09-10
+
+Construit depuis `main` après fusion de #115, #118 et #120. Contrôlé **dans le
+zip**, pas seulement dans `dist/` :
+
+| Vérification | Résultat |
+|---|---|
+| Version du manifeste | `1.5.0` |
+| `externally_connectable` | production uniquement |
+| URL Supabase compilée | `api.penduline.polemil.dev` |
+| Colonne `pinned` réclamée | **0 occurrence** — l'enjeu du garde-fou |
+| Menu réorganisé, sous-menus par univers | présents |
+| Cache local (`penduline-snapshot`) | présent |
+| Temps réel (`postgres_changes`) + filtre serveur | présents |
+| Titre dépliable (`task__title--deplie`) | présent |
+
+⚠️ **Un `localhost:9999` subsiste dans `assets/session-bridge-*.js`, et c'est
+normal.** C'est la constante par défaut de `gotrue-js`, écrasée par notre
+configuration explicite — elle est déjà dans le paquet 1.4.0 publié, et le hash du
+chunk n'a pas bougé. Ne pas la confondre avec la ligne `http://localhost/*`
+d'`externally_connectable`, qui elle ne doit JAMAIS partir au Store.
 
 ## Le point à peser avant de publier
 
