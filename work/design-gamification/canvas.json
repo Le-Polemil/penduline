@@ -57,6 +57,14 @@
       "w": 1000,
       "h": 1000,
       "page": "page-2"
+    },
+    {
+      "file": "NidClay.dc.html",
+      "x": 0,
+      "y": 820,
+      "w": 1160,
+      "h": 700,
+      "page": "page-2"
     }
   ],
   "annotations": [
@@ -79,6 +87,6 @@
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-1"
+    "page": "page-2"
   }
 }
