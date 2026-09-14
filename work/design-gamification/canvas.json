@@ -7,6 +7,10 @@
     {
       "id": "page-2",
       "name": "DA Duolingo"
+    },
+    {
+      "id": "page-3",
+      "name": "Découpes"
     }
   ],
   "artboards": [
@@ -59,12 +63,12 @@
       "page": "page-2"
     },
     {
-      "file": "NidClay.dc.html",
+      "file": "NidSilhouette.dc.html",
       "x": 0,
-      "y": 820,
+      "y": 0,
       "w": 1160,
-      "h": 700,
-      "page": "page-2"
+      "h": 1000,
+      "page": "page-3"
     }
   ],
   "annotations": [
@@ -83,10 +87,18 @@
       "w": 680,
       "page": "page-2",
       "text": "La même chose en langue Duolingo, pour comparer.\n\nRefait d'après l'asset de référence (streak-freeze.svg) : cinq couches, aucun contour, aucun anneau, aucun socle décalé. Les formes sont originales, seule la technique d'empilement est reprise."
+    },
+    {
+      "id": "decoupes",
+      "x": 0,
+      "y": -150,
+      "w": 640,
+      "page": "page-3",
+      "text": "Le contour porte le sens, pas un filtre par-dessus.\nChaque variante se juge d'abord en noir plein — la vignette « contour seul » sous chaque carte."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-2"
+    "page": "page-3"
   }
 }
