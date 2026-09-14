@@ -1,5 +1,4 @@
 import { useEffect, useState, type CSSProperties, type DragEvent } from 'react';
-import { flushSync } from 'react-dom';
 import {
   ALL,
   buildRows,
@@ -26,6 +25,7 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
+import { withVT } from '../lib/viewTransition';
 import type { Store } from '../data/store';
 import { readFocusLimit } from '../data/focusPrefs';
 import { Confirm } from '../components/Confirm';
@@ -47,13 +47,6 @@ type Drag = { id: string; quad: QuadrantKey } | null;
 
 /** Où le repli des étapes est retenu, par appareil. */
 const SUB_KEY = 'penduline:subtasks-open';
-
-/** Anime un changement structurel via l'API View Transitions (dégradation gracieuse). */
-function withVT(fn: () => void) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-  if (doc.startViewTransition) doc.startViewTransition(() => flushSync(fn));
-  else fn();
-}
 
 export function MatrixScreen({
   store,

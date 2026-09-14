@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { flushSync } from 'react-dom';
 import {
   deleteLabel,
   endPosition,
@@ -21,19 +20,13 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
+import { withVT } from '../lib/viewTransition';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
 import { useReview } from '../data/useReview';
 import { markReviewed, readThresholds, writeThresholds } from '../data/reviewPrefs';
-
-/** Anime un changement structurel via l'API View Transitions (dégradation gracieuse). */
-function withVT(fn: () => void) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-  if (doc.startViewTransition) doc.startViewTransition(() => flushSync(fn));
-  else fn();
-}
 
 /** Le seuil que chaque signal expose au réglage. `null` = rien à régler. */
 const TUNABLE: Record<ReviewSignalKey, keyof ReviewThresholds | null> = {
