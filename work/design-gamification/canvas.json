@@ -11,6 +11,10 @@
     {
       "id": "page-3",
       "name": "Découpes"
+    },
+    {
+      "id": "page-4",
+      "name": "Mascotte"
     }
   ],
   "artboards": [
@@ -66,9 +70,17 @@
       "file": "NidSilhouette.dc.html",
       "x": 0,
       "y": 0,
-      "w": 1120,
+      "w": 1340,
       "h": 880,
       "page": "page-3"
+    },
+    {
+      "file": "Mascotte.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1240,
+      "h": 900,
+      "page": "page-4"
     }
   ],
   "annotations": [
@@ -95,10 +107,18 @@
       "w": 640,
       "page": "page-3",
       "text": "Découpe ET volume — les deux essais précédents prenaient chacun une moitié.\nLe volume de l'asset est fait de plans francs superposés, pas d'un dégradé : aucun linearGradient dans le fichier."
+    },
+    {
+      "id": "masc",
+      "x": 0,
+      "y": -150,
+      "w": 640,
+      "page": "page-4",
+      "text": "La grammaire de construction, pas le personnage.\nLe masque noir de la rémiz tombe exactement là où ce style place ses grandes taches oculaires."
     }
   ],
   "launch": {
     "view": "canvas",
-    "page": "page-3"
+    "page": "page-4"
   }
 }

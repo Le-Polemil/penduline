@@ -31,15 +31,18 @@ TUILES = [
 VIFS = ['#7FAE4A', '#4A8FBF', '#E0A62B', '#CE4D32']
 
 # ── Les découpes ─────────────────────────────────────────────────────────────
-POCHE = ('M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86 '
-         'C40 94 47 99 56 99 C65 99 72 94 79 86 '
-         'C86 78 89 67 89 54 C89 34 76 18 56 18 Z')
-COEUR = ('M56 29 C42 29 32 41 32 55 C32 65 34 73 40 80 '
-         'C45 86 50 89 56 89 C62 89 67 86 72 80 '
-         'C78 73 80 65 80 55 C80 41 70 29 56 29 Z')
+# ⚠️ Aucune de ces courbes n'est le miroir de sa voisine, et c'est délibéré :
+# une forme symétrique se lit comme un gabarit, pas comme un objet. Épaule
+# gauche un peu plus basse, flanc droit un peu plus plein, apex décalé de 1.
+POCHE = ('M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 '
+         'C40 94 47 99 56 99 C66 99 73 93 80 85 '
+         'C86 77 90 66 89 53 C88 33 77 19 57 18 Z')
+COEUR = ('M57 29 C43 28 32 41 32 55 C32 66 35 74 41 80 '
+         'C46 86 50 89 56 89 C62 89 67 85 72 79 '
+         'C78 72 81 64 80 54 C79 41 71 30 57 29 Z')
 FACETTE = 'M2 64 L70 -4 L106 6 L16 98 Z'
-TUBE = ('M32 39 C22 32 10 30 5 34 C-1 39 -1 50 5 54 C11 58 22 56 33 50 '
-        'C31 46 31 43 32 39 Z')
+TUBE = ('M33 38 C23 30 11 28 6 33 C0 38 0 51 6 55 C13 59 24 56 34 50 '
+        'C32 46 31 42 33 38 Z')
 # Le bord bas devient une suite de pendeloques : que des courbes.
 def _pendeloques(gouttes):
     """Le bord bas en pendeloques, chacune réglée à part.
@@ -61,13 +64,13 @@ GLACONS = ('M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86'
            + _pendeloques([(38, 14, 2.6), (52, 27, 2.4), (64, 21, 2.6), (76, 9, 2.2)])
            + ' C87 77 89 67 89 54 C89 34 76 18 56 18 Z')
 # Le flanc rongé : un feston, pas une dent de scie.
-BRECHE = ('M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86 '
+BRECHE = ('M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 '
           'C40 94 47 99 56 99 C62 99 68 96 73 92 '
-          'C67 90 65 86 70 83 C75 80 72 76 67 74 '
-          'C62 72 65 68 71 67 C77 66 74 61 69 59 '
-          'C64 57 67 53 73 52 C79 51 76 46 71 44 '
-          'C66 42 69 38 75 37 C81 36 77 31 72 29 '
-          'C69 27 71 23 75 22 C70 19 64 18 56 18 Z')
+          'C66 90 64 85 70 82 C76 79 71 75 66 73 '
+          'C61 71 65 67 71 66 C78 65 73 60 68 58 '
+          'C63 56 67 52 73 51 C80 50 75 45 70 43 '
+          'C66 41 70 37 76 36 C82 35 77 30 73 28 '
+          'C70 26 72 22 76 21 C71 19 64 18 57 18 Z')
 
 def _lame(x, y, angle, L, W):
     """Une éclisse : deux courbes qui se rejoignent en pointe, jamais un triangle."""
@@ -80,7 +83,11 @@ def _brins():
 
     Posées sur la NORMALE à la poche : au rayon, celles des flancs bâillaient.
     """
-    cx, cy, rx, ry = 56, 58, 33, 40
+    # ⚠️ Rayons VOLONTAIREMENT plus courts que la poche (33 × 40) : une base
+    # posée sur le contour laisse un jour dès que la découpe s'écarte de
+    # l'ellipse — et la poche s'en écarte, elle a une taille. En rentrant de
+    # 12 %, la base passe sous la masse et l'éclisse en sort vraiment.
+    cx, cy, rx, ry = 56, 58, 29, 35
     # ⚠️ Le secteur du col — environ -90° ± 20° — reste VIDE : une éclisse qui
     # passe derrière la queue la coupe en deux et casse la lecture du pendu.
     plan = [(-138, 26, 7.5), (-116, 20, 6.5), (-52, 24, 7), (-14, 18, 6),
@@ -143,10 +150,11 @@ def icone(uid, variante, size=168, clair='#F0A468', sature='#C95F1F', facette='#
             s += _eclat(63, 29, 7, 0.9)
     return s + '</svg>'
 
-# « Poche » est retirée : c'était le témoin, pas une variante. La poche est la
-# base COMMUNE aux quatre autres, donc la montrer seule ne disait rien de plus
-# — et une carte qui ne dit rien se lit comme une proposition creuse.
+# « Poche » est l'ÉTAT DE BASE, et elle est étiquetée comme tel : c'est la
+# découpe commune aux autres. Non étiquetée, elle se lisait comme une variante
+# qui ne propose rien — d'où la confusion.
 VARIANTES = [
+    ('poche', 'Poche — état de base', "La découpe commune aux trois autres : large en haut, resserrée à la taille, parce qu'un nid de rémiz pend au lieu de reposer. Sans aucune caractéristique ajoutée — c'est la référence à laquelle les autres se comparent."),
     ('herisse', 'Hérissé', "Sept éclisses à double courbure sortent de la masse. Aucune ne flotte, aucune ne passe derrière le col."),
     ('tube', 'Tube', "L'entrée latérale en manchon. La seule qui soit intransmissible — et la seule qui demande qu'on l'explique."),
     ('givre', 'Givré', "Le bord bas devient quatre pendeloques dépareillées. Dit « en veille » par la forme."),
