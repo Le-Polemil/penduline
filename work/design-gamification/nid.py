@@ -8,7 +8,6 @@ BRANCHES = [
     "M30 70 C22 72 18 75 13 77", "M82 70 C90 72 94 75 101 77",
     "M36 82 C30 86 27 90 24 94", "M76 82 C82 86 85 90 88 94",
 ]
-BERRY = "M56 19 C56 12 55 8 54 4"
 NECK  = 'M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z'
 # Même col resserré de 55 % autour de x=56 : sec, pas tombant.
 NECK_FIN = 'M52.4 10 C52.4 4 59.6 4 59.6 10 L58.7 24 C57.8 30 54.2 30 53.3 24 Z'
@@ -36,16 +35,14 @@ def feuille(branche, longueur=11.5, largeur=4.2):
     d = f'M0 0 Q {L*0.42:.1f} -{W} {L} 0 Q {L*0.42:.1f} {W} 0 0 Z'
     return f'<path d="{d}" transform="translate({ex} {ey}) rotate({angle:.1f})" />'
 
-def nid(size, n=0, berry=False, sec=False, pale=False, vide=False, hollow=None, body='#c67139', flex=True):
+def nid(size, n=0, sec=False, pale=False, vide=False, hollow=None, body='#c67139', flex=True):
     sw = 3.2 if size < 50 else 2.6
     st = ' style="flex: none;"' if flex else ''
     s = f'<svg viewBox="4 0 104 100" width="{size}" height="{size}"{st} aria-hidden="true">'
-    if n or berry:
-        tw = ''.join(f'<path d="{b}" />' for b in BRANCHES[:n]) + (f'<path d="{BERRY}" />' if berry else '')
+    if n:
+        tw = ''.join(f'<path d="{b}" />' for b in BRANCHES[:n])
         s += f'\n          <g stroke="#a8763f" stroke-width="{sw}" stroke-linecap="round" fill="none">{tw}</g>'
         s += '\n          <g fill="#7a8a5e">' + ''.join(feuille(b) for b in BRANCHES[:n]) + '</g>'
-        if berry:
-            s += '\n          <circle cx="54" cy="4" r="3.6" fill="#c67139" />'
     if sec:
         s += f'\n          <g transform="rotate(8 56 14)"><path d="{NECK_FIN}" fill="none" stroke="#c0b6a5" stroke-width="{sw}" /></g>'
         s += f'\n          <path d="{BODY}" fill="#f2ece1" stroke="#c0b6a5" stroke-width="{sw}" stroke-dasharray="7 4" />'

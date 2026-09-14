@@ -74,7 +74,7 @@
       "y": -150,
       "w": 680,
       "page": "page-2",
-      "text": "La même chose en langue Duolingo, pour comparer.\n\n⚠️ Les médaillons ci-contre sont FAUX et à refaire : ils ont été dessinés de mémoire, pas d'après l'asset de référence. Ils empruntent la construction des badges de succès (anneau + disque décalé + icône au trait) alors que les icônes streak et gel sont des silhouettes pleines à deux tons, sans anneau ni contour. Le fichier source n'a pas pu être récupéré — Cloudflare bloque, le wiki renvoie 402."
+      "text": "La même chose en langue Duolingo, pour comparer.\n\nRefait d'après l'asset de référence (streak-freeze.svg) : cinq couches, aucun contour, aucun anneau, aucun socle décalé. Les formes sont originales, seule la technique d'empilement est reprise."
     }
   ],
   "launch": {
