@@ -9,76 +9,144 @@
 <helmet>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap">
   <style>
-    body { margin: 0; background: #f5ead8; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
+    body { margin: 0; background: #fff; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
     a { color: #8c491a; } a:hover { color: #643312; }
-    .cell { display: flex; flex-direction: column; align-items: center; background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); padding: 14px 12px; }
+    .cell { display: flex; flex-direction: column; align-items: center; background: #fff; border: 2px solid #EFE7DA; border-radius: 24px; padding: 10px 12px 14px; }
     .nm { font: 400 19px 'Caprasimo', system-ui, sans-serif; color: #201e1d; }
-    .rl { font: 12px/1.5 'Figtree', system-ui, sans-serif; color: #645c50; text-align: center; margin: 6px 0 0; }
-    .sw { display: flex; flex-direction: column; align-items: center; gap: 4px; }
-    .ch { width: 42px; height: 42px; border-radius: 14px; }
-    .cn { font: 600 10px 'Figtree', system-ui, sans-serif; color: #645c50; }
+    .rl { font: 12px/1.5 'Figtree', system-ui, sans-serif; color: #8a8175; text-align: center; margin: 5px 0 0; }
     .h2 { font: 400 20px/1.2 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0 0 6px; }
     .p { font: 13px/1.6 'Figtree', system-ui, sans-serif; color: #474238; margin: 0; }
+    .sw { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .ch { width: 40px; height: 40px; border-radius: 999px; }
+    .cn { font: 600 10px 'Figtree', system-ui, sans-serif; color: #8a8175; }
   </style>
 </helmet>
-<div style="padding: 38px 40px 42px; background: #f5ead8; min-height: 100%; box-sizing: border-box;">
+<div style="padding: 38px 40px 42px; background: #fff; min-height: 100%; box-sizing: border-box;">
 
-  <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">Une rémiz penduline en mascotte</h1>
-  <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #645c50; margin: 8px 0 20px; max-width: 900px;">
-    Ce qui est repris, c'est la <strong>grammaire de construction</strong> : aplats sans contour, tête et corps en une seule masse, yeux surdimensionnés, pattes détachées, un plan plus clair pour la face. Pas le personnage — autre espèce, autre silhouette, autre palette.
+  <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">Rémiz penduline</h1>
+  <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #8a8175; margin: 8px 0 26px; max-width: 880px;">
+    Aplats saturés, aucun contour, aucun dégradé, aucune texture. Rien que des formes pleinement arrondies — pas une pointe, pas une arête, bec et queue compris. Trois arcs sur la poitrine.
   </p>
 
-  <div style="display: flex; gap: 14px; background: #ebddc5; border-radius: 28px; padding: 16px 20px; margin-bottom: 22px;">
-    <div style="width: 4px; flex: none; border-radius: 999px; background: #c67139;"></div>
-    <p style="font: 13.5px/1.6 'Figtree', system-ui, sans-serif; color: #474238; margin: 0;">
-      <strong>Le hasard fait bien les choses :</strong> le <strong>masque noir</strong> de la rémiz tombe exactement là où cette grammaire place ses grandes taches oculaires. La signature de l'oiseau <em>est</em> la pièce maîtresse du style — il n'y a rien à forcer. Le bandeau plonge au milieu plutôt que de barrer la face, parce que le vrai masque part du bec, traverse l'œil et s'arrête aux couvertures auriculaires.
-    </p>
-  </div>
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px;">
 
-  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px;">
+    <!-- ─────────── De face ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 124" width="200" height="207" aria-hidden="true"><path d="M59 11 C87 11 106 31 106 59 C106 85 88 104 59 104 C31 104 13 85 13 58 C13 30 32 11 59 11 Z" fill="#F1EDE6" /><path d="M59 11 C77 11 92 19 100 33 C92 29 84 30 79 35 C72 27 66 24 59 24 C52 24 45 27 39 35 C34 30 26 29 18 33 C26 19 41 11 59 11 Z" fill="#A8552A" /><path d="M17 51 C21 39 31 32 44 33 C51 34 56 39 60 44 C64 39 70 34 77 33 C89 32 99 39 103 51 C99 63 89 70 77 68 C69 67 64 61 60 56 C56 61 51 67 44 68 C31 70 21 63 17 51 Z" fill="#2A2622" /><ellipse cx="38" cy="50" rx="9.5" ry="11" fill="#FFF" /><ellipse cx="39.5" cy="51.5" rx="4.8" ry="6.1" fill="#3A3632" /><circle cx="36.9" cy="47.1" r="1.8" fill="#FFF" /><ellipse cx="82" cy="50" rx="9.5" ry="11" fill="#FFF" /><ellipse cx="83.5" cy="51.5" rx="4.8" ry="6.1" fill="#3A3632" /><circle cx="80.9" cy="47.1" r="1.8" fill="#FFF" /><path d="M60 62 C74 62 86 70 88 82 C79 92 70 96 60 96 C50 96 41 92 32 82 C34 70 46 62 60 62 Z" fill="#EBD9BC" /><path d="M60 60 L69 73 C66 77 54 77 51 73 Z" fill="#8A8D91" /><path d="M60 60 L69 73 C67 75 62 76 60 76 Z" fill="#6B6E72" /><rect x="41.5" y="108.0" width="13" height="8" rx="4.0" fill="#E39A3C" transform="rotate(-8 48 112)" /><rect x="65.5" y="108.0" width="13" height="8" rx="4.0" fill="#E39A3C" transform="rotate(8 72 112)" /></svg>
-      <span class="nm">Portrait</span>
-      <p class="rl">De face, masse unique, yeux surdimensionnés. La pose qui sert d'avatar et de tuile d'app.</p>
+      <svg viewBox="0 0 200 212" width="228" height="242" aria-hidden="true">
+        <ellipse cx="30" cy="128" rx="21" ry="33" fill="#C4552C" transform="rotate(-20 30 128)" />
+        <ellipse cx="170" cy="128" rx="21" ry="33" fill="#C4552C" transform="rotate(20 170 128)" />
+        <path d="M100 30 C147 30 178 64 178 112 C178 156 144 184 100 184 C56 184 22 156 22 112 C22 64 53 30 100 30 Z" fill="#EBD8B6" />
+        <path d="M100 30 C147 30 178 64 178 112 C169 92 150 79 127 77 C115 76 108 80 100 80 C92 80 85 76 73 77 C50 79 31 92 22 112 C22 64 53 30 100 30 Z" fill="#C4552C" />
+        <path d="M68 72 C88 66 112 66 132 72 C158 79 176 94 176 111 C176 131 156 145 132 149 C112 153 88 153 68 149 C44 145 24 131 24 111 C24 94 42 79 68 72 Z" fill="#241F1C" />
+        <circle cx="68" cy="110" r="27" fill="#FFFFFF" />
+        <circle cx="132" cy="110" r="27" fill="#FFFFFF" />
+        <circle cx="72" cy="114" r="14" fill="#3B352F" />
+        <circle cx="128" cy="114" r="14" fill="#3B352F" />
+        <circle cx="66" cy="105" r="5.5" fill="#FFFFFF" />
+        <circle cx="122" cy="105" r="5.5" fill="#FFFFFF" />
+        <path d="M100 133 C114 133 125 141 125 150 C125 161 113 169 100 169 C87 169 75 161 75 150 C75 141 86 133 100 133 Z" fill="#E8A33C" />
+        <g fill="none" stroke="#D8BF93" stroke-width="7" stroke-linecap="round">
+          <path d="M66 180 C66 172 72 166 80 166 C88 166 94 172 94 180" />
+          <path d="M86 190 C86 182 92 176 100 176 C108 176 114 182 114 190" />
+          <path d="M106 180 C106 172 112 166 120 166 C128 166 134 172 134 180" />
+        </g>
+        <rect x="68" y="190" width="28" height="14" rx="7" fill="#E8A33C" />
+        <rect x="104" y="190" width="28" height="14" rx="7" fill="#E8A33C" />
+      </svg>
+      <span class="nm">De face</span>
+      <p class="rl">La pose d'avatar et de tuile d'app.</p>
     </div>
+
+    <!-- ─────────── Perchée ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 124" width="200" height="207" aria-hidden="true"><path d="M58 14 C82 14 99 33 99 58 C99 72 96 84 90 93 C84 101 72 106 58 106 C44 106 33 101 27 92 C21 83 19 71 19 57 C19 32 35 14 58 14 Z" fill="#EBD9BC" /><path d="M58 14 C80 14 97 32 99 56 C100 74 94 88 84 95 C88 84 88 71 84 61 C80 50 72 42 62 39 C70 33 78 33 86 36 C79 23 70 16 58 14 Z" fill="#A8552A" /><path d="M84 61 C88 71 88 84 84 95 C79 98 73 99 68 98 C79 90 84 76 84 61 Z" fill="#C4703E" /><path d="M92 88 C102 96 112 106 116 116 C107 114 96 106 88 97 Z" fill="#A8552A" /><path d="M50 16 C68 12 84 20 88 34 C80 29 71 28 64 31 C56 25 48 23 40 26 C41 21 44 17 50 16 Z" fill="#F1EDE6" /><path d="M22 44 C25 33 34 27 45 28 C51 29 56 33 59 38 C63 34 68 30 74 30 C84 30 91 36 94 45 C90 55 82 60 73 59 C66 58 62 53 59 49 C55 54 50 59 44 59 C33 60 25 54 22 44 Z" fill="#2A2622" /><ellipse cx="40" cy="43" rx="8.5" ry="10" fill="#FFF" /><ellipse cx="41.4" cy="44.4" rx="4.2" ry="5.5" fill="#3A3632" /><circle cx="39.0" cy="40.4" r="1.6" fill="#FFF" /><ellipse cx="78" cy="43" rx="8.5" ry="10" fill="#FFF" /><ellipse cx="79.4" cy="44.4" rx="4.2" ry="5.5" fill="#3A3632" /><circle cx="77.0" cy="40.4" r="1.6" fill="#FFF" /><path d="M59 52 L68 64 C65 68 54 68 51 64 Z" fill="#8A8D91" /><path d="M59 52 L68 64 C66 66 61 67 59 67 Z" fill="#6B6E72" /><rect x="40.5" y="110.0" width="13" height="8" rx="4.0" fill="#E39A3C" transform="rotate(-6 47 114)" /><rect x="63.5" y="110.0" width="13" height="8" rx="4.0" fill="#E39A3C" transform="rotate(6 70 114)" /></svg>
-      <span class="nm">Debout</span>
-      <p class="rl">Trois-quarts, corps entier, queue longue. Celle qui montre l'oiseau en entier.</p>
+      <svg viewBox="0 0 200 212" width="228" height="242" aria-hidden="true">
+        <ellipse cx="152" cy="160" rx="42" ry="19" fill="#C4552C" transform="rotate(34 152 160)" />
+        <path d="M92 44 C138 44 168 78 168 124 C168 164 136 190 94 190 C52 190 24 164 24 124 C24 78 46 44 92 44 Z" fill="#EBD8B6" />
+        <path d="M92 44 C138 44 168 78 168 124 C168 146 158 164 141 176 C150 156 152 132 144 112 C136 92 120 80 100 76 C112 66 128 64 142 70 C130 52 112 44 92 44 Z" fill="#C4552C" />
+        <ellipse cx="136" cy="128" rx="26" ry="38" fill="#B04A25" transform="rotate(16 136 128)" />
+        <path d="M64 64 C82 58 104 58 122 66 C144 74 158 88 156 104 C154 122 134 134 110 136 C90 138 68 134 54 124 C40 114 38 96 44 84 C48 74 54 68 64 64 Z" fill="#241F1C" />
+        <circle cx="72" cy="98" r="25" fill="#FFFFFF" />
+        <circle cx="130" cy="102" r="21" fill="#FFFFFF" />
+        <circle cx="66" cy="102" r="13" fill="#3B352F" />
+        <circle cx="126" cy="106" r="11" fill="#3B352F" />
+        <circle cx="70" cy="93" r="5" fill="#FFFFFF" />
+        <circle cx="121" cy="98" r="4.2" fill="#FFFFFF" />
+        <path d="M38 104 C30 104 22 110 22 118 C22 127 31 133 41 132 C50 131 56 124 55 116 C54 108 47 104 38 104 Z" fill="#E8A33C" />
+        <g fill="none" stroke="#D8BF93" stroke-width="7" stroke-linecap="round">
+          <path d="M62 160 C62 152 68 146 76 146 C84 146 90 152 90 160" />
+          <path d="M82 172 C82 164 88 158 96 158 C104 158 110 164 110 172" />
+          <path d="M102 160 C102 152 108 146 116 146 C124 146 130 152 130 160" />
+        </g>
+        <rect x="66" y="188" width="28" height="14" rx="7" fill="#E8A33C" />
+        <rect x="102" y="188" width="28" height="14" rx="7" fill="#E8A33C" />
+      </svg>
+      <span class="nm">Perchée</span>
+      <p class="rl">De trois-quarts, l'oiseau en entier.</p>
     </div>
+
+    <!-- ─────────── Au nid ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 124" width="200" height="207" aria-hidden="true"><path d="M26 22 C40 10 62 14 72 30 C78 40 76 52 68 60 C58 70 40 68 30 56 C22 46 20 31 26 22 Z" fill="#A8552A" transform="rotate(-16 50 40)" /><path d="M56 30 C82 26 102 44 104 68 C105 86 95 100 78 104 C60 108 44 98 38 82 C33 68 38 48 56 30 Z" fill="#EBD9BC" /><path d="M56 30 C80 26 100 44 103 66 C96 58 86 54 77 56 C72 45 64 37 54 35 Z" fill="#A8552A" /><path d="M96 96 C108 100 116 108 119 118 C108 117 98 111 91 103 Z" fill="#A8552A" /><path d="M44 52 C46 42 54 36 63 37 C69 38 73 42 76 46 C80 43 85 40 90 41 C99 42 105 49 106 57 C102 66 95 70 87 69 C81 68 77 63 74 59 C70 64 65 68 60 68 C50 68 45 61 44 52 Z" fill="#2A2622" /><ellipse cx="60" cy="52" rx="8.5" ry="10" fill="#FFF" /><ellipse cx="61.4" cy="53.4" rx="4.2" ry="5.5" fill="#3A3632" /><circle cx="59.0" cy="49.4" r="1.6" fill="#FFF" /><ellipse cx="93" cy="55" rx="8" ry="9.5" fill="#FFF" /><ellipse cx="94.3" cy="56.3" rx="4.0" ry="5.2" fill="#3A3632" /><circle cx="92.0" cy="52.5" r="1.5" fill="#FFF" /><path d="M76 62 L85 74 C82 78 71 78 68 74 Z" fill="#8A8D91" /><path d="M76 62 L85 74 C83 76 78 77 76 77 Z" fill="#6B6E72" /><rect x="58.0" y="110.5" width="12" height="7" rx="3.5" fill="#E39A3C" transform="rotate(-20 64 114)" /><rect x="78.0" y="112.5" width="12" height="7" rx="3.5" fill="#E39A3C" transform="rotate(16 84 116)" /></svg>
-      <span class="nm">En vol</span>
-      <p class="rl">Corps basculé, aile haute. Pour les moments de récompense — un badge obtenu, une matrice au net.</p>
-    </div>
-    <div class="cell">
-      <svg viewBox="0 0 120 124" width="200" height="207" aria-hidden="true"><path d="M64 30 C40 30 26 48 26 70 C26 92 40 110 64 110 C88 110 102 92 102 70 C102 48 88 30 64 30 Z" fill="#C67139" /><path d="M34 50 C24 44 10 42 5 47 C-1 52 -1 66 5 71 C12 75 25 72 36 66 C33 60 33 55 34 50 Z" fill="#C67139" /><path d="M64 30 C46 30 34 42 30 58 C36 44 48 37 64 37 C80 37 92 44 98 58 C94 42 82 30 64 30 Z" fill="#DA8B56" /><path d="M30 40 C42 34 56 38 60 50 C63 60 57 70 46 73 C33 76 22 69 20 57 C19 49 23 43 30 40 Z" fill="#F1EDE6" /><path d="M30 40 C40 35 51 37 57 45 C50 43 43 44 38 48 C34 43 32 41 30 40 Z" fill="#A8552A" /><path d="M20 52 C22 45 28 41 35 42 C39 43 42 46 44 49 C47 47 51 46 55 48 C59 50 61 55 60 60 C56 65 50 66 45 64 C42 63 40 60 39 57 C36 61 31 63 27 62 C22 61 19 57 20 52 Z" fill="#2A2622" /><ellipse cx="32" cy="53" rx="7.5" ry="8.5" fill="#FFF" /><ellipse cx="33.2" cy="54.2" rx="3.8" ry="4.7" fill="#3A3632" /><circle cx="31.1" cy="50.8" r="1.4" fill="#FFF" /><ellipse cx="52" cy="55" rx="6.5" ry="7.5" fill="#FFF" /><ellipse cx="53.0" cy="56.0" rx="3.2" ry="4.1" fill="#3A3632" /><circle cx="51.2" cy="53.0" r="1.2" fill="#FFF" /><path d="M14 58 L2 62 C1 59 3 54 6 53 Z" fill="#8A8D91" /></svg>
+      <svg viewBox="0 0 200 212" width="228" height="242" aria-hidden="true">
+        <path d="M112 34 C118 22 140 22 146 34 C150 44 148 54 144 62 C136 66 122 66 114 62 C110 54 108 44 112 34 Z" fill="#C67139" />
+        <path d="M128 58 C170 58 192 96 192 138 C192 178 166 202 128 202 C90 202 62 178 62 138 C62 96 86 58 128 58 Z" fill="#C67139" />
+        <path d="M128 58 C164 58 186 86 191 122 C182 96 160 80 128 80 C96 80 74 96 65 122 C70 86 92 58 128 58 Z" fill="#DB8D58" />
+        <path d="M62 96 C42 86 18 88 10 100 C2 112 6 134 20 142 C36 150 58 144 72 132 C64 122 60 108 62 96 Z" fill="#C67139" />
+        <path d="M56 100 C74 96 92 104 96 118 C100 134 88 148 70 150 C50 152 34 142 32 126 C30 112 40 103 56 100 Z" fill="#EBD8B6" />
+        <path d="M56 100 C72 96 88 102 94 114 C84 108 72 106 62 108 C58 104 57 102 56 100 Z" fill="#C4552C" />
+        <path d="M36 112 C48 104 64 104 76 110 C88 116 94 128 88 138 C80 150 60 152 46 146 C32 140 26 124 30 118 C32 115 34 113 36 112 Z" fill="#241F1C" />
+        <circle cx="52" cy="124" r="17" fill="#FFFFFF" />
+        <circle cx="84" cy="128" r="12" fill="#FFFFFF" />
+        <circle cx="49" cy="127" r="9" fill="#3B352F" />
+        <circle cx="82" cy="131" r="6.5" fill="#3B352F" />
+        <circle cx="52" cy="119" r="3.4" fill="#FFFFFF" />
+        <path d="M28 138 C20 140 14 146 16 152 C18 159 27 161 34 158 C40 155 42 148 39 143 C36 139 32 137 28 138 Z" fill="#E8A33C" />
+      </svg>
       <span class="nm">Au nid</span>
-      <p class="rl">La tête sort du manchon. La seule qui raconte le produit et pas seulement l'oiseau.</p>
+      <p class="rl">La seule pose qui raconte le produit.</p>
     </div>
+
+    <!-- ─────────── En veille ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 124" width="200" height="207" aria-hidden="true"><path d="M59 11 C87 11 106 31 106 59 C106 85 88 104 59 104 C31 104 13 85 13 58 C13 30 32 11 59 11 Z" fill="#F1EDE6" /><path d="M59 11 C77 11 92 19 100 33 C92 29 84 30 79 35 C72 27 66 24 59 24 C52 24 45 27 39 35 C34 30 26 29 18 33 C26 19 41 11 59 11 Z" fill="#A8552A" /><path d="M17 51 C21 39 31 32 44 33 C51 34 56 39 60 44 C64 39 70 34 77 33 C89 32 99 39 103 51 C99 63 89 70 77 68 C69 67 64 61 60 56 C56 61 51 67 44 68 C31 70 21 63 17 51 Z" fill="#2A2622" /><path d="M28 50 C33 57 43 57 48 50" fill="none" stroke="#F1EDE6" stroke-width="3.4" stroke-linecap="round" /><path d="M72 50 C77 57 87 57 92 50" fill="none" stroke="#F1EDE6" stroke-width="3.4" stroke-linecap="round" /><path d="M60 62 C74 62 86 70 88 82 C79 92 70 96 60 96 C50 96 41 92 32 82 C34 70 46 62 60 62 Z" fill="#EBD9BC" /><path d="M60 60 L69 73 C66 77 54 77 51 73 Z" fill="#8A8D91" /><path d="M60 60 L69 73 C67 75 62 76 60 76 Z" fill="#6B6E72" /><rect x="41.5" y="108.0" width="13" height="8" rx="4.0" fill="#E39A3C" transform="rotate(-8 48 112)" /><rect x="65.5" y="108.0" width="13" height="8" rx="4.0" fill="#E39A3C" transform="rotate(8 72 112)" /></svg>
+      <svg viewBox="0 0 200 212" width="228" height="242" aria-hidden="true">
+        <ellipse cx="30" cy="132" rx="21" ry="31" fill="#C4552C" transform="rotate(-14 30 132)" />
+        <ellipse cx="170" cy="132" rx="21" ry="31" fill="#C4552C" transform="rotate(14 170 132)" />
+        <path d="M100 44 C147 44 178 76 178 120 C178 162 144 188 100 188 C56 188 22 162 22 120 C22 76 53 44 100 44 Z" fill="#EBD8B6" />
+        <path d="M100 44 C147 44 178 76 178 120 C169 100 150 88 127 86 C115 85 108 89 100 89 C92 89 85 85 73 86 C50 88 31 100 22 120 C22 76 53 44 100 44 Z" fill="#C4552C" />
+        <path d="M68 82 C88 76 112 76 132 82 C158 89 176 104 176 120 C176 140 156 154 132 158 C112 162 88 162 68 158 C44 154 24 140 24 120 C24 104 42 89 68 82 Z" fill="#241F1C" />
+        <g fill="none" stroke="#EBD8B6" stroke-width="9" stroke-linecap="round">
+          <path d="M48 116 C54 130 82 130 88 116" />
+          <path d="M112 116 C118 130 146 130 152 116" />
+        </g>
+        <path d="M100 142 C114 142 125 150 125 159 C125 170 113 178 100 178 C87 178 75 170 75 159 C75 150 86 142 100 142 Z" fill="#E8A33C" />
+        <rect x="68" y="194" width="28" height="14" rx="7" fill="#E8A33C" />
+        <rect x="104" y="194" width="28" height="14" rx="7" fill="#E8A33C" />
+      </svg>
       <span class="nm">En veille</span>
-      <p class="rl">Mêmes aplats, yeux fermés en deux arcs. L'état « matrice en pause », sans rien redessiner.</p>
+      <p class="rl">Deux arcs à la place des yeux. L'état « matrice en pause ».</p>
     </div>
+
   </div>
 
-  <div style="display: grid; grid-template-columns: 1.3fr 1fr; gap: 18px; margin-top: 22px;">
-    <div style="background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); padding: 18px 22px;">
-      <p class="h2">La palette vient de l'oiseau, pas de la charte</p>
-      <div style="display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px;">
-        <div class="sw"><span class="ch" style="background: #F1EDE6;"></span><span class="cn">calotte</span></div>
-        <div class="sw"><span class="ch" style="background: #2A2622;"></span><span class="cn">masque</span></div>
-        <div class="sw"><span class="ch" style="background: #A8552A;"></span><span class="cn">manteau</span></div>
-        <div class="sw"><span class="ch" style="background: #EBD9BC;"></span><span class="cn">poitrine</span></div>
-        <div class="sw"><span class="ch" style="background: #6B6E72;"></span><span class="cn">bec</span></div>
-        <div class="sw"><span class="ch" style="background: #E39A3C;"></span><span class="cn">pattes</span></div>
-      </div>
-      <p class="p" style="margin-top: 12px;">Relevée sur la photo et désaturée juste ce qu'il faut pour tenir en aplat. Une seule liberté : les pattes, gris ardoise chez l'oiseau, passent en <strong>ocre</strong> — c'est la couleur qui fait le pont avec le terracotta du produit, et c'est aussi le seul endroit où cette grammaire attend une tache vive détachée du corps.</p>
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 24px;">
+    <div style="border: 2px solid #EFE7DA; border-radius: 24px; padding: 18px 22px;">
+      <p class="h2">Quatre règles tenues, sans exception</p>
+      <p class="p">
+        <strong>Aucune pointe.</strong> Le bec est un galet, la queue une ellipse inclinée, les ailes des ellipses, les pattes des capsules. Rien ne se termine en angle.<br>
+        <strong>Aucun contour.</strong> Les masses se détachent par la couleur seule.<br>
+        <strong>Aucun dégradé, aucune ombre.</strong> Six aplats, pas un de plus.<br>
+        <strong>Trois arcs sur la poitrine</strong>, tracés au trait à bouts ronds — celui du milieu descend un peu, pour que la rangée ne soit pas un peigne.
+      </p>
     </div>
-    <div style="background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); padding: 18px 22px;">
-      <p class="h2">Celle qui vaut plus que les autres</p>
-      <p class="p"><strong>Au nid.</strong> Les quatre autres dessinent un oiseau ; celle-ci dessine <em>le produit</em> — la tête sort du manchon, et le manchon est justement la découpe qu'on hésitait à garder sur l'icône. Elle répond à ta question « pourquoi représenter le tube ? » : seul, il demande une notice ; avec l'oiseau dedans, il s'explique tout seul.</p>
+    <div style="border: 2px solid #EFE7DA; border-radius: 24px; padding: 18px 22px;">
+      <p class="h2">La palette</p>
+      <div style="display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0;">
+        <div class="sw"><span class="ch" style="background: #EBD8B6;"></span><span class="cn">corps</span></div>
+        <div class="sw"><span class="ch" style="background: #C4552C;"></span><span class="cn">dos</span></div>
+        <div class="sw"><span class="ch" style="background: #241F1C;"></span><span class="cn">masque</span></div>
+        <div class="sw"><span class="ch" style="background: #E8A33C;"></span><span class="cn">bec, pattes</span></div>
+        <div class="sw"><span class="ch" style="background: #D8BF93;"></span><span class="cn">arcs</span></div>
+      </div>
+      <p class="p">Le bec de la rémiz est gris ardoise et pointu. Ici il est ocre et rond : la règle « aucune pointe » et la palette saturée l'emportent sur l'exactitude ornithologique — et l'ocre est ce qui raccorde la mascotte au terracotta du produit.</p>
     </div>
   </div>
 
