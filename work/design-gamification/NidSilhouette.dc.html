@@ -9,222 +9,69 @@
 <helmet>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap">
   <style>
-    body { margin: 0; background: #fff; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
+    body { margin: 0; background: #f5ead8; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
     a { color: #8c491a; } a:hover { color: #643312; }
-    .cell { display: flex; flex-direction: column; align-items: center; background: #fff; border: 2px solid #EFE7DA; border-radius: 24px; padding: 10px 12px 14px; }
-    .cell--base { background: #FCF7EF; }
+    .cell { display: flex; flex-direction: column; align-items: center; background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); padding: 14px; }
     .nm { font: 400 19px 'Caprasimo', system-ui, sans-serif; color: #201e1d; }
-    .rl { font: 12px/1.5 'Figtree', system-ui, sans-serif; color: #8a8175; text-align: center; margin: 5px 0 10px; flex: 1; }
-    .test { display: flex; flex-direction: column; align-items: center; gap: 1px; background: #F7F1E7; border-radius: 14px; padding: 6px 12px 4px; width: 100%; box-sizing: border-box; }
-    .tl { font: 600 9.5px 'Figtree', system-ui, sans-serif; color: #b0a695; letter-spacing: 0.06em; text-transform: uppercase; }
+    .rl { font: 12px/1.5 'Figtree', system-ui, sans-serif; color: #645c50; text-align: center; margin: 6px 0 10px; flex: 1; }
+    .test { display: flex; flex-direction: column; align-items: center; gap: 1px; background: #f9f4ed; border-radius: 16px; padding: 7px 14px 5px; width: 100%; box-sizing: border-box; }
+    .tl { font: 600 9.5px 'Figtree', system-ui, sans-serif; color: #a19786; letter-spacing: 0.06em; text-transform: uppercase; }
     .h2 { font: 400 20px/1.2 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0 0 6px; }
     .p { font: 13px/1.6 'Figtree', system-ui, sans-serif; color: #474238; margin: 0; }
   </style>
 </helmet>
-<div style="padding: 38px 40px 42px; background: #fff; min-height: 100%; box-sizing: border-box;">
+<div style="padding: 38px 40px 42px; background: #f5ead8; min-height: 100%; box-sizing: border-box;">
 
-  <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">Un état de base, quatre découpes</h1>
-  <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #8a8175; margin: 8px 0 24px; max-width: 880px;">
-    Mêmes règles que la mascotte : <strong>pas une pointe, pas une arête.</strong> Les brins et les pendeloques sont des tracés à bouts ronds, la brèche est mordue par des cercles, les éclats sont des carrés à grand rayon. Aucun contour, aucun dégradé.
+  <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">Un état de base, trois découpes</h1>
+  <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #645c50; margin: 8px 0 22px; max-width: 900px;">
+    « Poche » revient, <strong>étiquetée comme état de base</strong> : c'est la découpe commune aux autres, la référence à laquelle elles se comparent. Non étiquetée, elle se lisait comme une variante qui ne propose rien — d'où la confusion. Et toutes les formes de la page ont reçu une <strong>passe organique</strong> : plus aucune courbe n'est le miroir de sa voisine.
   </p>
 
-  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px;">
-
-    <!-- ─────────── Poche · état de base ─────────── -->
-    <div class="cell cell--base">
-      <svg viewBox="0 0 120 120" width="176" height="176" aria-hidden="true">
-        <defs><clipPath id="cp0"><path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" /></clipPath></defs>
-        <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#F0A468" transform="rotate(8 58 14)" />
-        <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#F0A468" />
-        <path d="M58 28 C43 27 32 41 32 56 C32 67 35 75 41 81 C46 87 51 90 58 90 C64 90 69 86 74 80 C80 73 83 65 82 55 C81 41 72 29 58 28 Z" fill="#C95F1F" />
-        <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" />
-        <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" />
-        <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" />
-        <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" />
-        <g clip-path="url(#cp0)"><path d="M0 66 C24 40 48 14 72 -6 C86 -2 98 2 110 8 C82 38 52 70 24 100 C14 90 6 78 0 66 Z" fill="#FFE2C4" opacity="0.42" /></g>
-        <rect x="32" y="28" width="13" height="13" rx="5" fill="#FFF" transform="rotate(45 38.5 34.5)" />
-        <rect x="70" y="72" width="9" height="9" rx="3.6" fill="#FFF" opacity="0.85" transform="rotate(45 74.5 76.5)" />
-      </svg>
-      <span class="nm">Poche</span>
-      <p class="rl">L'état de base : la découpe commune aux quatre autres, large en haut, resserrée à la taille — un nid de rémiz pend, il ne repose pas.</p>
-      <div class="test">
-        <svg viewBox="0 0 120 120" width="40" height="40" aria-hidden="true">
-          <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#2e2b25" transform="rotate(8 58 14)" />
-          <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#2e2b25" />
-        </svg>
-        <span class="tl">contour seul</span>
-      </div>
+  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px;">
+    <div class="cell" style="background: #f9f4ed;">
+      <svg viewBox="-4 -4 120 124" width="172" height="172" aria-hidden="true"><defs><clipPath id="iv0"><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" /></clipPath></defs><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#F0A468" /></g><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" fill="#F0A468" /><path d="M57 29 C43 28 32 41 32 55 C32 66 35 74 41 80 C46 86 50 89 56 89 C62 89 67 85 72 79 C78 72 81 64 80 54 C79 41 71 30 57 29 Z" fill="#C95F1F" /><path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" /><path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" /><path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" /><path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" /><g clip-path="url(#iv0)"><path d="M2 64 L70 -4 L106 6 L16 98 Z" fill="#FFE2C4" opacity="0.42" /></g><rect fill="#FFF" opacity="1.0" x="32.0" y="28.0" width="12" height="12" rx="1.68" transform="rotate(45 38 34)" /><rect fill="#FFF" opacity="0.85" x="70.0" y="72.0" width="8" height="8" rx="1.12" transform="rotate(45 74 76)" /></svg>
+      <span class="nm">Poche — état de base</span>
+      <p class="rl">La découpe commune aux trois autres : large en haut, resserrée à la taille, parce qu'un nid de rémiz pend au lieu de reposer. Sans aucune caractéristique ajoutée — c'est la référence à laquelle les autres se comparent.</p>
+      <div class="test"><svg viewBox="-4 -4 120 124" width="42" height="42" aria-hidden="true"><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#2e2b25" /></g><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" fill="#2e2b25" /></svg><span class="tl">contour seul</span></div>
     </div>
-
-    <!-- ─────────── Hérissé ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 120" width="176" height="176" aria-hidden="true">
-        <defs><clipPath id="cp1"><path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" /></clipPath></defs>
-        <g stroke="#F0A468" fill="none" stroke-linecap="round">
-          <path d="M34 34 C25 28 16 23 9 20" stroke-width="7.5" />
-          <path d="M30 46 C22 43 13 41 5 41" stroke-width="6" />
-          <path d="M27 62 C19 64 11 68 5 73" stroke-width="7" />
-          <path d="M36 82 C31 89 26 96 22 102" stroke-width="5.5" />
-          <path d="M80 80 C87 86 93 93 97 100" stroke-width="7" />
-          <path d="M88 60 C96 60 105 62 112 66" stroke-width="6" />
-          <path d="M84 36 C92 30 101 26 109 24" stroke-width="7.5" />
-        </g>
-        <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#F0A468" transform="rotate(8 58 14)" />
-        <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#F0A468" />
-        <path d="M58 28 C43 27 32 41 32 56 C32 67 35 75 41 81 C46 87 51 90 58 90 C64 90 69 86 74 80 C80 73 83 65 82 55 C81 41 72 29 58 28 Z" fill="#C95F1F" />
-        <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" />
-        <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" />
-        <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" />
-        <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" />
-        <g clip-path="url(#cp1)"><path d="M0 66 C24 40 48 14 72 -6 C86 -2 98 2 110 8 C82 38 52 70 24 100 C14 90 6 78 0 66 Z" fill="#FFE2C4" opacity="0.42" /></g>
-        <rect x="32" y="28" width="13" height="13" rx="5" fill="#FFF" transform="rotate(45 38.5 34.5)" />
-        <rect x="70" y="72" width="9" height="9" rx="3.6" fill="#FFF" opacity="0.85" transform="rotate(45 74.5 76.5)" />
-      </svg>
+      <svg viewBox="-4 -4 120 124" width="172" height="172" aria-hidden="true"><defs><clipPath id="iv1"><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" /></clipPath></defs><g fill="#F0A468"><path d="M0 -3.8 C 10.9 -4.7 20.3 -2.2 26 0 C 20.3 1.8 10.9 3.9 0 3.8 Z" transform="translate(34.4 34.6) rotate(-143.3)" /><path d="M0 -3.2 C 8.4 -4.0 15.6 -1.9 20 0 C 15.6 1.6 8.4 3.4 0 3.2 Z" transform="translate(43.3 26.5) rotate(-120.5)" /><path d="M0 -3.5 C 10.1 -4.3 18.7 -2.1 24 0 C 18.7 1.7 10.1 3.6 0 3.5 Z" transform="translate(73.9 30.4) rotate(-46.7)" /><path d="M0 -3.0 C 7.6 -3.7 14.0 -1.8 18 0 C 14.0 1.4 7.6 3.1 0 3.0 Z" transform="translate(84.1 49.5) rotate(-11.7)" /><path d="M0 -3.8 C 10.5 -4.7 19.5 -2.2 25 0 C 19.5 1.8 10.5 3.9 0 3.8 Z" transform="translate(80.0 77.6) rotate(29.2)" /><path d="M0 -3.2 C 8.4 -4.0 15.6 -1.9 20 0 C 15.6 1.6 8.4 3.4 0 3.2 Z" transform="translate(53.0 92.8) rotate(97.2)" /><path d="M0 -3.5 C 9.7 -4.3 17.9 -2.1 23 0 C 17.9 1.7 9.7 3.6 0 3.5 Z" transform="translate(30.4 74.4) rotate(156.2)" /></g><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#F0A468" /></g><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" fill="#F0A468" /><path d="M57 29 C43 28 32 41 32 55 C32 66 35 74 41 80 C46 86 50 89 56 89 C62 89 67 85 72 79 C78 72 81 64 80 54 C79 41 71 30 57 29 Z" fill="#C95F1F" /><path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" /><path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" /><path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" /><path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" /><g clip-path="url(#iv1)"><path d="M2 64 L70 -4 L106 6 L16 98 Z" fill="#FFE2C4" opacity="0.42" /></g><rect fill="#FFF" opacity="1.0" x="32.0" y="28.0" width="12" height="12" rx="1.68" transform="rotate(45 38 34)" /><rect fill="#FFF" opacity="0.85" x="70.0" y="72.0" width="8" height="8" rx="1.12" transform="rotate(45 74 76)" /></svg>
       <span class="nm">Hérissé</span>
-      <p class="rl">Sept brins à bouts ronds, d'épaisseurs et de longueurs dépareillées. Rien ne passe derrière le col.</p>
-      <div class="test">
-        <svg viewBox="0 0 120 120" width="40" height="40" aria-hidden="true">
-          <g stroke="#2e2b25" fill="none" stroke-linecap="round">
-            <path d="M34 34 C25 28 16 23 9 20" stroke-width="7.5" /><path d="M30 46 C22 43 13 41 5 41" stroke-width="6" />
-            <path d="M27 62 C19 64 11 68 5 73" stroke-width="7" /><path d="M36 82 C31 89 26 96 22 102" stroke-width="5.5" />
-            <path d="M80 80 C87 86 93 93 97 100" stroke-width="7" /><path d="M88 60 C96 60 105 62 112 66" stroke-width="6" />
-            <path d="M84 36 C92 30 101 26 109 24" stroke-width="7.5" />
-          </g>
-          <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#2e2b25" transform="rotate(8 58 14)" />
-          <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#2e2b25" />
-        </svg>
-        <span class="tl">contour seul</span>
-      </div>
+      <p class="rl">Sept éclisses à double courbure sortent de la masse. Aucune ne flotte, aucune ne passe derrière le col.</p>
+      <div class="test"><svg viewBox="-4 -4 120 124" width="42" height="42" aria-hidden="true"><g fill="#2e2b25"><path d="M0 -3.8 C 10.9 -4.7 20.3 -2.2 26 0 C 20.3 1.8 10.9 3.9 0 3.8 Z" transform="translate(34.4 34.6) rotate(-143.3)" /><path d="M0 -3.2 C 8.4 -4.0 15.6 -1.9 20 0 C 15.6 1.6 8.4 3.4 0 3.2 Z" transform="translate(43.3 26.5) rotate(-120.5)" /><path d="M0 -3.5 C 10.1 -4.3 18.7 -2.1 24 0 C 18.7 1.7 10.1 3.6 0 3.5 Z" transform="translate(73.9 30.4) rotate(-46.7)" /><path d="M0 -3.0 C 7.6 -3.7 14.0 -1.8 18 0 C 14.0 1.4 7.6 3.1 0 3.0 Z" transform="translate(84.1 49.5) rotate(-11.7)" /><path d="M0 -3.8 C 10.5 -4.7 19.5 -2.2 25 0 C 19.5 1.8 10.5 3.9 0 3.8 Z" transform="translate(80.0 77.6) rotate(29.2)" /><path d="M0 -3.2 C 8.4 -4.0 15.6 -1.9 20 0 C 15.6 1.6 8.4 3.4 0 3.2 Z" transform="translate(53.0 92.8) rotate(97.2)" /><path d="M0 -3.5 C 9.7 -4.3 17.9 -2.1 23 0 C 17.9 1.7 9.7 3.6 0 3.5 Z" transform="translate(30.4 74.4) rotate(156.2)" /></g><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#2e2b25" /></g><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" fill="#2e2b25" /></svg><span class="tl">contour seul</span></div>
     </div>
-
-    <!-- ─────────── Tube ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 120" width="176" height="176" aria-hidden="true">
-        <defs><clipPath id="cp2"><path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" /></clipPath></defs>
-        <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#F0A468" transform="rotate(8 58 14)" />
-        <path d="M31 38 C22 32 12 30 7 34 C1 39 1 51 7 56 C13 61 24 58 33 51 C31 47 30 42 31 38 Z" fill="#F0A468" />
-        <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#F0A468" />
-        <ellipse cx="7" cy="45" rx="5" ry="8.6" fill="#8E3D10" />
-        <path d="M58 28 C43 27 32 41 32 56 C32 67 35 75 41 81 C46 87 51 90 58 90 C64 90 69 86 74 80 C80 73 83 65 82 55 C81 41 72 29 58 28 Z" fill="#C95F1F" />
-        <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" />
-        <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" />
-        <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" />
-        <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" />
-        <g clip-path="url(#cp2)"><path d="M0 66 C24 40 48 14 72 -6 C86 -2 98 2 110 8 C82 38 52 70 24 100 C14 90 6 78 0 66 Z" fill="#FFE2C4" opacity="0.42" /></g>
-        <rect x="36" y="26" width="13" height="13" rx="5" fill="#FFF" transform="rotate(45 42.5 32.5)" />
-        <rect x="70" y="72" width="9" height="9" rx="3.6" fill="#FFF" opacity="0.85" transform="rotate(45 74.5 76.5)" />
-      </svg>
+      <svg viewBox="-4 -4 120 124" width="172" height="172" aria-hidden="true"><defs><clipPath id="iv2"><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" /></clipPath></defs><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#F0A468" /></g><path d="M33 38 C23 30 11 28 6 33 C0 38 0 51 6 55 C13 59 24 56 34 50 C32 46 31 42 33 38 Z" fill="#F0A468" /><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" fill="#F0A468" /><path d="M57 29 C43 28 32 41 32 55 C32 66 35 74 41 80 C46 86 50 89 56 89 C62 89 67 85 72 79 C78 72 81 64 80 54 C79 41 71 30 57 29 Z" fill="#C95F1F" /><ellipse cx="6" cy="44" rx="4.6" ry="8.6" fill="#8E3D10" /><path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" /><path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" /><path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" /><path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" /><g clip-path="url(#iv2)"><path d="M2 64 L70 -4 L106 6 L16 98 Z" fill="#FFE2C4" opacity="0.42" /></g><rect fill="#FFF" opacity="1.0" x="32.0" y="28.0" width="12" height="12" rx="1.68" transform="rotate(45 38 34)" /><rect fill="#FFF" opacity="0.85" x="70.0" y="72.0" width="8" height="8" rx="1.12" transform="rotate(45 74 76)" /></svg>
       <span class="nm">Tube</span>
-      <p class="rl">L'entrée latérale en manchon, bouche arrondie. Seule pose où la mascotte peut venir se loger.</p>
-      <div class="test">
-        <svg viewBox="0 0 120 120" width="40" height="40" aria-hidden="true">
-          <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#2e2b25" transform="rotate(8 58 14)" />
-          <path d="M31 38 C22 32 12 30 7 34 C1 39 1 51 7 56 C13 61 24 58 33 51 C31 47 30 42 31 38 Z" fill="#2e2b25" />
-          <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#2e2b25" />
-        </svg>
-        <span class="tl">contour seul</span>
-      </div>
+      <p class="rl">L'entrée latérale en manchon. La seule qui soit intransmissible — et la seule qui demande qu'on l'explique.</p>
+      <div class="test"><svg viewBox="-4 -4 120 124" width="42" height="42" aria-hidden="true"><path d="M33 38 C23 30 11 28 6 33 C0 38 0 51 6 55 C13 59 24 56 34 50 C32 46 31 42 33 38 Z" fill="#2e2b25" /><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#2e2b25" /></g><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C66 99 73 93 80 85 C86 77 90 66 89 53 C88 33 77 19 57 18 Z" fill="#2e2b25" /></svg><span class="tl">contour seul</span></div>
     </div>
-
-    <!-- ─────────── Givré ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 120" width="176" height="176" aria-hidden="true">
-        <defs><clipPath id="cp3"><path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" /></clipPath></defs>
-        <g stroke="#F0A468" fill="none" stroke-linecap="round">
-          <path d="M37 90 C36 96 36 101 37 105" stroke-width="8" />
-          <path d="M50 94 C51 102 52 110 52 116" stroke-width="9" />
-          <path d="M65 93 C66 99 67 104 67 108" stroke-width="8.5" />
-          <path d="M77 88 C78 91 78 94 78 96" stroke-width="7" />
-        </g>
-        <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#F0A468" transform="rotate(8 58 14)" />
-        <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#F0A468" />
-        <path d="M58 28 C43 27 32 41 32 56 C32 67 35 75 41 81 C46 87 51 90 58 90 C64 90 69 86 74 80 C80 73 83 65 82 55 C81 41 72 29 58 28 Z" fill="#C95F1F" />
-        <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" />
-        <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" />
-        <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" />
-        <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" />
-        <g clip-path="url(#cp3)"><path d="M0 66 C24 40 48 14 72 -6 C86 -2 98 2 110 8 C82 38 52 70 24 100 C14 90 6 78 0 66 Z" fill="#FFE2C4" opacity="0.52" /></g>
-        <rect x="32" y="28" width="13" height="13" rx="5" fill="#FFF" transform="rotate(45 38.5 34.5)" />
-        <rect x="70" y="72" width="9" height="9" rx="3.6" fill="#FFF" opacity="0.85" transform="rotate(45 74.5 76.5)" />
-        <rect x="60" y="24" width="8" height="8" rx="3.2" fill="#FFF" opacity="0.9" transform="rotate(45 64 28)" />
-      </svg>
+      <svg viewBox="-4 -4 120 124" width="172" height="172" aria-hidden="true"><defs><clipPath id="iv3"><path d="M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86 C34 94 35.4 97.4 38.0 100.0 C40.6 97.4 42 94 44 87 C48 101 49.6 110.6 52.0 113.0 C54.4 110.6 56 101 58 87 C60 98 61.4 104.4 64.0 107.0 C66.6 104.4 68 98 70 87 C72 91 73.8 92.8 76.0 95.0 C78.2 92.8 80 91 82 87 C87 77 89 67 89 54 C89 34 76 18 56 18 Z" /></clipPath></defs><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#F0A468" /></g><path d="M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86 C34 94 35.4 97.4 38.0 100.0 C40.6 97.4 42 94 44 87 C48 101 49.6 110.6 52.0 113.0 C54.4 110.6 56 101 58 87 C60 98 61.4 104.4 64.0 107.0 C66.6 104.4 68 98 70 87 C72 91 73.8 92.8 76.0 95.0 C78.2 92.8 80 91 82 87 C87 77 89 67 89 54 C89 34 76 18 56 18 Z" fill="#F0A468" /><path d="M57 29 C43 28 32 41 32 55 C32 66 35 74 41 80 C46 86 50 89 56 89 C62 89 67 85 72 79 C78 72 81 64 80 54 C79 41 71 30 57 29 Z" fill="#C95F1F" /><path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" /><path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" /><path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" /><path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" /><g clip-path="url(#iv3)"><path d="M2 64 L70 -4 L106 6 L16 98 Z" fill="#FFE2C4" opacity="0.52" /></g><rect fill="#FFF" opacity="1.0" x="32.0" y="28.0" width="12" height="12" rx="1.68" transform="rotate(45 38 34)" /><rect fill="#FFF" opacity="0.85" x="70.0" y="72.0" width="8" height="8" rx="1.12" transform="rotate(45 74 76)" /><rect fill="#FFF" opacity="0.9" x="59.5" y="25.5" width="7" height="7" rx="0.98" transform="rotate(45 63 29)" /></svg>
       <span class="nm">Givré</span>
-      <p class="rl">Quatre pendeloques à bouts ronds, dépareillées. La 2ᵉ est la plus longue et se serre contre la 3ᵉ.</p>
-      <div class="test">
-        <svg viewBox="0 0 120 120" width="40" height="40" aria-hidden="true">
-          <g stroke="#2e2b25" fill="none" stroke-linecap="round">
-            <path d="M37 90 C36 96 36 101 37 105" stroke-width="8" /><path d="M50 94 C51 102 52 110 52 116" stroke-width="9" />
-            <path d="M65 93 C66 99 67 104 67 108" stroke-width="8.5" /><path d="M77 88 C78 91 78 94 78 96" stroke-width="7" />
-          </g>
-          <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#2e2b25" transform="rotate(8 58 14)" />
-          <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#2e2b25" />
-        </svg>
-        <span class="tl">contour seul</span>
-      </div>
+      <p class="rl">Le bord bas devient quatre pendeloques dépareillées. Dit « en veille » par la forme.</p>
+      <div class="test"><svg viewBox="-4 -4 120 124" width="42" height="42" aria-hidden="true"><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#2e2b25" /></g><path d="M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86 C34 94 35.4 97.4 38.0 100.0 C40.6 97.4 42 94 44 87 C48 101 49.6 110.6 52.0 113.0 C54.4 110.6 56 101 58 87 C60 98 61.4 104.4 64.0 107.0 C66.6 104.4 68 98 70 87 C72 91 73.8 92.8 76.0 95.0 C78.2 92.8 80 91 82 87 C87 77 89 67 89 54 C89 34 76 18 56 18 Z" fill="#2e2b25" /></svg><span class="tl">contour seul</span></div>
     </div>
-
-    <!-- ─────────── Éclaté ─────────── -->
     <div class="cell">
-      <svg viewBox="0 0 120 120" width="176" height="176" aria-hidden="true">
-        <defs>
-          <mask id="mk4">
-            <rect x="0" y="0" width="120" height="120" fill="#000" />
-            <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#fff" />
-            <circle cx="93" cy="40" r="11" fill="#000" />
-            <circle cx="88" cy="62" r="9" fill="#000" />
-            <circle cx="80" cy="82" r="8" fill="#000" />
-            <circle cx="66" cy="99" r="7" fill="#000" />
-          </mask>
-          <clipPath id="cp4"><path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" /></clipPath>
-        </defs>
-        <g mask="url(#mk4)">
-          <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#D7B896" transform="rotate(8 58 14)" />
-          <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#D7B896" />
-          <path d="M58 28 C43 27 32 41 32 56 C32 67 35 75 41 81 C46 87 51 90 58 90 C64 90 69 86 74 80 C80 73 83 65 82 55 C81 41 72 29 58 28 Z" fill="#A67F55" />
-          <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#9FA88A" />
-          <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#94A6B4" />
-          <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#C9AE7E" />
-          <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#B58974" />
-          <g clip-path="url(#cp4)"><path d="M0 66 C24 40 48 14 72 -6 C86 -2 98 2 110 8 C82 38 52 70 24 100 C14 90 6 78 0 66 Z" fill="#EFE3D2" opacity="0.14" /></g>
-          <g fill="none" stroke="#8A6742" stroke-linecap="round" opacity="0.55">
-            <path d="M35 36 C38 43 35 48 38 55 C41 61 38 66 41 72" stroke-width="1.9" />
-            <path d="M38 43 C42 45 45 44 48 42" stroke-width="1.2" />
-            <path d="M38 55 C43 58 48 57 52 54" stroke-width="1.2" />
-            <path d="M41 72 C37 74 34 76 32 79" stroke-width="1.2" />
-          </g>
-        </g>
-      </svg>
+      <svg viewBox="-4 -4 120 124" width="172" height="172" aria-hidden="true"><defs><clipPath id="iv4"><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C62 99 68 96 73 92 C66 90 64 85 70 82 C76 79 71 75 66 73 C61 71 65 67 71 66 C78 65 73 60 68 58 C63 56 67 52 73 51 C80 50 75 45 70 43 C66 41 70 37 76 36 C82 35 77 30 73 28 C70 26 72 22 76 21 C71 19 64 18 57 18 Z" /></clipPath></defs><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#D7B896" /></g><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C62 99 68 96 73 92 C66 90 64 85 70 82 C76 79 71 75 66 73 C61 71 65 67 71 66 C78 65 73 60 68 58 C63 56 67 52 73 51 C80 50 75 45 70 43 C66 41 70 37 76 36 C82 35 77 30 73 28 C70 26 72 22 76 21 C71 19 64 18 57 18 Z" fill="#D7B896" /><path d="M57 29 C43 28 32 41 32 55 C32 66 35 74 41 80 C46 86 50 89 56 89 C62 89 67 85 72 79 C78 72 81 64 80 54 C79 41 71 30 57 29 Z" fill="#A67F55" /><path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#7FAE4A" /><path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#4A8FBF" /><path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#E0A62B" /><path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#CE4D32" /><g clip-path="url(#iv4)"><path d="M2 64 L70 -4 L106 6 L16 98 Z" fill="#EFE3D2" opacity="0.14" /></g><g clip-path="url(#iv4)" fill="none" stroke="#8A6742" stroke-linecap="round" opacity="0.55"><path d="M35 36 L39 45 L35 51 L40 59 L36 66 L41 74 M79 43 L74 50 L78 58 L72 65 L75 72" stroke-width="1.9" /><path d="M39 45 L46 48 L49 45 M40 59 L47 62 L53 59 M36 66 L30 70 M74 50 L67 52 M78 58 L84 62" stroke-width="1.2" /></g></svg>
       <span class="nm">Éclaté</span>
-      <p class="rl">Le flanc mordu par quatre cercles : des morsures rondes, plus une seule dent de scie. Fini mat, sans éclat.</p>
-      <div class="test">
-        <svg viewBox="0 0 120 120" width="40" height="40" aria-hidden="true">
-          <defs><mask id="mk4b"><rect x="0" y="0" width="120" height="120" fill="#000" />
-            <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#fff" />
-            <circle cx="93" cy="40" r="11" fill="#000" /><circle cx="88" cy="62" r="9" fill="#000" />
-            <circle cx="80" cy="82" r="8" fill="#000" /><circle cx="66" cy="99" r="7" fill="#000" /></mask></defs>
-          <g mask="url(#mk4b)">
-            <path d="M50 10 C50 3 68 3 68 10 C68 17 65 25 62 29 C58 31 53 30 50 27 C48 22 48 15 50 10 Z" fill="#2e2b25" transform="rotate(8 58 14)" />
-            <path d="M58 16 C38 15 24 32 23 53 C22 68 26 80 34 88 C41 95 48 100 58 100 C68 100 75 94 82 86 C88 78 92 67 91 53 C90 32 78 17 58 16 Z" fill="#2e2b25" />
-          </g>
-        </svg>
-        <span class="tl">contour seul</span>
-      </div>
+      <p class="rl">Flanc rongé en feston, fini mat, fissures ramifiées. Le sec ne brille pas.</p>
+      <div class="test"><svg viewBox="-4 -4 120 124" width="42" height="42" aria-hidden="true"><g transform="rotate(8 56 14)"><path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#2e2b25" /></g><path d="M57 18 C37 17 23 33 22 53 C21 67 25 79 33 87 C40 94 47 99 56 99 C62 99 68 96 73 92 C66 90 64 85 70 82 C76 79 71 75 66 73 C61 71 65 67 71 66 C78 65 73 60 68 58 C63 56 67 52 73 51 C80 50 75 45 70 43 C66 41 70 37 76 36 C82 35 77 30 73 28 C70 26 72 22 76 21 C71 19 64 18 57 18 Z" fill="#2e2b25" /></svg><span class="tl">contour seul</span></div>
     </div>
-
   </div>
 
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin-top: 22px;">
-    <div style="border: 2px solid #EFE7DA; border-radius: 24px; padding: 18px 22px;">
-      <p class="h2">Comment on obtient « aucune pointe »</p>
-      <p class="p">
-        Les brins et les pendeloques ne sont plus des triangles mais des <strong>tracés à bouts ronds</strong> — un trait à <code style="font: 12px ui-monospace, monospace;">stroke-linecap="round"</code> est une capsule, il ne peut pas finir en pointe.<br><br>
-        La brèche d'« Éclaté » n'est plus une dent de scie mais un <strong>masque percé de quatre cercles</strong> : on ne dessine pas la morsure, on l'enlève. Une soustraction par cercles ne produit que des arcs.<br><br>
-        Et les éclats sont des carrés à grand rayon — <code style="font: 12px ui-monospace, monospace;">rx</code> à 38 % du côté au lieu de 14 %.
-      </p>
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 22px;">
+    <div style="background: #ebddc5; border-radius: 28px; padding: 18px 22px;">
+      <p class="h2">Une fissure se ramifie</p>
+      <p class="p">Deux traits lisses faisaient des cheveux, pas des cassures. Une fente réelle se propage en segments droits et <strong>change de cap aux embranchements</strong> : deux troncs, cinq ramifications, et le trait s'affine sur les branches — elles naissent après, elles portent moins. C'est le seul endroit du jeu où le polygonal est juste.</p>
     </div>
-    <div style="border: 2px solid #EFE7DA; border-radius: 24px; padding: 18px 22px;">
-      <p class="h2">Ce qui reste de calculé : rien</p>
-      <p class="p">Tous les tracés de cette page sont écrits à la main, courbe par courbe. Les générateurs qui plaçaient brins et pendeloques par trigonométrie sont supprimés — c'est eux qui produisaient des angles réguliers, des longueurs à un facteur près et des semis en soleil.<br><br>Seules les quatre cases restent intactes : ce sont les tracés d'<code style="font: 12px ui-monospace, monospace;">icon.svg</code>, et elles portent l'identité.</p>
+    <div style="background: #ebddc5; border-radius: 28px; padding: 18px 22px;">
+      <p class="h2">Rien derrière le col</p>
+      <p class="p">Règle appliquée aux trois pages : le secteur du col — environ <strong>−90° ± 20°</strong> — reste vide. Une éclisse ou une feuille qui passe derrière la queue la coupe en deux et casse la lecture du pendu. Les brins s'écartent, et la couronne du Florissant Duolingo s'ouvre en haut.</p>
+    </div>
+    <div style="background: #ebddc5; border-radius: 28px; padding: 18px 22px;">
+      <p class="h2">Le lustre est une matière</p>
+      <p class="p">« Éclaté » passe en mat — palette grisée, facette à 0,14 au lieu de 0,42, fissures à la place des éclats. « Givré » va dans l'autre sens : trois éclats, facette à 0,52. Les cinq couches ne bougent jamais ; ce sont leurs réglages qui disent la matière.</p>
     </div>
   </div>
 
