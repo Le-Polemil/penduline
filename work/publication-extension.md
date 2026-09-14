@@ -5,19 +5,19 @@ Paquet produit par `npm run build:ext` puis un zip du contenu de
 plus bas) ; les versions antérieures restent décrites ici pour l'historique des
 arbitrages.
 
-> **La version publiée sur le Store est la 1.4.0**, envoyée le 7 septembre 2026.
-> Elle emportait la 1.2.0 et la 1.3.0, jamais soumises — le bandeau qui annonçait
-> « la fiche est en 1.1.0 » est donc caduc, et les notes 1.4.0 plus bas décrivent
-> bien ce qui est en ligne.
+> **La version publiée sur le Store est la 1.5.0**, diffusée le 14 septembre 2026.
+> La 1.4.0 (envoyée le 7 septembre) emportait la 1.2.0 et la 1.3.0, jamais
+> soumises — les bandeaux successifs qui annonçaient « la fiche est en 1.1.0 »
+> puis « en 1.4.0 » sont donc caducs.
 >
 > Pour mémoire : **1.2.0 = #87** (capture avec lien, dans un formulaire),
 > **1.3.0 = #102** (passage au panneau latéral).
 
-> ⚠️ **La 1.5.0 n'est pas une soumission ordinaire : une migration l'attend.**
-> `apps/supabase/migrations/20260906100000_retirer_epinglage.sql` supprime la
-> colonne `tasks.pinned`, et la 1.4.0 en ligne la réclame encore nommément. Le
-> drop ne peut pas partir avant que la 1.5.0 soit **publiée ET diffusée**. Voir
-> les notes 1.5.0.
+> ✅ **La migration que cette soumission bloquait est passée.**
+> `20260906100000_retirer_epinglage.sql` (`drop column tasks.pinned`) a été
+> appliquée en production le 14 septembre 2026, une fois la 1.5.0 diffusée. La
+> section « Ce qui attend cette publication » plus bas est conservée : ce qu'elle
+> explique de l'ORDRE vaut pour la prochaine migration destructive.
 
 ## Le numéro de version appartient à la SOUMISSION, pas à la PR
 
@@ -538,11 +538,16 @@ un majeur surjouerait l'événement. L'historique du projet a tranché pour « m
 = changement fonctionnel » (1.1.0 menu contextuel, 1.2.0 capture, 1.3.0 panneau,
 1.4.0 badge), et c'en est un.
 
-### ⚠️ Ce qui attend cette publication — à ne pas oublier
+### ✅ Ce qui attendait cette publication — fait le 2026-09-14
 
-`20260906100000_retirer_epinglage.sql` est **bloquée** sur cette soumission. Elle
-fait `drop column tasks.pinned`, et le paquet 1.4.0 en ligne nomme cette colonne
-dans sa liste de `select` :
+> **Résolu.** La 1.5.0 diffusée, `20260906100000_retirer_epinglage.sql` a été
+> appliquée en production le 14 septembre 2026. Ce qui suit est conservé parce
+> que la RÈGLE vaut pour la prochaine migration destructive, pas seulement pour
+> celle-ci.
+
+`20260906100000_retirer_epinglage.sql` était **bloquée** sur cette soumission.
+Elle fait `drop column tasks.pinned`, et le paquet 1.4.0 alors en ligne nommait
+cette colonne dans sa liste de `select` :
 
 ```
 id, user_id, board_id, title, quadrant, done, pinned, archived, deleted, …
@@ -555,10 +560,10 @@ GET /rest/v1/tasks?select=id,title,pinned
 → HTTP 400  {"code":"42703","message":"column tasks.pinned does not exist"}
 ```
 
-Donc appliquer la migration trop tôt met **toute lecture de tâches** à 400 dans
-l'extension, pour tous ses utilisateurs, sans recours de leur côté. L'ordre est
-contraint, et il est l'inverse de celui du workflow de déploiement (qui applique
-les migrations avant le front) :
+Donc appliquer la migration trop tôt aurait mis **toute lecture de tâches** à 400
+dans l'extension, pour tous ses utilisateurs, sans recours de leur côté. L'ordre
+est contraint, et il est l'inverse de celui du workflow de déploiement (qui
+applique les migrations avant le front) :
 
 1. soumettre la 1.5.0 → revue du Store → **diffusion par Chrome** (des jours, pas
    des minutes) ;

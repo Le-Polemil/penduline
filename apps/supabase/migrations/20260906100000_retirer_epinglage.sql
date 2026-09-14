@@ -26,6 +26,10 @@
 -- que les tâches jusque-là hissées en tête retrouvent leur rang dans l'ordre
 -- manuel de leur case, qu'elles n'avaient jamais quitté.
 --
+-- ✅ APPLIQUÉE EN PRODUCTION LE 2026-09-14, l'extension 1.5.0 étant diffusée.
+--    Ce qui suit reste écrit au présent : la règle vaut pour la prochaine
+--    migration destructive, et c'est à ce titre qu'elle est conservée.
+--
 -- ⚠️ NE PAS APPLIQUER AVANT QUE L'EXTENSION SANS `pinned` SOIT DIFFUSÉE.
 --
 -- Ce paragraphe disait l'inverse, et il avait tort. Il affirmait qu'un client
