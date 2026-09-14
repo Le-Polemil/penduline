@@ -41,12 +41,25 @@ FACETTE = 'M2 64 L70 -4 L106 6 L16 98 Z'
 TUBE = ('M32 39 C22 32 10 30 5 34 C-1 39 -1 50 5 54 C11 58 22 56 33 50 '
         'C31 46 31 43 32 39 Z')
 # Le bord bas devient une suite de pendeloques : que des courbes.
-GLACONS = ('M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86 '
-           'C35 93 36 105 39 105 C42 105 42 94 45 90 '
-           'C48 89 50 102 53 114 C56 114 56 95 59 90 '
-           'C62 89 64 101 66 107 C69 107 69 93 72 88 '
-           'C75 87 76 96 78 97 C81 96 80 89 82 85 '
-           'C87 77 89 67 89 54 C89 34 76 18 56 18 Z')
+def _pendeloques(gouttes):
+    """Le bord bas en pendeloques, chacune réglée à part.
+
+    `gouttes` = (centre, profondeur, rayon de pointe). Le rayon arrondit le bout
+    plus ou moins ; des pointes strictement égales et régulièrement espacées
+    auraient fait peigne, d'où les écarts et les profondeurs dépareillés.
+    """
+    d = ''
+    for cx, prof, r in gouttes:
+        y = 86 + prof
+        d += (f' C{cx - 4:.0f} {86 + prof * 0.55:.0f} {cx - r:.1f} {y - r:.1f} {cx:.1f} {y:.1f}'
+              f' C{cx + r:.1f} {y - r:.1f} {cx + 4:.0f} {86 + prof * 0.55:.0f} {cx + 6:.0f} 87')
+    return d
+
+# 1ʳᵉ et 4ᵉ raccourcies, la 2ᵉ rapprochée de la 3ᵉ, les trois dernières
+# arrondies comme la première : plus aucune symétrie à lire.
+GLACONS = ('M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86'
+           + _pendeloques([(38, 14, 2.6), (52, 27, 2.4), (64, 21, 2.6), (76, 9, 2.2)])
+           + ' C87 77 89 67 89 54 C89 34 76 18 56 18 Z')
 # Le flanc rongé : un feston, pas une dent de scie.
 BRECHE = ('M56 18 C36 18 23 34 23 54 C23 67 26 78 33 86 '
           'C40 94 47 99 56 99 C62 99 68 96 73 92 '
@@ -68,7 +81,9 @@ def _brins():
     Posées sur la NORMALE à la poche : au rayon, celles des flancs bâillaient.
     """
     cx, cy, rx, ry = 56, 58, 33, 40
-    plan = [(-128, 26, 7.5), (-96, 21, 6.5), (-58, 24, 7), (-14, 18, 6),
+    # ⚠️ Le secteur du col — environ -90° ± 20° — reste VIDE : une éclisse qui
+    # passe derrière la queue la coupe en deux et casse la lecture du pendu.
+    plan = [(-138, 26, 7.5), (-116, 20, 6.5), (-52, 24, 7), (-14, 18, 6),
             (34, 25, 7.5), (96, 20, 6.5), (152, 23, 7)]
     out = []
     for deg, L, W in plan:
@@ -85,7 +100,14 @@ def _eclat(cx, cy, t, op=1.0):
 
 # Le sec ne brille pas : le lustre est un signal de MATIÈRE, pas un ornement.
 MAT = ('#D7B896', '#A67F55', '#EFE3D2')
-FENTES = 'M36 39 C40 46 38 52 42 59 C45 64 43 69 46 75 M78 46 C73 52 76 58 72 64'
+# Une fissure se propage en segments droits et CHANGE DE CAP aux embranchements.
+# C'est le seul endroit du jeu où le polygonal est juste : une fente lissée en
+# bézier fait un cheveu, pas une cassure. Deux troncs, cinq ramifications, et le
+# trait s'affine sur les branches — elles naissent après, elles portent moins.
+FENTE_TRONC = ('M35 36 L39 45 L35 51 L40 59 L36 66 L41 74 '
+               'M79 43 L74 50 L78 58 L72 65 L75 72')
+FENTE_RAMEAU = ('M39 45 L46 48 L49 45 M40 59 L47 62 L53 59 M36 66 L30 70 '
+                'M74 50 L67 52 M78 58 L84 62')
 
 def icone(uid, variante, size=168, clair='#F0A468', sature='#C95F1F', facette='#FFE2C4'):
     corps = {'givre': GLACONS, 'eclate': BRECHE}.get(variante, POCHE)
@@ -112,18 +134,21 @@ def icone(uid, variante, size=168, clair='#F0A468', sature='#C95F1F', facette='#
     s += f'<g clip-path="url(#i{uid})"><path d="{FACETTE}" fill="{facette}" opacity="{op}" /></g>'
     # 5 · éclats, ou fentes sur le sec
     if mat:
-        s += (f'<g clip-path="url(#i{uid})" fill="none" stroke="#8A6742" stroke-width="1.8" '
-              f'stroke-linecap="round" opacity="0.55"><path d="{FENTES}" /></g>')
+        s += (f'<g clip-path="url(#i{uid})" fill="none" stroke="#8A6742" stroke-linecap="round" opacity="0.55">'
+              f'<path d="{FENTE_TRONC}" stroke-width="1.9" />'
+              f'<path d="{FENTE_RAMEAU}" stroke-width="1.2" /></g>')
     else:
         s += _eclat(38, 34, 12) + _eclat(74, 76, 8, 0.85)
         if variante == 'givre':
             s += _eclat(63, 29, 7, 0.9)
     return s + '</svg>'
 
+# « Poche » est retirée : c'était le témoin, pas une variante. La poche est la
+# base COMMUNE aux quatre autres, donc la montrer seule ne disait rien de plus
+# — et une carte qui ne dit rien se lit comme une proposition creuse.
 VARIANTES = [
-    ('tube', 'Tube', "L'entrée latérale en manchon — la signature de la rémiz penduline, et de personne d'autre."),
-    ('herisse', 'Hérissé', "Sept éclisses sortent de la masse, à double courbure. Aucune ne flotte : toutes prennent dans le nid."),
-    ('poche', 'Poche', "La découpe seule : large en haut, resserrée à la taille. On voit que ça pend."),
-    ('givre', 'Givré', "Le bord bas devient une suite de pendeloques arrondies. Dit « en veille » par la forme."),
-    ('eclate', 'Éclaté', "Flanc rongé en feston, fini mat et fendillé. Le sec ne brille pas."),
+    ('herisse', 'Hérissé', "Sept éclisses à double courbure sortent de la masse. Aucune ne flotte, aucune ne passe derrière le col."),
+    ('tube', 'Tube', "L'entrée latérale en manchon. La seule qui soit intransmissible — et la seule qui demande qu'on l'explique."),
+    ('givre', 'Givré', "Le bord bas devient quatre pendeloques dépareillées. Dit « en veille » par la forme."),
+    ('eclate', 'Éclaté', "Flanc rongé en feston, fini mat, fissures ramifiées. Le sec ne brille pas."),
 ]
