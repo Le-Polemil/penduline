@@ -52,8 +52,18 @@ def _eclat(cx, cy, t, op=1.0):
     return (f'<rect fill="#FFF" opacity="{op}" x="{cx-d:.1f}" y="{cy-d:.1f}" width="{t}" height="{t}" '
             f'rx="{t*0.14:.2f}" transform="rotate(45 {cx} {cy})" />')
 
+# Le sec ne brille pas : dans cette langue, le lustre est un SIGNAL DE MATIÈRE,
+# pas un ornement. Un objet desséché n'a ni éclat spéculaire ni large plan de
+# lumière — il a des fentes. Le givre, lui, va dans l'autre sens.
+MAT = {'clair': '#D7B896', 'sature': '#A67F55', 'facette': '#EFE3D2'}
+FENTES = ('M35 38 L42 47 L38 56 L44 66 M79 44 L72 52 L77 62 L71 70 '
+          'M52 26 L56 34 M60 92 L56 84')
+
 def icone(uid, variante, size=168, clair='#F0A468', sature='#C95F1F', facette='#FFE2C4'):
     corps = {'givre': GLACONS, 'eclate': BRECHE}.get(variante, POCHE)
+    mat = variante == 'eclate'
+    if mat:
+        clair, sature, facette = MAT['clair'], MAT['sature'], MAT['facette']
     s = (f'<svg viewBox="-4 -6 120 132" width="{size}" height="{size}" aria-hidden="true">'
          f'<defs><clipPath id="i{uid}"><path d="{corps}" /></clipPath></defs>')
     # 1 · la masse, ton clair — brins et tube EN FONT PARTIE, ils ne sont pas posés dessus
@@ -73,10 +83,17 @@ def icone(uid, variante, size=168, clair='#F0A468', sature='#C95F1F', facette='#
         s += '<ellipse cx="6" cy="44.5" rx="4.5" ry="8.5" fill="#8E3D10" />'
     # 3 · le motif, tons vifs
     s += ''.join(f'<path d="{d}" fill="{VIFS[i]}" />' for d, i in TUILES)
-    # 4 · le plan de facette, détouré sur la masse
-    s += f'<g clip-path="url(#i{uid})"><path d="{FACETTE}" fill="{facette}" opacity="0.42" /></g>'
-    # 5 · les éclats
-    s += _eclat(37, 33, 12) + _eclat(75, 76, 8, 0.85)
+    # 4 · le plan de facette — rasant sur le sec, franc sur le givre
+    op = 0.14 if mat else (0.52 if variante == 'givre' else 0.42)
+    s += f'<g clip-path="url(#i{uid})"><path d="{FACETTE}" fill="{facette}" opacity="{op}" /></g>'
+    # 5 · les éclats — ou, sur le sec, des fentes à leur place
+    if mat:
+        s += (f'<g clip-path="url(#i{uid})" fill="none" stroke="#8A6742" stroke-width="1.7" '
+              f'stroke-linecap="round" opacity="0.6"><path d="{FENTES}" /></g>')
+    else:
+        s += _eclat(37, 33, 12) + _eclat(75, 76, 8, 0.85)
+        if variante == 'givre':
+            s += _eclat(62, 30, 7, 0.9)
     return s + '</svg>'
 
 VARIANTES = [
