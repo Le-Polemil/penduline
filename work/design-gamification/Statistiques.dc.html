@@ -1,0 +1,184 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #f5ead8; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
+    a { color: #8c491a; } a:hover { color: #643312; }
+    .fig { margin: 0 0 18px; padding: 16px 18px 14px; background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); }
+    .fig__head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .fig__title { font: 400 19px/1.25 "Caprasimo", system-ui, sans-serif; color: #201e1d; }
+    .fig__hint { font: 12.5px "Figtree", system-ui, sans-serif; color: #645c50; }
+    .bar { display: grid; grid-template-columns: 5.5rem 1fr auto; align-items: center; gap: 10px; }
+    .bar__label { font: 600 13px "Figtree", system-ui, sans-serif; color: #201e1d; }
+    .bar__track { height: 14px; background: #eee7db; border-radius: 4px; overflow: hidden; }
+    .bar__fill { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+    .bar__value { font: 600 13px "Figtree", system-ui, sans-serif; color: #201e1d; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .bar__share { font: 400 12px "Figtree", system-ui, sans-serif; color: #645c50; }
+    .dot9 { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+    .period { font: 600 13px "Figtree", system-ui, sans-serif; color: #645c50; background: none; border: 1.5px solid #c0b6a5; border-radius: 999px; padding: 6px 14px; }
+    .period--on { color: #643312; background: #fff2eb; border-color: #b2622d; }
+    .note { font: italic 12px/1.45 "Figtree", system-ui, sans-serif; color: #645c50; margin: 12px 0 0; }
+    .medal { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .mname { font: 600 12px/1.3 "Figtree", system-ui, sans-serif; color: #201e1d; text-align: center; }
+    .msub { font: 10.5px/1.3 "Figtree", system-ui, sans-serif; color: #645c50; text-align: center; }
+  </style>
+</helmet>
+<div style="padding: 44px 24px 56px; background: #f5ead8; min-height: 100%; box-sizing: border-box;">
+ <div style="max-width: 760px; margin: 0 auto;">
+
+  <div style="margin-bottom: 22px;">
+    <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">Rétrospective</h1>
+    <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #645c50; margin: 8px 0 14px;">
+      Ce que vous avez terminé, et depuis quelle case. Les tâches supprimées définitivement n'y figurent pas.
+    </p>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <span class="period">7 jours</span><span class="period period--on">30 jours</span><span class="period">3 mois</span><span class="period">Tout</span>
+    </div>
+  </div>
+
+  <!-- Le moment : un badge qui vient de tomber -->
+  <div style="position: relative; overflow: hidden; background: #3d472b; border-radius: 28px; padding: 22px 24px; margin-bottom: 14px; display: flex; align-items: center; gap: 22px;">
+    <svg viewBox="0 0 100 100" width="96" height="96" style="flex: none;" aria-hidden="true">
+      <g stroke="#7a8a5e" stroke-width="3" stroke-linecap="round">
+        <path d="M50 3 v9" /><path d="M50 88 v9" /><path d="M3 50 h9" /><path d="M88 50 h9" />
+        <path d="M17 17 l6 6" /><path d="M77 77 l6 6" /><path d="M83 17 l-6 6" /><path d="M23 77 l-6 6" />
+      </g>
+      <circle cx="50" cy="50" r="34" fill="#a63d2a" />
+      <circle cx="50" cy="50" r="34" fill="none" stroke="#7c2d1e" stroke-width="4" />
+      <circle cx="50" cy="50" r="26" fill="none" stroke="#e3d8d4" stroke-width="1.6" opacity="0.5" />
+      <g fill="none" stroke="#fdf6e9" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M36 40 h28" /><path d="M44 40 v-4 h12 v4" /><path d="M39 40 l2 24 h18 l2 -24" />
+      </g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <span style="font: 600 11.5px 'Figtree', system-ui, sans-serif; color: #c8d4b4; letter-spacing: 0.08em; text-transform: uppercase;">Obtenu à l'instant</span>
+      <span style="font: 400 27px/1.15 'Caprasimo', system-ui, sans-serif; color: #fdf6e9;">Premier Éliminer</span>
+      <span style="font: 13.5px/1.5 'Figtree', system-ui, sans-serif; color: #dbe3ce; max-width: 420px;">Vous avez accepté de ne pas faire quelque chose. C'est l'acte le plus difficile de la méthode, et le seul que rien d'autre ne mesure.</span>
+    </div>
+  </div>
+
+  <!-- La collection -->
+  <figure class="fig">
+    <figcaption class="fig__head">
+      <span class="fig__title">Gestes rares</span>
+      <span class="fig__hint">4 obtenus sur 9</span>
+    </figcaption>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px 10px;">
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+          <circle cx="50" cy="50" r="38" fill="#a63d2a" /><circle cx="50" cy="50" r="38" fill="none" stroke="#7c2d1e" stroke-width="4.5" />
+          <circle cx="50" cy="50" r="29" fill="none" stroke="#e3d8d4" stroke-width="1.8" opacity="0.5" />
+          <g fill="none" stroke="#fdf6e9" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M35 39 h30" /><path d="M43 39 v-4 h14 v4" /><path d="M38 39 l2 26 h20 l2 -26" />
+          </g>
+        </svg>
+        <span class="mname">Premier Éliminer</span>
+        <span class="msub">accepter de ne pas faire</span>
+      </div>
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+          <circle cx="50" cy="50" r="38" fill="#8f6a14" /><circle cx="50" cy="50" r="38" fill="none" stroke="#6b4f0e" stroke-width="4.5" />
+          <circle cx="50" cy="50" r="29" fill="none" stroke="#f2e0c4" stroke-width="1.8" opacity="0.5" />
+          <g fill="none" stroke="#fdf6e9" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M32 50 h24" /><path d="M49 42 l8 8 -8 8" />
+          </g>
+          <circle cx="66" cy="50" r="5.5" fill="#fdf6e9" />
+        </svg>
+        <span class="mname">Déléguée, puis close</span>
+        <span class="msub">passée, puis terminée</span>
+      </div>
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+          <circle cx="50" cy="50" r="38" fill="#5c6b45" /><circle cx="50" cy="50" r="38" fill="none" stroke="#43502f" stroke-width="4.5" />
+          <circle cx="50" cy="50" r="29" fill="none" stroke="#dbe3ce" stroke-width="1.8" opacity="0.5" />
+          <g fill="none" stroke="#fdf6e9" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="33" y="36" width="34" height="30" rx="4" /><path d="M42 31 v8 M58 31 v8 M33 47 h34" /><path d="M42 57 l5 5 9 -9" />
+          </g>
+        </svg>
+        <span class="mname">Quinze jours nets</span>
+        <span class="msub">aucun dépassement</span>
+      </div>
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+          <circle cx="50" cy="50" r="38" fill="#38607f" /><circle cx="50" cy="50" r="38" fill="none" stroke="#27455c" stroke-width="4.5" />
+          <circle cx="50" cy="50" r="29" fill="none" stroke="#dde7ef" stroke-width="1.8" opacity="0.5" />
+          <g fill="none" stroke="#fdf6e9" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="50" cy="50" r="18" /><path d="M50 39 v11 l8 5" />
+          </g>
+        </svg>
+        <span class="mname">Décidée lundi, faite lundi</span>
+        <span class="msub">posée et close le même jour</span>
+      </div>
+
+      <div class="medal" style="opacity: 0.5;">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true">
+          <circle cx="50" cy="50" r="38" fill="#eee7db" /><circle cx="50" cy="50" r="38" fill="none" stroke="#c0b6a5" stroke-width="4.5" stroke-dasharray="6 5" />
+          <g fill="none" stroke="#a19786" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="37" y="48" width="26" height="19" rx="4" /><path d="M43 48 v-6 a7 7 0 0 1 14 0 v6" />
+          </g>
+        </svg>
+        <span class="mname" style="color: #645c50;">À trier vidée</span>
+        <span class="msub">pas encore</span>
+      </div>
+
+    </div>
+    <p class="note">Aucun badge de volume. « 100 tâches terminées » se gagne en fabriquant cent tâches triviales — et rendrait faux les deux chiffres qui suivent.</p>
+  </figure>
+
+  <p style="font: 400 19px/1.5 'Caprasimo', system-ui, sans-serif; color: #201e1d; background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); padding: 18px 20px; margin: 0 0 18px;">
+    38 tâches terminées ce mois-ci, surtout depuis « Faire ».
+  </p>
+
+  <figure class="fig">
+    <figcaption class="fig__head">
+      <span class="fig__title">Ratio Eisenhower</span>
+      <span class="fig__hint">part de ce qui comptait</span>
+    </figcaption>
+    <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px;">
+      <span style="font: 400 40px/1 'Caprasimo', system-ui, sans-serif; color: #43502f;">71 %</span>
+      <span style="font: 13px 'Figtree', system-ui, sans-serif; color: #645c50;">contre 64 % le mois dernier</span>
+    </div>
+    <div style="display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: #eee7db;">
+      <span style="display: block; width: 45%; background: #5c6b45;"></span>
+      <span style="display: block; width: 26%; background: #38607f;"></span>
+      <span style="display: block; width: 21%; background: #8f6a14;"></span>
+      <span style="display: block; width: 8%; background: #a63d2a;"></span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 11px;">
+      <span style="display: flex; align-items: center; gap: 6px; font: 600 12px 'Figtree', system-ui, sans-serif; color: #201e1d;"><span class="dot9" style="background: #5c6b45;"></span>Faire 45 %</span>
+      <span style="display: flex; align-items: center; gap: 6px; font: 600 12px 'Figtree', system-ui, sans-serif; color: #201e1d;"><span class="dot9" style="background: #38607f;"></span>Planifier 26 %</span>
+      <span style="display: flex; align-items: center; gap: 6px; font: 400 12px 'Figtree', system-ui, sans-serif; color: #645c50;"><span class="dot9" style="background: #8f6a14;"></span>Déléguer 21 %</span>
+      <span style="display: flex; align-items: center; gap: 6px; font: 400 12px 'Figtree', system-ui, sans-serif; color: #645c50;"><span class="dot9" style="background: #a63d2a;"></span>Éliminer 8 %</span>
+    </div>
+    <p class="note">Faire + Planifier sur le total terminé. La seule note qu'on ne puisse pas gonfler : ajouter des tâches faciles à « Éliminer » la fait baisser.</p>
+  </figure>
+
+  <figure class="fig" style="margin-bottom: 0;">
+    <figcaption class="fig__head">
+      <span class="fig__title">Par case</span>
+      <span class="fig__hint">38 tâches terminées</span>
+    </figcaption>
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div class="bar"><span class="bar__label">Faire</span><span class="bar__track"><span class="bar__fill" style="width: 100%; background: #5c6b45;"></span></span><span class="bar__value">17 <span class="bar__share">45 %</span></span></div>
+      <div class="bar"><span class="bar__label">Planifier</span><span class="bar__track"><span class="bar__fill" style="width: 59%; background: #38607f;"></span></span><span class="bar__value">10 <span class="bar__share">26 %</span></span></div>
+      <div class="bar"><span class="bar__label">Déléguer</span><span class="bar__track"><span class="bar__fill" style="width: 47%; background: #8f6a14;"></span></span><span class="bar__value">8 <span class="bar__share">21 %</span></span></div>
+      <div class="bar"><span class="bar__label">Éliminer</span><span class="bar__track"><span class="bar__fill" style="width: 18%; background: #a63d2a;"></span></span><span class="bar__value">3 <span class="bar__share">8 %</span></span></div>
+    </div>
+  </figure>
+
+ </div>
+</div>
+</x-dc>
+</body>
+</html>

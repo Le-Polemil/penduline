@@ -1,0 +1,129 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+  <style>
+    body { margin: 0; background: #fff; color: #3c3c3c; font-family: "Nunito", system-ui, sans-serif; }
+    a { color: #1899D6; } a:hover { color: #1478ab; }
+    .cell { display: flex; flex-direction: column; align-items: center; background: #fff; border: 2px solid #E5E5E5; border-bottom-width: 4px; border-radius: 16px; padding: 18px 14px 16px; }
+    .nm { font: 800 17px "Nunito", system-ui, sans-serif; color: #3c3c3c; }
+    .rl { font: 700 12px/1.4 "Nunito", system-ui, sans-serif; color: #afafaf; text-align: center; margin: 6px 0 0; }
+  </style>
+</helmet>
+<div style="padding: 40px 40px 44px; background: #fff; min-height: 100%; box-sizing: border-box;">
+
+  <h1 style="font: 900 34px/1.1 'Nunito', system-ui, sans-serif; color: #3c3c3c; margin: 0;">Le nid, en langue Duolingo</h1>
+  <p style="font: 700 15px/1.5 'Nunito', system-ui, sans-serif; color: #777; margin: 8px 0 28px; max-width: 760px;">
+    Mêmes états, autre vocabulaire graphique : couleurs saturées, formes épaisses, socle plus sombre sous chaque volume, reflet blanc. Nunito remplace Caprasimo et Figtree.
+  </p>
+
+  <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px;">
+
+    <!-- Gelé -->
+    <div class="cell">
+      <svg viewBox="0 0 120 120" width="150" height="150" aria-hidden="true">
+        <g stroke="#84D8FF" stroke-width="6" stroke-linecap="round">
+          <path d="M22 26 l10 10 M32 26 l-10 10" /><path d="M96 84 l10 10 M106 84 l-10 10" />
+        </g>
+        <rect x="50" y="10" width="20" height="26" rx="9" fill="#1899D6" />
+        <rect x="50" y="10" width="20" height="21" rx="9" fill="#1CB0F6" />
+        <ellipse cx="60" cy="76" rx="38" ry="38" fill="#1899D6" />
+        <ellipse cx="60" cy="72" rx="38" ry="36" fill="#84D8FF" />
+        <ellipse cx="47" cy="54" rx="13" ry="8" fill="#DDF4FF" opacity="0.75" transform="rotate(-28 47 54)" />
+        <g fill="#DDF4FF">
+          <rect x="38" y="52" width="20" height="20" rx="7" /><rect x="62" y="52" width="20" height="20" rx="7" />
+          <rect x="38" y="76" width="20" height="20" rx="7" /><rect x="62" y="76" width="20" height="20" rx="7" />
+        </g>
+        <g stroke="#fff" stroke-width="4.5" stroke-linecap="round"><path d="M60 44 v-8 M54 39 l6 5 6 -5" /></g>
+      </svg>
+      <span class="nm">Gelé</span>
+      <p class="rl">Mise en veille volontaire. La matrice ne compte plus comme négligée.</p>
+    </div>
+
+    <!-- Sec -->
+    <div class="cell">
+      <svg viewBox="0 0 120 120" width="150" height="150" aria-hidden="true">
+        <g stroke="#D6BFA8" stroke-width="5" stroke-linecap="round">
+          <path d="M34 100 c-5 6 -8 9 -12 13" /><path d="M86 100 c5 6 8 9 12 13" />
+        </g>
+        <g transform="rotate(10 60 22)"><rect x="50" y="10" width="20" height="26" rx="9" fill="#C8AE93" /></g>
+        <ellipse cx="60" cy="76" rx="38" ry="38" fill="#C8AE93" />
+        <ellipse cx="60" cy="72" rx="38" ry="36" fill="#E6D5C1" />
+        <g fill="#F4EAE0">
+          <rect x="38" y="52" width="20" height="20" rx="7" /><rect x="62" y="52" width="20" height="20" rx="7" />
+          <rect x="38" y="76" width="20" height="20" rx="7" /><rect x="62" y="76" width="20" height="20" rx="7" />
+        </g>
+      </svg>
+      <span class="nm">Sec</span>
+      <p class="rl">Plus de trois tâches immobiles depuis un mois. Les brindilles tombent.</p>
+    </div>
+
+    <!-- Sain -->
+    <div class="cell">
+      <svg viewBox="0 0 120 120" width="150" height="150" aria-hidden="true">
+        <rect x="50" y="10" width="20" height="26" rx="9" fill="#E58700" />
+        <rect x="50" y="10" width="20" height="21" rx="9" fill="#FF9600" />
+        <ellipse cx="60" cy="76" rx="38" ry="38" fill="#E58700" />
+        <ellipse cx="60" cy="72" rx="38" ry="36" fill="#FF9600" />
+        <ellipse cx="45" cy="52" rx="13" ry="8" fill="#FFC46B" opacity="0.85" transform="rotate(-28 45 52)" />
+        <g>
+          <rect x="38" y="52" width="20" height="20" rx="7" fill="#4FA800" /><rect x="38" y="52" width="20" height="17" rx="7" fill="#58CC02" />
+          <rect x="62" y="52" width="20" height="20" rx="7" fill="#1899D6" /><rect x="62" y="52" width="20" height="17" rx="7" fill="#1CB0F6" />
+          <rect x="38" y="76" width="20" height="20" rx="7" fill="#E5A900" /><rect x="38" y="76" width="20" height="17" rx="7" fill="#FFC800" />
+          <rect x="62" y="76" width="20" height="20" rx="7" fill="#EA2B2B" /><rect x="62" y="76" width="20" height="17" rx="7" fill="#FF4B4B" />
+        </g>
+      </svg>
+      <span class="nm">Sain</span>
+      <p class="rl">Rien de dépassé, au plus une tâche qui traîne.</p>
+    </div>
+
+    <!-- Florissant -->
+    <div class="cell" style="border-color: #58CC02;">
+      <svg viewBox="0 0 120 120" width="150" height="150" aria-hidden="true">
+        <g stroke="#FFC800" stroke-width="5" stroke-linecap="round">
+          <path d="M60 6 v8" /><path d="M22 22 l6 6" /><path d="M98 22 l-6 6" /><path d="M8 62 h8" /><path d="M104 62 h8" />
+        </g>
+        <g fill="#58CC02">
+          <ellipse cx="22" cy="44" rx="9" ry="5.5" transform="rotate(-30 22 44)" />
+          <ellipse cx="98" cy="44" rx="9" ry="5.5" transform="rotate(30 98 44)" />
+          <ellipse cx="18" cy="86" rx="8.5" ry="5" transform="rotate(24 18 86)" />
+          <ellipse cx="102" cy="86" rx="8.5" ry="5" transform="rotate(-24 102 86)" />
+          <ellipse cx="36" cy="26" rx="5.5" ry="9" transform="rotate(-18 36 26)" />
+          <ellipse cx="84" cy="26" rx="5.5" ry="9" transform="rotate(18 84 26)" />
+        </g>
+        <rect x="50" y="10" width="20" height="26" rx="9" fill="#E58700" />
+        <rect x="50" y="10" width="20" height="21" rx="9" fill="#FF9600" />
+        <ellipse cx="60" cy="76" rx="38" ry="38" fill="#E58700" />
+        <ellipse cx="60" cy="72" rx="38" ry="36" fill="#FF9600" />
+        <ellipse cx="45" cy="52" rx="13" ry="8" fill="#FFC46B" opacity="0.85" transform="rotate(-28 45 52)" />
+        <g>
+          <rect x="38" y="52" width="20" height="20" rx="7" fill="#4FA800" /><rect x="38" y="52" width="20" height="17" rx="7" fill="#58CC02" />
+          <rect x="62" y="52" width="20" height="20" rx="7" fill="#1899D6" /><rect x="62" y="52" width="20" height="17" rx="7" fill="#1CB0F6" />
+          <rect x="38" y="76" width="20" height="20" rx="7" fill="#E5A900" /><rect x="38" y="76" width="20" height="17" rx="7" fill="#FFC800" />
+          <rect x="62" y="76" width="20" height="20" rx="7" fill="#EA2B2B" /><rect x="62" y="76" width="20" height="17" rx="7" fill="#FF4B4B" />
+        </g>
+      </svg>
+      <span class="nm">Florissant</span>
+      <p class="rl">Un mois sans rien laisser filer. Couronne complète.</p>
+    </div>
+
+  </div>
+
+  <div style="margin-top: 28px; background: #DDF4FF; border: 2px solid #84D8FF; border-bottom-width: 4px; border-radius: 16px; padding: 20px 22px;">
+    <p style="font: 800 19px/1.3 'Nunito', system-ui, sans-serif; color: #1899D6; margin: 0 0 8px;">Ce que ce langage apporte, et ce qu'il coûte</p>
+    <p style="font: 700 13.5px/1.65 'Nunito', system-ui, sans-serif; color: #4b4b4b; margin: 0;">
+      Il <strong>apporte</strong> la lisibilité à 20 px et la sensation de récompense : le socle plus sombre donne du volume, la saturation fait exister l'objet même minuscule, et le gel devient une vraie icône plutôt qu'un nid pâle.
+      Il <strong>coûte</strong> la direction que le projet s'est donnée noir sur blanc — « fuir le look générique », palette terracotta désaturée, Caprasimo. Ces quatre nids sont bons, mais ils n'appartiennent plus à Penduline : posés sur l'accueil beige, c'est le reste de l'app qui aurait l'air d'une erreur.
+    </p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

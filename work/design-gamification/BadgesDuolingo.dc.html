@@ -1,0 +1,167 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800;900&display=swap">
+  <style>
+    body { margin: 0; background: #fff; color: #3c3c3c; font-family: "Nunito", system-ui, sans-serif; }
+    a { color: #1899D6; } a:hover { color: #1478ab; }
+    .m { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+    .mn { font: 800 13px/1.25 "Nunito", system-ui, sans-serif; color: #3c3c3c; text-align: center; }
+    .ms { font: 700 11px/1.3 "Nunito", system-ui, sans-serif; color: #afafaf; text-align: center; }
+  </style>
+</helmet>
+<div style="padding: 40px 40px 44px; background: #fff; min-height: 100%; box-sizing: border-box;">
+
+  <h1 style="font: 900 34px/1.1 'Nunito', system-ui, sans-serif; color: #3c3c3c; margin: 0;">Les badges, en langue Duolingo</h1>
+  <p style="font: 700 15px/1.5 'Nunito', system-ui, sans-serif; color: #777; margin: 8px 0 28px; max-width: 760px;">
+    Médaillon épais, anneau plus sombre sous le disque, icône blanche à trait gras, verrouillé en gris. Mêmes gestes récompensés qu'en DA Penduline — seule la langue change.
+  </p>
+
+  <!-- Le moment -->
+  <div style="background: #58CC02; border-radius: 20px; border-bottom: 5px solid #4FA800; padding: 24px 26px; margin-bottom: 30px; display: flex; align-items: center; gap: 24px;">
+    <svg viewBox="0 0 120 120" width="108" height="108" style="flex: none;" aria-hidden="true">
+      <g stroke="#FFC800" stroke-width="6" stroke-linecap="round">
+        <path d="M60 4 v10" /><path d="M60 106 v10" /><path d="M4 60 h10" /><path d="M106 60 h10" />
+        <path d="M20 20 l7 7" /><path d="M93 93 l7 7" /><path d="M100 20 l-7 7" /><path d="M27 93 l-7 7" />
+      </g>
+      <circle cx="60" cy="62" r="40" fill="#EA2B2B" />
+      <circle cx="60" cy="58" r="40" fill="#FF4B4B" />
+      <circle cx="60" cy="58" r="31" fill="none" stroke="#fff" stroke-width="3" opacity="0.35" />
+      <g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M43 47 h34" /><path d="M52 47 v-5 h16 v5" /><path d="M47 47 l2 28 h22 l2 -28" />
+      </g>
+    </svg>
+    <div style="display: flex; flex-direction: column; gap: 6px;">
+      <span style="font: 800 12px 'Nunito', system-ui, sans-serif; color: #D7FFB8; letter-spacing: 0.1em; text-transform: uppercase;">Obtenu à l'instant</span>
+      <span style="font: 900 30px/1.1 'Nunito', system-ui, sans-serif; color: #fff;">Premier Éliminer</span>
+      <span style="font: 700 14px/1.5 'Nunito', system-ui, sans-serif; color: #E8FFD4; max-width: 440px;">Vous avez accepté de ne pas faire quelque chose. L'acte le plus difficile de la méthode.</span>
+    </div>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 22px 14px;">
+
+    <div class="m">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#EA2B2B" /><circle cx="50" cy="49" r="38" fill="#FF4B4B" />
+        <circle cx="50" cy="49" r="29" fill="none" stroke="#fff" stroke-width="2.6" opacity="0.35" />
+        <g fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M35 39 h30" /><path d="M43 39 v-4 h14 v4" /><path d="M38 39 l2 25 h20 l2 -25" />
+        </g>
+      </svg>
+      <span class="mn">Premier Éliminer</span><span class="ms">accepter de ne pas faire</span>
+    </div>
+
+    <div class="m">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#E5A900" /><circle cx="50" cy="49" r="38" fill="#FFC800" />
+        <circle cx="50" cy="49" r="29" fill="none" stroke="#fff" stroke-width="2.6" opacity="0.4" />
+        <g fill="none" stroke="#fff" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M31 49 h23" /><path d="M47 41 l8 8 -8 8" />
+        </g>
+        <circle cx="66" cy="49" r="6.5" fill="#fff" />
+      </svg>
+      <span class="mn">Déléguée, puis close</span><span class="ms">passée, puis terminée</span>
+    </div>
+
+    <div class="m">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#4FA800" /><circle cx="50" cy="49" r="38" fill="#58CC02" />
+        <circle cx="50" cy="49" r="29" fill="none" stroke="#fff" stroke-width="2.6" opacity="0.35" />
+        <g fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="33" y="35" width="34" height="30" rx="5" /><path d="M42 30 v8 M58 30 v8 M33 46 h34" /><path d="M42 56 l5 5 9 -9" />
+        </g>
+      </svg>
+      <span class="mn">Quinze jours nets</span><span class="ms">aucun dépassement</span>
+    </div>
+
+    <div class="m">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#1899D6" /><circle cx="50" cy="49" r="38" fill="#1CB0F6" />
+        <circle cx="50" cy="49" r="29" fill="none" stroke="#fff" stroke-width="2.6" opacity="0.4" />
+        <g fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="50" cy="49" r="18" /><path d="M50 38 v11 l8 5" />
+        </g>
+      </svg>
+      <span class="mn">Décidée lundi, faite lundi</span><span class="ms">posée et close le même jour</span>
+    </div>
+
+    <div class="m" style="opacity: 0.6;">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#D4D4D4" /><circle cx="50" cy="49" r="38" fill="#E5E5E5" />
+        <g fill="none" stroke="#AFAFAF" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="36" y="47" width="28" height="21" rx="5" /><path d="M43 47 v-7 a7 7 0 0 1 14 0 v7" />
+        </g>
+      </svg>
+      <span class="mn" style="color: #afafaf;">À trier vidée</span><span class="ms">pas encore</span>
+    </div>
+
+    <div class="m">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#CE82FF" /><circle cx="50" cy="49" r="38" fill="#DFAFFF" />
+        <circle cx="50" cy="49" r="29" fill="none" stroke="#fff" stroke-width="2.6" opacity="0.5" />
+        <g fill="none" stroke="#fff" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M36 60 l10 -12 8 8 12 -18" /><path d="M64 38 h6 v6" />
+        </g>
+      </svg>
+      <span class="mn">Ratio au-dessus de 70 %</span><span class="ms">un mois sur ce qui compte</span>
+    </div>
+
+    <div class="m" style="opacity: 0.6;">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#D4D4D4" /><circle cx="50" cy="49" r="38" fill="#E5E5E5" />
+        <g fill="none" stroke="#AFAFAF" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="36" y="47" width="28" height="21" rx="5" /><path d="M43 47 v-7 a7 7 0 0 1 14 0 v7" />
+        </g>
+      </svg>
+      <span class="mn" style="color: #afafaf;">Quatre cases en un jour</span><span class="ms">pas encore</span>
+    </div>
+
+    <div class="m" style="opacity: 0.6;">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#D4D4D4" /><circle cx="50" cy="49" r="38" fill="#E5E5E5" />
+        <g fill="none" stroke="#AFAFAF" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="36" y="47" width="28" height="21" rx="5" /><path d="M43 47 v-7 a7 7 0 0 1 14 0 v7" />
+        </g>
+      </svg>
+      <span class="mn" style="color: #afafaf;">Nid florissant</span><span class="ms">pas encore</span>
+    </div>
+
+    <div class="m" style="opacity: 0.6;">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#D4D4D4" /><circle cx="50" cy="49" r="38" fill="#E5E5E5" />
+        <g fill="none" stroke="#AFAFAF" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="36" y="47" width="28" height="21" rx="5" /><path d="M43 47 v-7 a7 7 0 0 1 14 0 v7" />
+        </g>
+      </svg>
+      <span class="mn" style="color: #afafaf;">Une paire menée à bout</span><span class="ms">pas encore</span>
+    </div>
+
+    <div class="m" style="opacity: 0.6;">
+      <svg viewBox="0 0 100 100" width="84" height="84" aria-hidden="true">
+        <circle cx="50" cy="53" r="38" fill="#D4D4D4" /><circle cx="50" cy="49" r="38" fill="#E5E5E5" />
+        <g fill="none" stroke="#AFAFAF" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="36" y="47" width="28" height="21" rx="5" /><path d="M43 47 v-7 a7 7 0 0 1 14 0 v7" />
+        </g>
+      </svg>
+      <span class="mn" style="color: #afafaf;">Trois matrices au vert</span><span class="ms">pas encore</span>
+    </div>
+
+  </div>
+
+  <div style="margin-top: 30px; background: #FFF4E5; border: 2px solid #FFC800; border-bottom-width: 4px; border-radius: 16px; padding: 20px 22px;">
+    <p style="font: 800 19px/1.3 'Nunito', system-ui, sans-serif; color: #E5A900; margin: 0 0 8px;">Le piège que cette langue amène avec elle</p>
+    <p style="font: 700 13.5px/1.65 'Nunito', system-ui, sans-serif; color: #4b4b4b; margin: 0;">
+      Une grille de médaillons colorés donne envie de <strong>tout déverrouiller</strong> — c'est sa force et c'est exactement le danger. Chez Duolingo, déverrouiller veut dire pratiquer, et l'app y gagne. Ici, cinq cases grises donnent envie de fabriquer les gestes qui les ouvrent : créer une tâche pour la mettre en « Éliminer », vider « À trier » en classant au hasard. C'est pourquoi aucun badge ne porte sur du volume, et pourquoi le compteur « 4 sur 9 » mérite d'être discuté : afficher le total, c'est déjà désigner une collection à compléter.
+    </p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>
