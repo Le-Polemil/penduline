@@ -22,8 +22,16 @@ export function Loader({ label = 'Chargement…' }: { label?: string }) {
     <div className="loader" role="status" aria-live="polite">
       <svg className="loader__svg" viewBox="11.75 5.5 88.5 88.5" aria-hidden="true">
         {/* Le col : l'attache par laquelle le nid pend. */}
-        <g className="loader__neck">
-          <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139" />
+        {/* ⚠️ L'inclinaison de 8° est portée par un groupe EXTÉRIEUR au groupe animé.
+            Posée sur `loader__neck` lui-même, elle entrerait en concurrence avec le
+            balancier : l'animation pilote `rotate`, la propriété individuelle, tandis
+            qu'un attribut `transform` alimente `transform` — les deux se composent,
+            mais autour de deux pivots différents (56,6 pour le balancier, 56,14 pour
+            l'attache), et le col se décrochait. Séparés, chacun garde le sien. */}
+        <g transform="rotate(8 56 14)">
+          <g className="loader__neck">
+            <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139" />
+          </g>
         </g>
         {/* Le nid et ses quatre tuiles, dans l'ordre de la matrice. */}
         <g className="loader__nest">
