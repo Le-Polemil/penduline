@@ -19,30 +19,79 @@ TILES = [
     ('M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z', '#e3d8d4'),
 ]
 
-def feuille(branche, longueur=11.5, largeur=4.2):
-    """La feuille part du BOUT du rameau et suit sa tangente.
-
-    Une ellipse centrée sur l'extrémité, orientée à l'estime, donnait un rameau
-    qui traverse sa propre feuille de part en part. Ici la base est posée sur le
-    point d'arrivée et la nervure prolonge la dernière poignée de la courbe :
-    c'est la tangente réelle, pas un angle deviné.
-    """
+def _courbe(branche):
     n = [float(v) for v in re.findall(r'-?\d+\.?\d*', branche)]
-    (c2x, c2y), (ex, ey) = (n[4], n[5]), (n[6], n[7])
-    angle = math.degrees(math.atan2(ey - c2y, ex - c2x))
-    L, W = longueur, largeur / 2
-    # Ovale pointu : base à l'origine, pointe en (L, 0).
-    d = f'M0 0 Q {L*0.42:.1f} -{W} {L} 0 Q {L*0.42:.1f} {W} 0 0 Z'
-    return f'<path d="{d}" transform="translate({ex} {ey}) rotate({angle:.1f})" />'
+    return [(n[0], n[1]), (n[2], n[3]), (n[4], n[5]), (n[6], n[7])]
 
-def nid(size, n=0, sec=False, pale=False, vide=False, hollow=None, body='#c67139', flex=True):
+def _point(p, t):
+    """Position et tangente sur la cubique, à l'abscisse t."""
+    u = 1 - t
+    x = u**3*p[0][0] + 3*u*u*t*p[1][0] + 3*u*t*t*p[2][0] + t**3*p[3][0]
+    y = u**3*p[0][1] + 3*u*u*t*p[1][1] + 3*u*t*t*p[2][1] + t**3*p[3][1]
+    dx = 3*u*u*(p[1][0]-p[0][0]) + 6*u*t*(p[2][0]-p[1][0]) + 3*t*t*(p[3][0]-p[2][0])
+    dy = 3*u*u*(p[1][1]-p[0][1]) + 6*u*t*(p[2][1]-p[1][1]) + 3*t*t*(p[3][1]-p[2][1])
+    return x, y, math.degrees(math.atan2(dy, dx))
+
+def _lame(x, y, angle, L, W):
+    """Ovale pointu : base à l'origine, pointe en (L, 0)."""
+    d = f'M0 0 Q {L*0.42:.1f} -{W/2:.1f} {L} 0 Q {L*0.42:.1f} {W/2:.1f} 0 0 Z'
+    return f'<path d="{d}" transform="translate({x:.1f} {y:.1f}) rotate({angle:.1f})" />'
+
+def feuille(branche, longueur=15, largeur=8, combien=1):
+    """Les feuilles du rameau : une au bout, les suivantes le long de la tige.
+
+    La feuille part du BOUT et suit la tangente réelle — une ellipse centrée sur
+    l'extrémité, orientée à l'estime, donnait un rameau qui traverse sa propre
+    feuille de part en part.
+
+    Au-delà de la première, les feuilles se posent en amont sur la courbe et
+    s'écartent de l'axe : c'est ce qui donne à « Florissant » sa densité, sans
+    ajouter une seule branche.
+    """
+    p = _courbe(branche)
+    x, y, a = _point(p, 1.0)
+    out = [_lame(x, y, a, longueur, largeur)]
+    for t, ecart in ((0.62, -42), (0.42, 42))[:combien - 1]:
+        x, y, a = _point(p, t)
+        out.append(_lame(x, y, a + ecart, longueur * 0.72, largeur * 0.78))
+    return ''.join(out)
+
+def rayons(rayons_n=18, r0=14, r1=66, teinte='#f2dc9c', opacite=0.38):
+    """Le fond de lumière du dernier cran.
+
+    Des rayons pleins, pas un dégradé radial : le dégradé se serait perdu sur le
+    fond crème de la carte, là où des lames franches tiennent même à faible
+    opacité. Pâle et à 0,38 — il doit passer DERRIÈRE le nid sans jamais
+    concurrencer les tuiles, qui sont la donnée.
+    """
+    import math as _m
+    pas = 360 / rayons_n
+    # Lame et vide à parts égales, et surtout un secteur à angle CONSTANT : la
+    # lame s'élargit donc vers l'extérieur, comme sur le drapeau. Une largeur
+    # constante en unités aurait donné des barres parallèles, pas des rayons.
+    d = _m.radians(pas * 0.5 / 2)
+    lames = []
+    for i in range(rayons_n):
+        a = _m.radians(i * pas)
+        p = [(56 + r * _m.cos(a + s_), 56 + r * _m.sin(a + s_))
+             for r, s_ in ((r0, -d), (r1, -d), (r1, d), (r0, d))]
+        lames.append('M' + ' L'.join(f'{x:.1f} {y:.1f}' for x, y in p) + ' Z')
+    return (f'\n          <g fill="{teinte}" opacity="{opacite}">'
+            + ''.join(f'<path d="{d}" />' for d in lames) + '</g>')
+
+def nid(size, n=0, par_branche=1, halo=False, sec=False, pale=False, vide=False, hollow=None, body='#c67139', flex=True):
     sw = 3.2 if size < 50 else 2.6
     st = ' style="flex: none;"' if flex else ''
     s = f'<svg viewBox="4 0 104 100" width="{size}" height="{size}"{st} aria-hidden="true">'
+    if halo:
+        s += rayons()
     if n:
         tw = ''.join(f'<path d="{b}" />' for b in BRANCHES[:n])
         s += f'\n          <g stroke="#a8763f" stroke-width="{sw}" stroke-linecap="round" fill="none">{tw}</g>'
-        s += '\n          <g fill="#7a8a5e">' + ''.join(feuille(b) for b in BRANCHES[:n]) + '</g>'
+        # « Florissant » alterne 3 et 2 feuilles ; les crans plus bas en ont une.
+        s += '\n          <g fill="#7a8a5e">' + ''.join(
+            feuille(b, combien=par_branche if par_branche == 1 else (3 if i % 2 == 0 else 2))
+            for i, b in enumerate(BRANCHES[:n])) + '</g>'
     if sec:
         s += f'\n          <g transform="rotate(8 56 14)"><path d="{NECK_FIN}" fill="none" stroke="#c0b6a5" stroke-width="{sw}" /></g>'
         s += f'\n          <path d="{BODY}" fill="#f2ece1" stroke="#c0b6a5" stroke-width="{sw}" stroke-dasharray="7 4" />'
