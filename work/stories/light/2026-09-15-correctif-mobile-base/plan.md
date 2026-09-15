@@ -2,7 +2,7 @@
 story: "Correctif Mobile 1/3 — la base"
 story_code: "correctif-mobile-base"
 created: 2026-09-15
-status: "In Progress"
+status: "Done"
 ---
 
 # #89 — Correctif Mobile 1/3 : la base
