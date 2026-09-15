@@ -21,6 +21,7 @@ import {
   IconTrash,
 } from './Icons';
 import { useTitreDepliable } from '../data/useTitreDepliable';
+import { LARGEUR_ACTION, useBalayage, useTelephone } from '../data/useBalayage';
 import { Attachments } from './Attachments';
 import { Deadline } from './Deadline';
 import { Subtasks } from './Subtasks';
@@ -100,6 +101,8 @@ export function TaskCard({
   universes,
   menuOpen,
   onMenu,
+  swipeOpen = false,
+  onSwipe,
   rename,
   onCheck,
   onMoveQuad,
@@ -131,6 +134,17 @@ export function TaskCard({
   universes?: Universe[];
   menuOpen: boolean;
   onMenu: (open: boolean) => void;
+  /**
+   * Le bandeau d'actions révélé au balayage est-il ouvert ? (#89)
+   *
+   * Même forme que `menuOpen` / `onMenu`, et pour la même raison : une seule
+   * carte ouverte à la fois sur tout l'écran, donc l'état vit chez l'écran.
+   *
+   * Facultatif : sans `onSwipe`, le geste n'est pas monté — un hôte qui n'en veut
+   * pas (le panneau d'extension) n'a rien à câbler.
+   */
+  swipeOpen?: boolean;
+  onSwipe?: (open: boolean) => void;
   rename: CardRename;
   onCheck: () => void;
   onMoveQuad: (key: QuadrantKey) => void;
@@ -201,8 +215,10 @@ export function TaskCard({
   /** L'univers dont le sous-menu est ouvert. `null` = aucun. */
   const [openUni, setOpenUni] = useState<string | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const swipeRef = useRef<HTMLDivElement>(null);
   /** Lire un titre tronqué d'un clic (#95). Voir le hook pour les trois pièges. */
   const titre = useTitreDepliable(task.title);
+
 
   /**
    * Fermer le menu au clic à côté.
@@ -228,6 +244,120 @@ export function TaskCard({
   const renaming = rename.value !== null;
   const splitActive = !!split?.ok && !!split.active;
   const statut = deadline ? deadlineStatus(task.due_at, deadline.now) : null;
+
+  /**
+   * Le bandeau d'actions du téléphone (#89).
+   *
+   * Sous 720 px, les trois commandes quittent la carte — elles y prenaient 88 px
+   * sur 306, plus que le titre — et se rangent derrière elle. Le bandeau n'a que
+   * les boutons dont la prop existe : `Focus` et `Review` n'en passent pas
+   * autant que la matrice, et obtiennent un bandeau plus court sans conditionnelle
+   * supplémentaire.
+   */
+  const telephone = useTelephone();
+  const actionsBandeau = telephone ? [subtasks, focus, deadline].filter(Boolean).length : 0;
+  const bandeau = !!onSwipe && actionsBandeau > 0 && !renaming;
+  const largeurBandeau = actionsBandeau * LARGEUR_ACTION;
+  const balayage = useBalayage(
+    swipeRef,
+    bandeau,
+    swipeOpen,
+    onSwipe ?? (() => {}),
+    largeurBandeau,
+  );
+
+  /**
+   * Refermer le bandeau au contact d'ailleurs — même règle et même écouteur que
+   * le menu `⋯` juste en dessous : `pointerdown` et non `click`, pour qu'il
+   * disparaisse dès l'appui.
+   */
+  useEffect(() => {
+    if (!swipeOpen || !onSwipe) return;
+    function dehors(e: PointerEvent) {
+      if (!swipeRef.current?.contains(e.target as Node)) onSwipe?.(false);
+    }
+    document.addEventListener('pointerdown', dehors);
+    return () => document.removeEventListener('pointerdown', dehors);
+  }, [swipeOpen, onSwipe]);
+  /**
+   * Les commandes de la carte, construites UNE fois et posées à un seul endroit.
+   *
+   * Au-dessus de 720 px elles restent sur la carte, révélées au survol comme
+   * avant. En dessous elles passent dans le bandeau, où elles font 44 px. Les
+   * rendre aux deux endroits en laissant le CSS en masquer un donnerait deux
+   * boutons de même nom accessible par tâche — un lecteur d'écran les annoncerait
+   * tous les deux.
+   *
+   * L'échéance n'existe QUE dans le bandeau : sur la carte, elle reste une entrée
+   * du menu `⋯`, où le survol ne coûte rien.
+   */
+  const classeCommande = telephone ? 'task-swipe__act' : 'task__act';
+  /* Fermé, le bandeau ne doit rien ajouter au parcours clavier — déjà dense d'un
+     arrêt par contrôle et par tâche. */
+  const horsTab = bandeau && !swipeOpen ? -1 : undefined;
+  const tailleIcone = telephone ? 18 : 14;
+
+  const btnEtape = subtasks && (
+    <button
+      key="etape"
+      className={classeCommande}
+      tabIndex={horsTab}
+      aria-label={`Ajouter une étape à « ${task.title} »`}
+      onClick={() => {
+        if (!subtasks.open) subtasks.onToggleOpen();
+        // Un compteur plutôt qu'un booléen : deux clics de suite doivent
+        // redonner le focus au champ, même s'il est déjà ouvert.
+        setAskAdd((n) => n + 1);
+        onSwipe?.(false);
+      }}
+    >
+      <IconLayersPlus size={tailleIcone} />
+    </button>
+  );
+
+  const btnAujourdhui = focus && (
+    <button
+      key="aujourdhui"
+      className={`${classeCommande} task__today${focus.on ? ' task__today--on' : ''}`}
+      tabIndex={horsTab}
+      aria-pressed={focus.on}
+      // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
+      // ne se tait pas non plus.
+      title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? 'Faire aujourd\u2019hui')}
+      aria-label={
+        focus.on
+          ? `Retirer « ${task.title} » d'aujourd'hui`
+          : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
+      }
+      disabled={!focus.on && !!focus.refusal}
+      onClick={() => {
+        focus.toggle();
+        onSwipe?.(false);
+      }}
+    >
+      <IconFlag size={tailleIcone} filled={focus.on} />
+    </button>
+  );
+
+  const btnEcheance = telephone && deadline && (
+    <button
+      key="echeance"
+      className={classeCommande}
+      tabIndex={horsTab}
+      aria-label={
+        task.due_at
+          ? `Modifier l\u2019échéance de « ${task.title} »`
+          : `Fixer une échéance à « ${task.title} »`
+      }
+      onClick={() => {
+        deadline.onStartEdit();
+        onSwipe?.(false);
+      }}
+    >
+      <IconAlarmClock size={tailleIcone} />
+    </button>
+  );
+
   const cls = [
     'task',
     // Une tâche du jour se voit SANS survol et sans lire son fanion : c'est un
@@ -265,11 +395,40 @@ export function TaskCard({
   return (
     <div className="card-wrap" data-task={task.id} ref={wrapRef} onKeyDown={onKeyDown}>
       <div className="task-anchor">
+      {/* ⚠️ `.task-swipe` s'insère DANS `.task-anchor` et au-dessus de la seule
+          `.task` : le menu `⋯` reste son frère, donc hors du `overflow: hidden`
+          — dedans, il serait rogné dès son ouverture. Et l'ancrage du menu, qui
+          dépend de `.task-anchor` (voir styles.css), ne bouge pas. */}
+      <div
+        ref={swipeRef}
+        className={`task-swipe${balayage.suit ? ' task-swipe--suit' : ''}`}
+        {...(bandeau ? balayage.gestes : {})}
+      >
+        {bandeau && (
+          /* `aria-hidden` fermé : un lecteur d'écran ne doit jamais rencontrer
+             une commande invisible. Le menu `⋯` porte les mêmes actions, lui. */
+          <div
+            className="task-swipe__actions"
+            style={{ width: largeurBandeau }}
+            aria-hidden={!swipeOpen}
+          >
+            {btnEtape}
+            {btnAujourdhui}
+            {btnEcheance}
+          </div>
+        )}
       <div
         className={cls}
-        style={{ viewTransitionName: `vt-${task.id}` } as CSSProperties}
+        style={
+          {
+            viewTransitionName: `vt-${task.id}`,
+            ...(balayage.decalage ? { transform: `translateX(${balayage.decalage}px)` } : null),
+          } as CSSProperties
+        }
         // Pas de déplacement pendant une saisie : le glisser volerait le curseur.
-        draggable={!!drag && !task.done && !renaming}
+        // Ni sous 720 px : le glisser HTML5 ne s'y déclenche pas au doigt, et
+        // l'axe horizontal appartient au balayage.
+        draggable={!!drag && !task.done && !renaming && !telephone}
         onDragStart={(e: DragEvent) => {
           if (!drag) return;
           e.dataTransfer.effectAllowed = 'move';
@@ -360,53 +519,14 @@ export function TaskCard({
             ⏰ {formatDeadline(task.due_at, deadline?.now)}
           </time>
         )}
-        {/* Ajouter une étape, à côté de `⋯` et révélé au survol comme lui.
-            Auparavant une pastille « ＋ étape » vivait SOUS la carte : invisible
-            au repos mais occupant sa ligne, elle rallongeait chaque tâche d'un
-            cran pour un geste rare. Ici elle ne coûte rien tant qu'on ne survole
-            pas. */}
-        {subtasks && (
-          <button
-            className="task__act task__sub"
-            aria-label={`Ajouter une étape à « ${task.title} »`}
-            onClick={() => {
-              if (!subtasks.open) subtasks.onToggleOpen();
-              // Un compteur plutôt qu'un booléen : deux clics de suite doivent
-              // redonner le focus au champ, même s'il est déjà ouvert.
-              setAskAdd((n) => n + 1);
-            }}
-          >
-            <IconLayersPlus size={14} />
-          </button>
-        )}
-        {/* L'engagement du jour, en un clic (#49).
-            Le geste reste dans le menu `⋯` — c'est là qu'on le cherche quand on
-            ne le connaît pas — mais il gagne un raccourci ici, parce que c'est
-            le seul du menu qu'on répète tous les matins.
-            Un FANION, collé au `⋯`. Il avait d'abord été mis en tête de carte,
-            là où se tenait celui de l'épinglage — mais masqué au repos il y
-            creusait un trou bien visible entre la poignée et la case à cocher.
-            Contre le `⋯`, qui est toujours là, son absence ne se remarque plus.
-            Une tâche déjà choisie garde son icône visible en permanence : le
-            bouton est alors autant un marqueur d'état qu'une commande. */}
-        {focus && (
-          <button
-            className={`task__act task__today${focus.on ? ' task__today--on' : ''}`}
-            aria-pressed={focus.on}
-            // Le motif du refus sert d'infobulle : le bouton ne disparaît pas et
-            // ne se tait pas non plus.
-            title={focus.on ? "Retirer d'aujourd'hui" : (focus.refusal ?? "Faire aujourd'hui")}
-            aria-label={
-              focus.on
-                ? `Retirer « ${task.title} » d'aujourd'hui`
-                : focus.refusal ?? `Faire « ${task.title} » aujourd'hui`
-            }
-            disabled={!focus.on && !!focus.refusal}
-            onClick={focus.toggle}
-          >
-            <IconFlag size={14} filled={focus.on} />
-          </button>
-        )}
+        {/* Les deux raccourcis, ici seulement AU-DESSUS de 720 px : en dessous
+            ils vivent dans le bandeau, où ils ne mangent plus le titre.
+            Ils ne s'affichent qu'au survol ou au focus clavier, pour qu'une
+            grille de trente tâches reste une grille de trente titres — une
+            pastille « ＋ étape » vivait auparavant SOUS la carte, invisible au
+            repos mais occupant sa ligne. */}
+        {!telephone && btnEtape}
+        {!telephone && btnAujourdhui}
         {/* Le glyphe seul nommait ce bouton « ⋯ » dans l'arbre d'accessibilité :
             autant de boutons identiques et anonymes qu'il y a de tâches. */}
         <button
@@ -417,6 +537,7 @@ export function TaskCard({
         >
           ⋯
         </button>
+      </div>
       </div>
       {menuOpen && (
         <div className="task-menu">
@@ -499,6 +620,24 @@ export function TaskCard({
             </>
           )}
           <div className="task-menu__sep" role="separator" />
+          {/* ⚠️ « Ajouter une étape » n'existait QUE sur la carte, révélée au
+              survol — donc nulle part au doigt, et nulle part au clavier sur une
+              tablette. C'est la condition qui manquait pour pouvoir retirer les
+              raccourcis de la carte sous 720 px : un geste directionnel ne doit
+              jamais être le seul accès à une action (WCAG 2.5.1). */}
+          {subtasks && (
+            <button
+              className="task-menu__action"
+              onClick={() => {
+                if (!subtasks.open) subtasks.onToggleOpen();
+                setAskAdd((n) => n + 1);
+                onMenu(false);
+              }}
+            >
+              <IconLayersPlus size={13} />
+              Ajouter une étape
+            </button>
+          )}
           {/* L'ajout d'un lien vit ICI et pas sur la carte : une tâche sans
               lien ne doit rien afficher de plus qu'aujourd'hui. */}
           {attachments && (
