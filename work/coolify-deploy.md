@@ -567,3 +567,70 @@ sur le Store, et le front alors servi (0.0.27) ne lisait déjà plus `pinned`. C
 exactement l'ordre que le garde-fou posé dans la migration réclamait — l'inverse
 de celui du workflow. Le front est passé en 0.0.30 juste après, avec
 `migrations=ignorer`.
+
+## Le chemin automatique, enfin installé (2026-09-15)
+
+Le job `migrate` échouait depuis le 4 septembre sur `Secret MIGRATE_SSH_KEY
+absent`. La cause était plus large que les secrets : **rien n'avait jamais été
+posé sur l'hôte**. Ni `penduline-migrate.sh`, ni `/etc/default/penduline-migrate`,
+ni la ligne bornée dans `authorized_keys` — qui ne contenait qu'une clé humaine.
+Créer les secrets seuls n'aurait donc rien débloqué, et aurait surtout créé la
+clé dangereuse en attendant son garde-fou.
+
+### L'ordre d'installation n'est pas indifférent
+
+Le script d'abord, la clé ensuite. Une clé déposée dans `authorized_keys` avant
+que sa commande forcée n'existe donne, l'intervalle durant, **un shell complet
+sur la production à quiconque peut modifier un workflow du dépôt**. C'est
+exactement ce que la commande forcée existe pour empêcher.
+
+### `sudo` demande un mot de passe : le script vit dans le home
+
+La doc du script prévoit `/usr/local/bin/penduline-migrate.sh`. Impossible ici —
+`sudo` n'est pas ouvert sans mot de passe pour `bekansabo`. Le script est donc
+installé en `/home/bekansabo/penduline-migrate.sh`, et la ligne
+`authorized_keys` pointe dessus.
+
+**Ça ne déplace aucune frontière de confiance.** La commande forcée accepte
+n'importe quel chemin absolu, et `authorized_keys` est déjà dans ce home : qui
+peut réécrire le script peut aussi bien réécrire la ligne qui le désigne. Le seul
+vrai prix est que l'emplacement n'est plus celui que la doc du script annonce —
+d'où cette note, et le rappel dans l'en-tête du script lui-même.
+
+### Ce que contiennent les quatre secrets
+
+Ils vivent dans l'**environnement `production`** du dépôt (pas dans les secrets
+du dépôt) : le job déclare `environment: production`, et c'est ce niveau qui
+permettra d'exiger une approbation le jour où on le voudra.
+
+| Secret | Contenu |
+|---|---|
+| `MIGRATE_SSH_KEY` | la clé privée ed25519 dédiée, sans passphrase — `penduline-ci-migrate` |
+| `MIGRATE_SSH_KNOWN_HOSTS` | la sortie de `ssh-keyscan -t ed25519,rsa,ecdsa 82.165.0.213` |
+| `MIGRATE_SSH_HOST` | `82.165.0.213` |
+| `MIGRATE_SSH_USER` | `bekansabo` |
+
+⚠️ **Un `ssh-keyscan` pris tel quel grave une éventuelle interception.** La sortie
+a été recoupée avec l'entrée déjà présente dans le `known_hosts` du poste, qui
+précède l'opération — les trois empreintes correspondent. Refaire ce recoupement
+si l'hôte change de clés ; ne jamais se contenter du scan seul.
+
+### La clé a été éprouvée avant d'être confiée au CI
+
+C'est le moment où un bornage raté se voit encore. Les trois essais, par la clé
+CI et elle seule :
+
+```
+ssh -i id_migrate … applied        → liste les 13 versions
+ssh -i id_migrate … 'id; cat …'    → « sous-commande refusée : « id; » »
+ssh -i id_migrate … (sans commande) → « sous-commande refusée : « (vide) » »
+```
+
+`verify` répond également. La clé humaine du poste reste sans `command=`, elle :
+c'est la voie d'administration, et elle n'a pas à être bornée.
+
+> Premier essai invalide, et la leçon vaut d'être notée : les options ssh avaient
+> été mises dans une variable shell non découpée, donc `ssh` est retombé sur la
+> clé par défaut du poste et n'éprouvait rien du tout — `id` « réussissait ».
+> Un test de restriction qui PASSE doit être regardé deux fois : c'est le sens
+> où l'erreur est silencieuse.
