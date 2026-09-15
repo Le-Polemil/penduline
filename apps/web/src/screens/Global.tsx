@@ -1,5 +1,4 @@
 import { useState, type CSSProperties, type DragEvent } from 'react';
-import { flushSync } from 'react-dom';
 import {
   ALL,
   deleteLabel,
@@ -23,6 +22,7 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
+import { withVT } from '../lib/viewTransition';
 import type { Store } from '../data/store';
 import { readFocusLimit } from '../data/focusPrefs';
 import { BinModal } from '../components/BinModal';
@@ -50,13 +50,6 @@ export type BoardFrame = 'filet' | 'cadre' | 'etiquette';
 
 /** La variante en vigueur. Un jour un réglage ; aujourd'hui, une constante. */
 const FRAME: BoardFrame = 'cadre';
-
-/** Anime un changement structurel via l'API View Transitions (dégradation gracieuse). */
-function withVT(fn: () => void) {
-  const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-  if (doc.startViewTransition) doc.startViewTransition(() => flushSync(fn));
-  else fn();
-}
 
 /**
  * Toutes les tâches dans une seule grille — toutes matrices, ou un univers.

@@ -13,6 +13,7 @@ import {
   type Universe,
 } from '@penduline/shared';
 import { supabase } from '../lib/supabase';
+import { withVT } from '../lib/viewTransition';
 import { useRealtime } from './useRealtime';
 import { pop, push, type UndoEntry } from './undo';
 import { usePersist, type WriteResult } from './persist';
@@ -642,17 +643,31 @@ export function useStore(userId: string): Store {
     }
   }, []);
 
-  /** Applique les inverses d'une entrée, en enregistrant le geste dans l'autre pile. */
+  /**
+   * Applique les inverses d'une entrée, en enregistrant le geste dans l'autre pile.
+   *
+   * `withVT` ici et non chez l'appelant : annuler déplace les mêmes cartes que le
+   * geste annulé, et les écrans animent déjà leurs gestes. Sans lui, un
+   * glisser-déposer s'animait à l'aller et sautait au retour (#46).
+   *
+   * ⚠️ `sens` est posé DANS la mise à jour, pas autour. `startViewTransition`
+   * diffère son rappel le temps de l'instantané : un `try/finally` autour de
+   * `withVT` aurait remis `sens` à `normal` avant même que `group` ne lise le
+   * drapeau, et l'annulation se serait réempilée dans « annuler » au lieu de
+   * « rétablir » — un Ctrl+Z qui se défait lui-même.
+   */
   const rejouer = useCallback(
     (entry: UndoEntry, direction: 'undo' | 'redo') => {
-      sens.current = direction;
-      try {
-        group(entry.label, () => {
-          for (const w of entry.inverses) void patchTask(w.id, w.patch);
-        });
-      } finally {
-        sens.current = 'normal';
-      }
+      withVT(() => {
+        sens.current = direction;
+        try {
+          group(entry.label, () => {
+            for (const w of entry.inverses) void patchTask(w.id, w.patch);
+          });
+        } finally {
+          sens.current = 'normal';
+        }
+      });
     },
     [group, patchTask],
   );
