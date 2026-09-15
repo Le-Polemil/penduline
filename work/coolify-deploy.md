@@ -474,3 +474,96 @@ curl -sS -o /dev/null -w '%{http_code}\n' -H "apikey: $CLE" -H "Authorization: B
 C'est ainsi qu'a été établi que la base était à jour **sauf** les deux migrations
 du 6 septembre : `focus_day`, `due_at`, `task_attachments` et `pinned` présents,
 `job_runs` absente.
+
+## Les migrations en attente, passées — et la ligne de suivi qui manquait (2026-09-14)
+
+La base s'était arrêtée à `20260902100000`. Les trois retards ont été résorbés en
+une passe, par SSH sur l'hôte, `psql -U supabase_admin -1 -v ON_ERROR_STOP=1`.
+
+### Le vrai piège n'était pas celui que j'avais annoncé
+
+La semaine précédente, le renommage de #112 avait été classé « fausse alerte » :
+`20260901110000_review.sql` réapparaissait comme en attente, et un `grep` partiel
+n'y montrait que des `create or replace function` — donc réputée rejouable sans
+dommage. **C'était faux.** Le fichier fait aussi :
+
+```sql
+alter table public.tasks add column quadrant_changed_at …   -- sans if not exists
+create trigger tasks_quadrant_changed_at …                  -- sans or replace
+```
+
+La rejouer échouait donc sur `column already exists`. Et comme le job `migrate`
+applique dans l'ordre des versions et s'arrête à la première qui tombe,
+`20260901110000` aurait **bloqué `scheduler` et `retirer_epinglage` derrière
+elle**. Le défaut se serait manifesté au premier passage du chemin automatique,
+c'est-à-dire une fois les secrets rétablis — donc plus tard, et loin de sa cause.
+
+Leçon d'usage : pour juger si une migration est rejouable, lire le fichier, pas
+un `grep` des lignes qui arrangent.
+
+### Ce qu'il fallait, c'était une baseline
+
+`review.sql` **était** appliquée — colonne, fonction, trigger, index et vue tous
+vérifiés présents en base. Seule sa ligne de suivi manquait : la collision
+d'horodatage d'avant #112 avait laissé la place à `task_due_at`, qui occupe
+`20260901120000` avec son propre nom. On enregistre donc sans rejouer :
+
+```sql
+insert into supabase_migrations.schema_migrations (version, name)
+values ('20260901110000', 'review');
+```
+
+C'est l'opération que le README décrit à l'étape 3, appliquée ici seule.
+
+### `pg_cron` : l'inconnue de la story est levée
+
+`work/stories/light/2026-09-06-planification/dev.md` laissait ouvert un point :
+« que `create extension pg_cron` réussisse bien sous `supabase_admin` ». Elle
+réussit. Le planificateur est en place, `cron.job` porte
+`0 * * * *  select public.penduline_tick()`.
+
+### État final, vérifié
+
+13 fichiers dans `apps/supabase/migrations/`, 13 lignes dans `schema_migrations`,
+identiques. Et les contrôles de bout en bout :
+
+```
+GET /rest/v1/tasks?select=id,title    → 200   l'app lit normalement
+GET /rest/v1/tasks?select=pinned      → 400   la colonne est bien partie
+GET /rest/v1/job_runs?select=id       → 401   permission denied
+```
+
+Le `401` vaut mieux qu'un `404` : un 404 signifierait que PostgREST n'a pas
+rechargé son cache et ne connaît pas la table. Un `permission denied` prouve les
+deux à la fois — le cache a suivi, **et** les droits tiennent. `job_runs`
+appartient à `supabase_admin`, RLS activée, zéro policy, aucun droit pour `anon`
+ni `authenticated` : invisible à l'API, comme la migration le voulait.
+
+### Le tick, éprouvé à la main
+
+`select public.penduline_tick()` retourne `0` et laisse sa trace :
+`ran=t`, `rows_touched=0`, `error` vide, `finished_at` renseigné. C'est le
+comportement attendu d'un corps encore vide (#21 et #22 non livrés).
+
+Reste le seul point que cette vérification ne couvre pas, et que la story
+signalait déjà : le **premier passage du cron lui-même**, à l'heure ronde. Un
+appel manuel prouve la fonction, pas l'ordonnanceur.
+
+```sql
+select started_at, ran, rows_touched, error from public.job_runs
+ order by started_at desc limit 5;
+```
+
+Contrôle annexe, qui vaut d'être connu : `drop column` ne vérifie **pas** les
+corps de fonctions plpgsql. Une fonction lisant `pinned` se serait laissé retirer
+la colonne sous les pieds et n'aurait cassé qu'à l'exécution. Vérifié après coup —
+aucune fonction, vue ni index ne la mentionne, et `search_tasks` comme
+`review_boards` s'exécutent.
+
+### L'ordre a été respecté, cette fois dans le bon sens
+
+`retirer_epinglage.sql` n'a été appliquée qu'après diffusion de l'extension 1.5.0
+sur le Store, et le front alors servi (0.0.27) ne lisait déjà plus `pinned`. C'est
+exactement l'ordre que le garde-fou posé dans la migration réclamait — l'inverse
+de celui du workflow. Le front est passé en 0.0.30 juste après, avec
+`migrations=ignorer`.
