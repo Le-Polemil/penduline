@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Penduline — présentation du projet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;500;600;700;800&family=Azeret+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Penduline — deck de présentation.
+   Palette et fontes reprises telles quelles de l'app (apps/web/src/styles.css
+   et packages/shared/src/quadrants.ts) : c'est le même design system « Organic »,
+   pas une interprétation.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --font-display: 'Caprasimo', Georgia, serif;
+  --font-body: 'Figtree', 'Avenir Next', sans-serif;
+  --font-mono: 'Azeret Mono', 'SF Mono', Consolas, monospace;
+
+  /* Papier + encre de l'app */
+  --bg: #f5ead8;
+  --bg-deep: #efe0c7;
+  --surface: #fdf6e9;
+  --surface2: #ebddc5;
+  --surface-elevated: #fffdf7;
+  --border: rgba(32, 30, 29, 0.14);
+  --border-bright: rgba(32, 30, 29, 0.26);
+  --text: #201e1d;
+  --text-dim: #645c50;
+  --text-faint: #8d8474;
+
+  --accent: #c67139;         /* terracotta — l'accent de marque */
+  --accent-deep: #8c491a;
+  --accent-dim: rgba(198, 113, 57, 0.10);
+  --accent2: #7a8a5e;        /* sauge */
+
+  /* Les 4 cases + le parking, valeurs exactes de quadrants.ts */
+  --q-faire: #5c6b45;     --q-faire-bg: #dbe3ce;
+  --q-planifier: #38607f; --q-planifier-bg: #dde7ef;
+  --q-deleguer: #8f6a14;  --q-deleguer-bg: #f2e0c4;
+  --q-eliminer: #a63d2a;  --q-eliminer-bg: #e3d8d4;
+  --q-parking: #7b756a;
+
+  --code-bg: #2a231c;
+  --code-text: #f0e4cf;
+  --radius: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1815;
+    --bg-deep: #131110;
+    --surface: #262019;
+    --surface2: #2f2820;
+    --surface-elevated: #342c23;
+    --border: rgba(240, 230, 214, 0.12);
+    --border-bright: rgba(240, 230, 214, 0.24);
+    --text: #f2e8d8;
+    --text-dim: #b0a48f;
+    --text-faint: #8a7f6d;
+
+    --accent: #e08a4d;
+    --accent-deep: #f0a468;
+    --accent-dim: rgba(224, 138, 77, 0.12);
+    --accent2: #9db07c;
+
+    --q-faire: #9db07c;     --q-faire-bg: #343d2b;
+    --q-planifier: #7aa8c8; --q-planifier-bg: #26384a;
+    --q-deleguer: #d4a63f;  --q-deleguer-bg: #443617;
+    --q-eliminer: #d97a5f;  --q-eliminer-bg: #45302a;
+    --q-parking: #9b9384;
+
+    --code-bg: #100d0a;
+    --code-text: #f0e4cf;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0; padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Moteur de deck ──────────────────────────────────────────────────────── */
+.deck {
+  height: 100dvh;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.slide {
+  height: 100dvh;
+  scroll-snap-align: start;
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(36px, 6vh, 76px) clamp(32px, 7vw, 110px);
+  isolation: isolate;
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity .55s cubic-bezier(.16,1,.3,1), transform .55s cubic-bezier(.16,1,.3,1);
+}
+.slide.visible { opacity: 1; transform: none; }
+
+/* Fond : halo chaud très discret, direction alternée. Pas de dégradé voyant —
+   l'app s'interdit le blur et le gradient, le deck s'aligne. */
+.slide:nth-child(odd)  { background-image: radial-gradient(ellipse 70% 60% at 12% 88%, var(--accent-dim) 0%, transparent 62%); }
+.slide:nth-child(even) { background-image: radial-gradient(ellipse 70% 60% at 88% 12%, var(--accent-dim) 0%, transparent 62%); }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity .5s cubic-bezier(.16,1,.3,1), transform .5s cubic-bezier(.16,1,.3,1);
+  transition-delay: calc(var(--i, 0) * .07s);
+}
+.slide.visible .reveal { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide, .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+  .deck { scroll-behavior: auto; }
+}
+
+/* ── Typographie ─────────────────────────────────────────────────────────── */
+.s-display {
+  font-family: var(--font-display);
+  font-size: clamp(52px, 10.5vw, 132px);
+  font-weight: 400;
+  line-height: .92;
+  letter-spacing: -.02em;
+  margin: 0;
+  text-wrap: balance;
+}
+.s-heading {
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4.6vw, 54px);
+  font-weight: 400;
+  line-height: 1.06;
+  letter-spacing: -.01em;
+  margin: 0 0 clamp(10px, 1.6vh, 20px);
+  text-wrap: balance;
+}
+.s-sub {
+  font-size: clamp(16px, 2.1vw, 25px);
+  line-height: 1.5;
+  color: var(--text-dim);
+  margin: clamp(10px, 1.6vh, 18px) 0 0;
+  max-width: 62ch;
+  text-wrap: pretty;
+}
+.s-body { font-size: clamp(15px, 1.7vw, 20px); line-height: 1.62; color: var(--text-dim); text-wrap: pretty; }
+.s-label {
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 1.05vw, 13px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .16em;
+  color: var(--accent-deep);
+  display: flex; align-items: center; gap: 10px;
+  margin: 0 0 clamp(10px, 1.8vh, 22px);
+}
+.s-label::before {
+  content: ''; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--accent); flex: none;
+}
+.s-note {
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 1.1vw, 13px);
+  color: var(--text-faint);
+  letter-spacing: .04em;
+}
+strong { color: var(--text); font-weight: 700; }
+code {
+  font-family: var(--font-mono);
+  font-size: .88em;
+  background: var(--accent-dim);
+  color: var(--accent-deep);
+  padding: 1px 6px;
+  border-radius: 5px;
+  overflow-wrap: break-word;
+}
+
+/* ── Listes ──────────────────────────────────────────────────────────────── */
+.bullets { list-style: none; padding: 0; margin: 0; }
+.bullets li {
+  position: relative;
+  padding: clamp(5px, .9vh, 10px) 0 clamp(5px, .9vh, 10px) 26px;
+  font-size: clamp(15px, 1.75vw, 21px);
+  line-height: 1.55;
+  color: var(--text-dim);
+  text-wrap: pretty;
+}
+.bullets li::before {
+  content: ''; position: absolute; left: 2px; top: calc(clamp(5px, .9vh, 10px) + .62em);
+  width: 7px; height: 7px; border-radius: 2px;
+  background: var(--accent);
+}
+.bullets--sage li::before { background: var(--accent2); }
+
+/* ── Cartes ──────────────────────────────────────────────────────────────── */
+.cards {
+  display: grid;
+  gap: clamp(10px, 1.6vw, 20px);
+  min-height: 0;
+}
+.cards--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.cards--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.cards--4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 14px;
+  padding: clamp(14px, 2.3vh, 26px) clamp(14px, 1.7vw, 24px);
+  min-width: 0;
+  display: flex; flex-direction: column;
+  overflow-wrap: break-word;
+}
+.card__kicker {
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1vw, 12px);
+  font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--text-faint);
+  margin-bottom: 7px;
+}
+.card__title {
+  font-size: clamp(16px, 1.9vw, 23px);
+  font-weight: 700; line-height: 1.22;
+  margin: 0 0 8px;
+  color: var(--text);
+}
+.card__body { font-size: clamp(13px, 1.35vw, 17px); line-height: 1.55; color: var(--text-dim); flex: 1; }
+.card__tag {
+  align-self: flex-start;
+  margin-top: clamp(8px, 1.4vh, 14px);
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1vw, 11px);
+  font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  padding: 4px 9px; border-radius: 5px;
+  background: var(--accent-dim); color: var(--accent-deep);
+}
+
+/* ── Titre ───────────────────────────────────────────────────────────────── */
+.slide--title { align-items: center; text-align: center; }
+.nest { width: clamp(84px, 13vh, 150px); height: auto; margin-bottom: clamp(14px, 2.6vh, 32px); }
+.slide--title .s-sub { margin-left: auto; margin-right: auto; }
+.title-meta {
+  display: flex; flex-wrap: wrap; justify-content: center;
+  gap: clamp(10px, 2vw, 28px);
+  margin-top: clamp(20px, 3.4vh, 42px);
+  font-family: var(--font-mono);
+  font-size: clamp(10px, 1.15vw, 13px);
+  letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text-faint);
+}
+.title-meta span { white-space: nowrap; }
+
+/* ── Intercalaire ────────────────────────────────────────────────────────── */
+.slide--divider { justify-content: center; }
+.divider-num {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -54%);
+  font-family: var(--font-display);
+  font-size: clamp(150px, 30vw, 380px);
+  line-height: .8;
+  color: var(--accent);
+  opacity: .11;
+  pointer-events: none;
+  z-index: 0;
+  font-variant-numeric: tabular-nums;
+}
+.slide--divider > *:not(.divider-num) { position: relative; z-index: 1; }
+
+/* ── Panneaux ────────────────────────────────────────────────────────────── */
+.slide--split { padding: 0; }
+.panels { display: grid; grid-template-columns: 3fr 2fr; height: 100%; min-height: 0; }
+.panels--even { grid-template-columns: 1fr 1fr; }
+.panel {
+  padding: clamp(32px, 5.5vh, 72px) clamp(26px, 4vw, 62px);
+  display: flex; flex-direction: column; justify-content: center;
+  min-width: 0; overflow: hidden;
+}
+.panel--a { background: var(--surface); }
+.panel--b { background: var(--surface2); border-left: 1px solid var(--border); }
+.panel--ink { background: var(--code-bg); color: var(--code-text); }
+.panel--ink .s-heading, .panel--ink strong { color: var(--code-text); }
+.panel--ink .s-body, .panel--ink .bullets li { color: rgba(240, 228, 207, .72); }
+.panel--ink code { background: rgba(224, 138, 77, .18); color: #f0a468; }
+
+/* ── La matrice ──────────────────────────────────────────────────────────── */
+.matrix-wrap { display: flex; flex-direction: column; gap: clamp(8px, 1.3vh, 14px); min-height: 0; flex: 1; }
+.matrix-axes {
+  display: grid; grid-template-columns: auto 1fr; gap: clamp(8px, 1.2vw, 14px);
+  flex: 1; min-height: 0;
+}
+.axis-y {
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1.05vw, 12px);
+  font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-faint);
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  padding: 2px 0;
+}
+.matrix {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: clamp(8px, 1.2vw, 16px);
+  min-height: 0;
+}
+.quad {
+  border-radius: 14px;
+  padding: clamp(10px, 1.9vh, 22px) clamp(11px, 1.5vw, 20px);
+  display: flex; flex-direction: column;
+  min-width: 0; min-height: 0;
+  border: 1px solid var(--border);
+}
+.quad__name { font-family: var(--font-display); font-size: clamp(17px, 2.4vw, 32px); line-height: 1.05; margin: 0; }
+.quad__crit {
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1.05vw, 12px);
+  letter-spacing: .1em; text-transform: uppercase;
+  margin: 6px 0 clamp(6px, 1.1vh, 12px);
+  opacity: .8;
+}
+.quad__what { font-size: clamp(12px, 1.35vw, 17px); line-height: 1.5; opacity: .92; }
+.q-faire     { background: var(--q-faire-bg);     color: var(--q-faire); }
+.q-planifier { background: var(--q-planifier-bg); color: var(--q-planifier); }
+.q-deleguer  { background: var(--q-deleguer-bg);  color: var(--q-deleguer); }
+.q-eliminer  { background: var(--q-eliminer-bg);  color: var(--q-eliminer); }
+.axis-x {
+  margin-left: calc(clamp(9px, 1.05vw, 12px) + clamp(8px, 1.2vw, 14px) + 6px);
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1.05vw, 12px);
+  font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-faint);
+}
+.parking-band {
+  margin-left: calc(clamp(9px, 1.05vw, 12px) + clamp(8px, 1.2vw, 14px) + 6px);
+  border: 1.5px dashed var(--border-bright);
+  border-radius: 999px;
+  padding: clamp(7px, 1.2vh, 13px) clamp(14px, 2vw, 24px);
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+  color: var(--q-parking);
+  font-size: clamp(12px, 1.35vw, 16px);
+}
+.parking-band b { font-family: var(--font-display); font-weight: 400; font-size: clamp(14px, 1.7vw, 20px); }
+
+/* ── Chiffres ────────────────────────────────────────────────────────────── */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(120px, 15vw, 180px), 1fr));
+  gap: clamp(10px, 1.6vw, 20px);
+}
+.kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: clamp(14px, 2.6vh, 30px) clamp(14px, 1.8vw, 24px);
+  min-width: 0; overflow: hidden;
+}
+.kpi__val {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 5.4vw, 66px);
+  line-height: 1.02;
+  letter-spacing: -.02em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.kpi__label {
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1.05vw, 12px);
+  font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--text-dim);
+  margin-top: 9px;
+  line-height: 1.4;
+}
+.kpi--sage .kpi__val { color: var(--accent2); }
+.kpi--ink .kpi__val { color: var(--text); }
+
+/* ── Tableaux ────────────────────────────────────────────────────────────── */
+.table-wrap { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
+table.t { width: 100%; border-collapse: collapse; font-size: clamp(12px, 1.4vw, 18px); }
+table.t th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--surface2);
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1.05vw, 12px);
+  font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--text-dim);
+  text-align: left;
+  padding: clamp(8px, 1.4vh, 14px) clamp(10px, 1.5vw, 20px);
+  border-bottom: 1px solid var(--border-bright);
+}
+table.t td {
+  padding: clamp(8px, 1.3vh, 14px) clamp(10px, 1.5vw, 20px);
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  line-height: 1.45;
+  vertical-align: top;
+  overflow-wrap: break-word;
+}
+table.t tbody tr:nth-child(even) { background: color-mix(in srgb, var(--surface2) 45%, transparent); }
+table.t tbody tr:last-child td { border-bottom: none; }
+table.t td.k { color: var(--text); font-weight: 650; }
+table.t td small { display: block; color: var(--text-faint); font-size: .84em; margin-top: 3px; line-height: 1.4; }
+
+.chip {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: clamp(8px, .95vw, 11px);
+  font-weight: 600; letter-spacing: .09em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 5px; white-space: nowrap;
+}
+.chip--qol   { background: rgba(122,138,94,.18);  color: var(--q-faire); }
+.chip--simp  { background: rgba(56,96,127,.16);   color: var(--q-planifier); }
+.chip--moti  { background: rgba(143,106,20,.18);  color: var(--q-deleguer); }
+.chip--obj   { background: rgba(166,61,42,.15);   color: var(--q-eliminer); }
+.chip--rec   { background: var(--accent-dim);     color: var(--accent-deep); }
+.chip--done  { background: rgba(122,138,94,.18);  color: var(--q-faire); }
+.chip--open  { background: rgba(32,30,29,.08);    color: var(--text-dim); }
+
+/* ── Citation ────────────────────────────────────────────────────────────── */
+.slide--quote { align-items: center; text-align: center; padding-left: clamp(40px, 11vw, 190px); padding-right: clamp(40px, 11vw, 190px); }
+.quote-mark {
+  font-family: var(--font-display);
+  font-size: clamp(90px, 15vw, 190px);
+  line-height: .42; color: var(--accent); opacity: .16;
+  pointer-events: none; margin-bottom: 4px;
+}
+.slide--quote blockquote {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(24px, 3.9vw, 50px);
+  line-height: 1.25;
+  letter-spacing: -.01em;
+  text-wrap: balance;
+}
+.slide--quote cite {
+  display: block;
+  font-family: var(--font-mono);
+  font-style: normal;
+  font-size: clamp(10px, 1.15vw, 13px);
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--text-faint);
+  margin-top: clamp(18px, 3vh, 34px);
+}
+
+/* ── Code ────────────────────────────────────────────────────────────────── */
+.codeblock {
+  background: var(--code-bg);
+  border-radius: 12px;
+  padding: clamp(18px, 3vh, 34px) clamp(16px, 2.2vw, 30px);
+  position: relative;
+  min-width: 0;
+}
+.codeblock__name {
+  position: absolute; top: -11px; left: 20px;
+  font-family: var(--font-mono);
+  font-size: clamp(9px, 1vw, 11px);
+  font-weight: 600; letter-spacing: .08em;
+  padding: 3px 10px; border-radius: 5px;
+  background: var(--accent); color: #fff;
+}
+.codeblock pre { margin: 0; overflow-x: auto; }
+.codeblock code {
+  display: block; background: none; padding: 0; color: var(--code-text);
+  font-family: var(--font-mono);
+  font-size: clamp(11px, 1.25vw, 16px);
+  line-height: 1.75;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.codeblock .c { color: #9b8f7c; }
+.codeblock .a { color: #e08a4d; }
+.codeblock .g { color: #9db07c; }
+
+/* ── Frise / pipeline ────────────────────────────────────────────────────── */
+.pipeline { display: flex; align-items: stretch; flex: 1; min-height: 0; margin-top: clamp(10px, 1.8vh, 22px); }
+.pipe-step {
+  flex: 1; min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent);
+  border-radius: 12px;
+  padding: clamp(12px, 2.2vh, 24px) clamp(11px, 1.4vw, 20px);
+  display: flex; flex-direction: column;
+  overflow-wrap: break-word;
+}
+.pipe-step__num { font-family: var(--font-mono); font-size: clamp(9px, 1vw, 12px); font-weight: 600; letter-spacing: .1em; color: var(--accent); }
+.pipe-step__name { font-size: clamp(14px, 1.7vw, 21px); font-weight: 700; margin: 6px 0 7px; line-height: 1.2; }
+.pipe-step__desc { font-size: clamp(11px, 1.25vw, 15px); color: var(--text-dim); line-height: 1.5; flex: 1; }
+.pipe-step__tag {
+  align-self: flex-start; margin-top: clamp(8px, 1.3vh, 14px);
+  font-family: var(--font-mono); font-size: clamp(8px, .95vw, 11px);
+  padding: 3px 8px; border-radius: 4px;
+  background: var(--accent-dim); color: var(--accent-deep);
+}
+.pipe-arrow { display: flex; align-items: center; padding: 0 clamp(3px, .5vw, 8px); color: var(--accent); opacity: .45; flex: none; }
+
+/* ── Architecture ────────────────────────────────────────────────────────── */
+.arch { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: clamp(6px, 1vw, 14px); align-items: stretch; flex: 1; min-height: 0; margin-top: clamp(10px, 1.8vh, 22px); }
+.arch-col { display: flex; flex-direction: column; gap: clamp(7px, 1.2vh, 14px); min-width: 0; }
+.arch-box {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 12px; padding: clamp(10px, 1.8vh, 20px) clamp(10px, 1.3vw, 18px);
+  flex: 1; display: flex; flex-direction: column; justify-content: center; min-width: 0;
+}
+.arch-box--core { background: var(--accent-dim); border-color: var(--accent); border-width: 1.5px; }
+.arch-box--db { background: var(--q-planifier-bg); border-color: var(--q-planifier); }
+.arch-box__t { font-size: clamp(13px, 1.55vw, 19px); font-weight: 700; line-height: 1.2; }
+.arch-box__s { font-family: var(--font-mono); font-size: clamp(9px, 1vw, 12px); color: var(--text-faint); margin-top: 5px; line-height: 1.45; overflow-wrap: break-word; }
+.arch-sep { display: flex; align-items: center; color: var(--accent); opacity: .5; }
+.arch-head {
+  font-family: var(--font-mono); font-size: clamp(9px, 1vw, 12px);
+  font-weight: 600; letter-spacing: .13em; text-transform: uppercase;
+  color: var(--text-faint); margin-bottom: 2px; text-align: center;
+}
+
+/* ── Chrome de navigation ────────────────────────────────────────────────── */
+.deck-progress { position: fixed; top: 0; left: 0; height: 3px; background: var(--accent); z-index: 100; transition: width .3s ease; pointer-events: none; }
+.deck-dots {
+  position: fixed; right: clamp(8px, 1.4vw, 18px); top: 50%; transform: translateY(-50%);
+  display: flex; flex-direction: column; gap: 6px; z-index: 100;
+  background: color-mix(in srgb, var(--bg) 66%, transparent);
+  padding: 7px 5px; border-radius: 20px;
+}
+.deck-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); opacity: .28; border: none; padding: 0; cursor: pointer; transition: opacity .2s, transform .2s; }
+.deck-dot:hover { opacity: .6; }
+.deck-dot.active { opacity: 1; transform: scale(1.5); background: var(--accent); }
+.deck-counter {
+  position: fixed; bottom: clamp(10px, 1.8vh, 22px); right: clamp(12px, 2vw, 24px);
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-faint);
+  z-index: 100; font-variant-numeric: tabular-nums;
+  background: color-mix(in srgb, var(--bg) 66%, transparent);
+  padding: 4px 10px; border-radius: 20px;
+}
+.deck-hints {
+  position: fixed; bottom: clamp(10px, 1.8vh, 22px); left: 50%; transform: translateX(-50%);
+  font-family: var(--font-mono); font-size: 11px; color: var(--text-faint);
+  opacity: .7; z-index: 100; transition: opacity .5s ease; white-space: nowrap;
+}
+.deck-hints.faded { opacity: 0; pointer-events: none; }
+
+/* ── Adaptatif ───────────────────────────────────────────────────────────── */
+@media (max-height: 760px) {
+  .slide { padding: clamp(22px, 4vh, 40px) clamp(26px, 6vw, 80px); }
+  .bullets li { padding-top: 4px; padding-bottom: 4px; }
+}
+@media (max-height: 620px) {
+  .nest { display: none; }
+  .quote-mark { display: none; }
+  .divider-num { font-size: clamp(110px, 22vw, 220px); }
+}
+@media (max-height: 500px) {
+  .deck-dots { display: none; }
+  .s-display { font-size: clamp(30px, 7vw, 52px); }
+}
+@media (max-width: 900px) {
+  .cards--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cards--3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .arch { grid-template-columns: 1fr; }
+  .arch-sep { display: none; }
+}
+@media (max-width: 720px) {
+  .panels, .panels--even { grid-template-columns: 1fr; }
+  .panel--b { border-left: none; border-top: 1px solid var(--border); }
+  .cards--2, .cards--3, .cards--4 { grid-template-columns: 1fr; }
+  .pipeline { flex-direction: column; }
+  .pipe-arrow { justify-content: center; padding: 3px 0; transform: rotate(90deg); }
+  .matrix-axes { grid-template-columns: 1fr; }
+  .axis-y { display: none; }
+  .axis-x, .parking-band { margin-left: 0; }
+}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ═══ 01 — Titre ═══════════════════════════════════════════════════════ -->
+<section class="slide slide--title">
+  <svg class="nest reveal" style="--i:0" viewBox="11.75 5.5 88.5 88.5" aria-label="Logo Penduline : le nid suspendu de la rémiz penduline, avec la matrice 2×2 dedans">
+    <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139"/>
+    <path d="M56 20 C39 20 28 36 28 56 C28 76 39 94 56 94 C73 94 84 76 84 56 C84 36 73 20 56 20 Z" fill="#c67139"/>
+    <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#dbe3ce"/>
+    <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#dde7ef"/>
+    <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#f2e0c4"/>
+    <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#e3d8d4"/>
+  </svg>
+  <h1 class="s-display reveal" style="--i:1">Penduline</h1>
+  <p class="s-sub reveal" style="--i:2">Quatre cases, et le temps qu'on y passe.<br>Des matrices d'Eisenhower par contexte — sur le web, dans le navigateur, sur le téléphone.</p>
+  <div class="title-meta reveal" style="--i:3">
+    <span>Juillet → septembre 2026</span>
+    <span>penduline.polemil.dev</span>
+    <span>Web · Extension Chrome · PWA</span>
+  </div>
+</section>
+
+<!-- ═══ 02 — Le problème ════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Le point de départ</p>
+  <h2 class="s-heading reveal" style="--i:1">Une liste de tâches dit ce qu'il y a.<br>Elle ne dit pas ce qui compte.</h2>
+  <div class="cards cards--3" style="margin-top: clamp(14px, 2.4vh, 28px);">
+    <div class="card reveal" style="--i:2; border-top-color: var(--q-eliminer);">
+      <div class="card__kicker">Symptôme 1</div>
+      <p class="card__title">Tout se vaut</p>
+      <p class="card__body">Trente lignes à plat. La plus criante gagne, pas la plus importante. On travaille à l'adrénaline.</p>
+    </div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-deleguer);">
+      <div class="card__kicker">Symptôme 2</div>
+      <p class="card__title">Rien ne se jette</p>
+      <p class="card__body">Une liste ne propose jamais de renoncer. Elle grossit, on la fuit, on en ouvre une autre.</p>
+    </div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-planifier);">
+      <div class="card__kicker">Symptôme 3</div>
+      <p class="card__title">Aucune rétrospective</p>
+      <p class="card__body">On ne sait jamais où le temps est parti. Donc rien ne change d'une semaine sur l'autre.</p>
+    </div>
+  </div>
+  <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px); max-width: 78ch;">La matrice d'Eisenhower répond aux trois à la fois — à condition d'être <strong>tenue</strong>, pas dessinée une fois sur un tableau blanc. C'est tout le projet.</p>
+</section>
+
+<!-- ═══ 03 — Intercalaire I ═════════════════════════════════════════════ -->
+<section class="slide slide--divider">
+  <span class="divider-num">I</span>
+  <p class="s-label reveal" style="--i:0">Partie une</p>
+  <h2 class="s-display reveal" style="--i:1">L'origine</h2>
+  <p class="s-sub reveal" style="--i:2">Le besoin, la méthode, et les partis pris qu'on s'interdit de renégocier.</p>
+</section>
+
+<!-- ═══ 04 — La matrice ═════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">La méthode</p>
+  <h2 class="s-heading reveal" style="--i:1">Deux questions, quatre réponses</h2>
+  <div class="matrix-wrap reveal" style="--i:2">
+    <div class="matrix-axes">
+      <div class="axis-y">← Important →</div>
+      <div class="matrix">
+        <div class="quad q-faire">
+          <p class="quad__name">Faire</p>
+          <p class="quad__crit">urgent + important</p>
+          <p class="quad__what">Maintenant, soi-même. La case qu'on veut voir <em>vide</em>, pas pleine.</p>
+        </div>
+        <div class="quad q-planifier">
+          <p class="quad__name">Planifier</p>
+          <p class="quad__crit">important, pas urgent</p>
+          <p class="quad__what">Le vrai travail. Celui qui devient une urgence si on l'ignore.</p>
+        </div>
+        <div class="quad q-deleguer">
+          <p class="quad__name">Déléguer</p>
+          <p class="quad__crit">urgent, pas important</p>
+          <p class="quad__what">Ce qui presse quelqu'un d'autre. À passer, ou à borner.</p>
+        </div>
+        <div class="quad q-eliminer">
+          <p class="quad__name">Éliminer</p>
+          <p class="quad__crit">ni urgent, ni important</p>
+          <p class="quad__what">Le droit de renoncer, rendu explicite et traçable.</p>
+        </div>
+      </div>
+    </div>
+    <p class="axis-x">← Urgent →</p>
+  </div>
+  <p class="s-note reveal" style="--i:3; margin-top: clamp(8px, 1.4vh, 16px);">Une couleur par case — et une seule. Les teintes de cet écran sont celles de l'app, au code hexadécimal près.</p>
+</section>
+
+<!-- ═══ 05 — À trier ════════════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">La cinquième zone</p>
+      <h2 class="s-heading reveal" style="--i:1">« À trier » : le refus de trancher tout de suite</h2>
+      <p class="s-body reveal" style="--i:2">Une matrice pure oblige à classer au moment de la capture. C'est exactement ce qui fait abandonner l'outil : on note moins pour éviter de décider.</p>
+      <ul class="bullets" style="margin-top: clamp(8px, 1.4vh, 16px);">
+        <li class="reveal" style="--i:3">Une bande pleine largeur, neutre, sous les quatre cases.</li>
+        <li class="reveal" style="--i:4">On y jette sans réfléchir ; on classe plus tard, ou jamais.</li>
+        <li class="reveal" style="--i:5">La revue périodique signale ensuite ce qui y traîne depuis 14 jours.</li>
+      </ul>
+    </div>
+    <div class="panel panel--b">
+      <div class="parking-band reveal" style="--i:2; margin-left:0; background: var(--surface);">
+        <b>À trier</b>
+        <span>4 tâches en attente de classement</span>
+      </div>
+      <p class="s-body reveal" style="--i:4; margin-top: clamp(14px, 2.4vh, 26px);">La capture doit toujours coûter moins cher que la décision. Sinon la décision ne se prend jamais — parce que la capture n'a pas eu lieu.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 06 — Une matrice = un contexte ══════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Le modèle</p>
+  <h2 class="s-heading reveal" style="--i:1">Une matrice = un contexte, au choix de l'utilisateur</h2>
+  <p class="s-sub reveal" style="--i:2">Le projet est né sur « une matrice par pièce de la maison ». Il a très vite fallu admettre que la pièce n'était qu'<em>un</em> découpage possible.</p>
+  <div class="cards cards--4" style="margin-top: clamp(14px, 2.4vh, 28px);">
+    <div class="card reveal" style="--i:3"><div class="card__kicker">Un lieu</div><p class="card__title">Cuisine, Garage</p><p class="card__body">Le découpage d'origine : ce qu'on fait là où on se trouve.</p></div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-planifier);"><div class="card__kicker">Un moment</div><p class="card__title">Cette semaine</p><p class="card__body">Une fenêtre temporelle, remise à zéro quand elle se ferme.</p></div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-deleguer);"><div class="card__kicker">Un projet</div><p class="card__title">Déménagement</p><p class="card__body">Un sujet qui a un début et une fin, avec ses propres urgences.</p></div>
+    <div class="card reveal" style="--i:6; border-top-color: var(--accent2);"><div class="card__kicker">Un rôle</div><p class="card__title">Boulot, Perso</p><p class="card__body">Regroupables en <em>univers</em> — un niveau facultatif de bout en bout.</p></div>
+  </div>
+  <p class="s-body reveal" style="--i:7; margin-top: clamp(12px, 2.2vh, 24px);">En local, un compte de démo arrive garni. Ailleurs, <strong>un compte vide reste vide</strong> : l'app n'impose aucun découpage, elle en héberge un.</p>
+</section>
+
+<!-- ═══ 07 — Les partis pris ════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels panels--even">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">Ce qu'on s'interdit</p>
+      <h2 class="s-heading reveal" style="--i:1">Des non-choix, tenus</h2>
+      <ul class="bullets" style="margin-top: clamp(6px, 1.2vh, 14px);">
+        <li class="reveal" style="--i:2"><strong>Pas de « look IA »</strong> : palette papier/encre, pas de dégradé, pas de flou, pas d'emoji.</li>
+        <li class="reveal" style="--i:3"><strong>Pas de gestion de projet</strong> : ni assignation, ni dépendances, ni statuts.</li>
+        <li class="reveal" style="--i:4"><strong>Pas de score, pas de série</strong> à entretenir. On ne culpabilise pas son utilisateur.</li>
+        <li class="reveal" style="--i:5"><strong>Pas d'IA dans le produit.</strong> Rien ne classe à votre place : le classement <em>est</em> la valeur.</li>
+      </ul>
+    </div>
+    <div class="panel panel--b">
+      <p class="s-label reveal" style="--i:2">Ce qui en découle</p>
+      <h2 class="s-heading reveal" style="--i:3">Une identité qui ne ressemble à rien d'autre</h2>
+      <ul class="bullets bullets--sage" style="margin-top: clamp(6px, 1.2vh, 14px);">
+        <li class="reveal" style="--i:4">Fontes <strong>Caprasimo</strong> (titres) et <strong>Figtree</strong> (corps), auto-hébergées.</li>
+        <li class="reveal" style="--i:5">Terracotta <code>#c67139</code> comme seule couleur de marque ; le bleu reste fonctionnel.</li>
+        <li class="reveal" style="--i:6">Le nom : la <strong>rémiz penduline</strong>, un oiseau qui tisse un nid suspendu. Le logo est ce nid, avec la matrice dedans.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 08 — Architecture ═══════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">La technique, en un écran</p>
+  <h2 class="s-heading reveal" style="--i:1">Deux surfaces, un seul modèle, zéro serveur maison</h2>
+  <div class="arch reveal" style="--i:2">
+    <div class="arch-col">
+      <p class="arch-head">Surfaces</p>
+      <div class="arch-box">
+        <p class="arch-box__t">App web + PWA</p>
+        <p class="arch-box__s">Vite · React · TS<br>installable, responsive</p>
+      </div>
+      <div class="arch-box">
+        <p class="arch-box__t">Extension Chrome</p>
+        <p class="arch-box__s">MV3 · panneau latéral<br>capture depuis la page</p>
+      </div>
+    </div>
+    <div class="arch-sep"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-4-4l4 4-4 4"/></svg></div>
+    <div class="arch-col">
+      <p class="arch-head">Noyau partagé</p>
+      <div class="arch-box arch-box--core">
+        <p class="arch-box__t">@penduline/shared</p>
+        <p class="arch-box__s">quadrants · layout · focus<br>review · stats · realtime</p>
+      </div>
+      <div class="arch-box arch-box--core">
+        <p class="arch-box__t">La logique invisible</p>
+        <p class="arch-box__s">positions fractionnaires,<br>paires, seuils — 214 tests</p>
+      </div>
+    </div>
+    <div class="arch-sep"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-4-4l4 4-4 4"/></svg></div>
+    <div class="arch-col">
+      <p class="arch-head">Données</p>
+      <div class="arch-box arch-box--db">
+        <p class="arch-box__t">Supabase auto-hébergé</p>
+        <p class="arch-box__s">Postgres · Auth · Realtime<br>13 migrations</p>
+      </div>
+      <div class="arch-box arch-box--db">
+        <p class="arch-box__t">Isolation par RLS</p>
+        <p class="arch-box__s">user_id = auth.uid()<br>rien ne repose sur le client</p>
+      </div>
+    </div>
+  </div>
+  <p class="s-note reveal" style="--i:3; margin-top: clamp(8px, 1.4vh, 16px);">La règle de mise en page des paires vit dans <code>layout.ts</code> et nulle part ailleurs — parce qu'elle avait déjà divergé une fois entre le web et l'extension.</p>
+</section>
+
+<!-- ═══ 09 — Intercalaire II ════════════════════════════════════════════ -->
+<section class="slide slide--divider">
+  <span class="divider-num">II</span>
+  <p class="s-label reveal" style="--i:0">Partie deux</p>
+  <h2 class="s-display reveal" style="--i:1">Six vagues</h2>
+  <p class="s-sub reveal" style="--i:2">Ce qui s'est ajouté au fil de l'eau, et ce que chaque ajout devait résoudre.</p>
+</section>
+
+<!-- ═══ 10 — Les chiffres ═══════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Où en est le projet</p>
+  <h2 class="s-heading reveal" style="--i:1">Deux mois, deux surfaces, une base</h2>
+  <div class="kpis reveal" style="--i:2; margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="kpi"><div class="kpi__val">53</div><div class="kpi__label">PR fusionnées</div></div>
+    <div class="kpi kpi--sage"><div class="kpi__val">41</div><div class="kpi__label">Tickets fermés</div></div>
+    <div class="kpi"><div class="kpi__val">13</div><div class="kpi__label">Migrations SQL</div></div>
+    <div class="kpi kpi--sage"><div class="kpi__val">214</div><div class="kpi__label">Tests unitaires</div></div>
+    <div class="kpi kpi--ink"><div class="kpi__val">16 k</div><div class="kpi__label">Lignes TS / TSX</div></div>
+    <div class="kpi kpi--ink"><div class="kpi__val">45</div><div class="kpi__label">Tickets ouverts</div></div>
+  </div>
+  <p class="s-body reveal" style="--i:3; margin-top: clamp(14px, 2.4vh, 26px); max-width: 84ch;">Les tests ne couvrent <strong>que</strong> <code>packages/shared</code>, et c'est délibéré : c'est là que vivent les défaillances <em>silencieuses</em>. Un ordre qui dérive ou une paire cassée ne lèvent aucune erreur et ne se voient pas à l'écran — ils produisent juste un résultat faux. Le rendu, lui, se vérifie à l'œil.</p>
+</section>
+
+<!-- ═══ 11 — Les six vagues ═════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">La trajectoire</p>
+  <h2 class="s-heading reveal" style="--i:1">Une vague = une question à laquelle le produit ne savait pas répondre</h2>
+  <div class="table-wrap reveal" style="--i:2; margin-top: clamp(10px, 1.8vh, 20px);">
+    <table class="t">
+      <thead><tr><th style="width:17%">Vague</th><th style="width:31%">La question</th><th>Ce qu'elle a apporté</th><th style="width:12%">État</th></tr></thead>
+      <tbody>
+        <tr><td class="k">0 — Avant ouverture</td><td>« Puis-je laisser quelqu'un d'autre s'en servir ? »</td><td>Mot de passe oublié, échecs d'écriture visibles et réversibles</td><td><span class="chip chip--done">3/4</span></td></tr>
+        <tr><td class="k">1 — Quick wins</td><td>« Pourquoi dois-je tout refaire à la main ? »</td><td>Renommer, déplacer, réordonner, capture contextuelle, appairage</td><td><span class="chip chip--done">Close</span></td></tr>
+        <tr><td class="k">2 — Structure</td><td>« Comment je m'y retrouve avec vingt matrices ? »</td><td>Univers, vue globale, recherche, temps réel, Ctrl+Z, étapes, liens</td><td><span class="chip chip--done">Close</span></td></tr>
+        <tr><td class="k">3 — Le temps</td><td>« Et demain, et le mois dernier ? »</td><td>Échéances, revue périodique, statistiques, mode « aujourd'hui », planificateur</td><td><span class="chip chip--open">6/16</span></td></tr>
+        <tr><td class="k">4 — Ouverture</td><td>« Comment ça entre et ça sort ? »</td><td>MCP, HTTP, i18n, palette de commandes, import</td><td><span class="chip chip--open">À venir</span></td></tr>
+        <tr><td class="k">5 — Lourd</td><td>« Et sans réseau, et à plusieurs ? »</td><td>Hors-ligne, partage d'une matrice, nouvel onglet</td><td><span class="chip chip--open">À venir</span></td></tr>
+        <tr><td class="k">6 — La capture</td><td>« Pourquoi noter coûte encore cinq gestes ? »</td><td>Partage mobile, langage naturel, dictée, glisser d'une URL</td><td><span class="chip chip--open">À venir</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ 12 — Vague 1 ════════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Vague 1 — Confort d'usage</p>
+  <h2 class="s-heading reveal" style="--i:1">Les gestes qu'on fait cent fois par jour</h2>
+  <div class="cards cards--3" style="margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="card reveal" style="--i:2"><div class="card__kicker">#12 · #13</div><p class="card__title">Renommer, déplacer</p><p class="card__body">Éditer un titre en place, envoyer une tâche vers une autre matrice sans la recréer.</p><span class="card__tag">QoL</span></div>
+    <div class="card reveal" style="--i:3"><div class="card__kicker">#14</div><p class="card__title">Réordonner les matrices</p><p class="card__body">Au glisser-déposer, avec des positions fractionnaires — jamais de réécriture en masse.</p><span class="card__tag">QoL</span></div>
+    <div class="card reveal" style="--i:4"><div class="card__kicker">#52</div><p class="card__title">Capture contextuelle</p><p class="card__body">Clic droit sur une page → la tâche arrive dans la matrice visée, avec le lien.</p><span class="card__tag">Simplification</span></div>
+    <div class="card reveal" style="--i:5"><div class="card__kicker">#15</div><p class="card__title">Le nid pendulaire</p><p class="card__body">L'écran de chargement dessine le nid qui se tisse. Du soin, pas une fonction.</p><span class="card__tag">Plaisir</span></div>
+    <div class="card reveal" style="--i:6"><div class="card__kicker">#29 · #11 · #16</div><p class="card__title">Parité de l'extension</p><p class="card__body">Créer une matrice, afficher « À trier », arrondir les coins : l'extension cesse d'être un jouet.</p><span class="card__tag">Cohérence</span></div>
+    <div class="card reveal" style="--i:7"><div class="card__kicker">#51</div><p class="card__title">L'appairage</p><p class="card__body">Deux tâches côte à côte — et le lien devient une vraie relation, pas une mise en page.</p><span class="card__tag">Modèle</span></div>
+  </div>
+</section>
+
+<!-- ═══ 13 — L'appairage ════════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">Le ticket qui a changé de nature</p>
+      <h2 class="s-heading reveal" style="--i:1">« Donner un sens au lien, ou l'assumer comme mise en page »</h2>
+      <p class="s-body reveal" style="--i:2">Deux tâches partageant un <code>pair_id</code> s'affichaient côte à côte. Rien de plus : déplacer l'une laissait l'autre derrière. Un lien visuel qui ment est pire qu'une absence de lien.</p>
+      <ul class="bullets" style="margin-top: clamp(8px, 1.4vh, 16px);">
+        <li class="reveal" style="--i:3">Elles changent de case <strong>ensemble</strong>, se déplacent <strong>d'un bloc</strong>.</li>
+        <li class="reveal" style="--i:4">Le lien ne se défait que volontairement (« Dissocier »)…</li>
+        <li class="reveal" style="--i:5">…ou quand il perd son sens : l'une des deux supprimée ou terminée.</li>
+      </ul>
+    </div>
+    <div class="panel panel--ink">
+      <div class="codeblock reveal" style="--i:3; background: transparent; padding: 0;">
+        <pre><code><span class="c">// packages/shared/src/layout.ts</span>
+<span class="c">// Trois fonctions pures. Elles RENDENT</span>
+<span class="c">// les écritures à appliquer, sans rien</span>
+<span class="c">// persister — donc elles se testent.</span>
+
+<span class="a">planPairMove</span>(…)   <span class="c">→ Write[]</span>
+<span class="a">planPairPatch</span>(…)  <span class="c">→ Write[]</span>
+<span class="a">planPairDetach</span>(…) <span class="c">→ Write[]</span>
+
+<span class="c">// Et surtout : un seul exemplaire,</span>
+<span class="c">// partagé par le web ET l'extension.</span>
+<span class="c">// La règle avait déjà divergé une fois.</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 14 — Vague 2 : structure ════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Vague 2 — Se repérer</p>
+  <h2 class="s-heading reveal" style="--i:1">Quand il y a vingt matrices, l'accueil devient le problème</h2>
+  <div class="cards cards--2" style="margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="card reveal" style="--i:2; border-top-color: var(--accent2);">
+      <div class="card__kicker">#17 · #71 · #72 · #73</div>
+      <p class="card__title">Les univers</p>
+      <p class="card__body">Perso, Boulot, Maison. Un niveau de regroupement <strong>facultatif de bout en bout</strong> : on peut n'en créer aucun, et une matrice peut n'appartenir à aucun. Supprimer un univers <em>délie</em> ses matrices, il ne les emporte pas — c'est une vue, pas un propriétaire. Repliables, réordonnables, ouvrables en vue globale.</p>
+      <span class="card__tag">Simplification</span>
+    </div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);">
+      <div class="card__kicker">#18</div>
+      <p class="card__title">La vue globale</p>
+      <p class="card__body">Toutes les matrices fondues dans une seule matrice 2×2 — ou celles d'un univers. Répond à « qu'est-ce que j'ai, en tout ? » sans obliger à ouvrir sept écrans. Son entrée sur l'accueil est volontairement <em>plate</em> : la confondre avec une carte de matrice serait la première chose qu'on lui reprocherait.</p>
+      <span class="card__tag">Vue d'ensemble</span>
+    </div>
+  </div>
+  <p class="s-body reveal" style="--i:4; margin-top: clamp(12px, 2.2vh, 24px);">Au passage, <strong>#40</strong> : cesser de charger la corbeille et les archives. L'app ne lit plus que les tâches ouvertes — une décision qui reviendra hanter (utilement) les trois écrans de la vague 3.</p>
+</section>
+
+<!-- ═══ 15 — Recherche + temps réel ═════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Vague 2 — Retrouver, et rester à jour</p>
+  <h2 class="s-heading reveal" style="--i:1">Deux fonctions qu'on ne remarque que lorsqu'elles manquent</h2>
+  <div class="cards cards--2" style="margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="card reveal" style="--i:2">
+      <div class="card__kicker">#45 — Recherche</div>
+      <p class="card__title">Toutes matrices, corbeille comprise</p>
+      <p class="card__body">Insensible à la casse <em>et aux accents</em>. Utilisable au clavier seul. Un résultat ne se contente pas de s'afficher : il <strong>mène à sa tâche</strong>, dans sa case, dans sa matrice. Côté base, une fonction SQL — parce que le client ne charge plus les archives.</p>
+      <span class="card__tag">QoL</span>
+    </div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-faire);">
+      <div class="card__kicker">#39 · #117 — Temps réel</div>
+      <p class="card__title">Onglets et appareils synchronisés</p>
+      <p class="card__body">Cocher sur le téléphone met à jour l'onglet du bureau, et le panneau de l'extension. Sans lui, deux surfaces deviennent deux vérités — et l'utilisateur arbitre. Branché sur le web (#39) puis sur l'extension (#117), où le filtre serveur a dû sauter pour scoper à l'accès plutôt qu'à la propriété.</p>
+      <span class="card__tag">Confiance</span>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 16 — Ctrl+Z ═════════════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels panels--even">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">#46 — Annulation globale</p>
+      <h2 class="s-heading reveal" style="--i:1">La moitié du travail existait déjà</h2>
+      <p class="s-body reveal" style="--i:2">Pour rendre les échecs d'écriture réversibles (<strong>#34</strong>), chaque écriture capturait déjà l'état d'avant et savait calculer son patch inverse. L'annulation était <em>écrite</em> — elle ne servait qu'en cas de panne.</p>
+      <p class="s-body reveal" style="--i:3; margin-top: 12px;">Et les six gestes visés sont tous des patchs. L'inverse d'un patch est un patch : il n'y avait pas de second mécanisme à inventer, seulement à rendre disponible sur demande ce qui existait pour les urgences.</p>
+      <p class="s-note reveal" style="--i:4; margin-top: clamp(10px, 1.8vh, 20px);">Déplacement · réordonnancement · suppression · renommage · changement de matrice · complétion</p>
+    </div>
+    <div class="panel panel--b">
+      <p class="s-label reveal" style="--i:3">La leçon</p>
+      <blockquote class="reveal" style="--i:4; margin:0; font-family: var(--font-display); font-size: clamp(20px, 2.6vw, 34px); line-height: 1.25;">Une fonctionnalité « gratuite » est presque toujours le dividende d'une décision d'architecture prise deux mois plus tôt.</blockquote>
+      <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px);">Le même dividende reviendra pour le mode « aujourd'hui » : la colonne <code>focus_day</code> est devenue annulable par <code>Ctrl+Z</code> sans une ligne de code supplémentaire.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 17 — Sous-tâches ════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">#50 — Les étapes</p>
+  <h2 class="s-heading reveal" style="--i:1">Un seul niveau, tenu par trois règles</h2>
+  <p class="s-sub reveal" style="--i:2">C'est la seule entorse à la platitude du modèle. Sans ces trois règles, la matrice deviendrait un gestionnaire de projet — c'est-à-dire exactement ce qu'elle refuse d'être.</p>
+  <div class="cards cards--3" style="margin-top: clamp(14px, 2.4vh, 28px);">
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-eliminer);">
+      <div class="card__kicker">Règle 1</div>
+      <p class="card__title">Une étape ne peut pas en avoir</p>
+      <p class="card__body">Garanti par un <strong>trigger en base</strong>, pas par l'interface. Une interface se contourne par l'API ; un trigger, non.</p>
+    </div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);">
+      <div class="card__kicker">Règle 2</div>
+      <p class="card__title">Elle n'a pas de case à elle</p>
+      <p class="card__body">Elle hérite de celle de son parent. Une étape « urgente » d'une tâche « à éliminer » n'a aucun sens.</p>
+    </div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-planifier);">
+      <div class="card__kicker">Règle 3</div>
+      <p class="card__title">Elle ne compte nulle part</p>
+      <p class="card__body">Dans aucun compteur. Sinon dix étapes feraient passer une matrice pour surchargée.</p>
+    </div>
+  </div>
+  <p class="s-body reveal" style="--i:6; margin-top: clamp(12px, 2.2vh, 24px);">Elle ne se déplace pas, ne s'appaire pas : <strong>elle se coche et se supprime, rien d'autre.</strong></p>
+</section>
+
+<!-- ═══ 18 — Pièces jointes ═════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">#78 · #87 — Les liens</p>
+      <h2 class="s-heading reveal" style="--i:1">Une tâche porte des liens, et la capture se relit avant d'écrire</h2>
+      <ul class="bullets" style="margin-top: clamp(6px, 1.2vh, 14px);">
+        <li class="reveal" style="--i:2"><strong>Une table, pas une colonne</strong> — une issue <em>et</em> sa PR, un article <em>et</em> sa discussion. Une colonne obligerait à choisir lequel compte.</li>
+        <li class="reveal" style="--i:3"><strong>Un formulaire, plus un envoi aveugle.</strong> Le clic droit ouvre le panneau : on relit le titre, on vise la case, puis on écrit.</li>
+        <li class="reveal" style="--i:4"><strong>Une tâche sans lien n'affiche rien.</strong> Pas de pastille vide : l'immense majorité n'en aura jamais.</li>
+        <li class="reveal" style="--i:5">Le brouillon vit dans <code>chrome.storage.session</code> : une URL visitée est une information personnelle, elle ne traîne pas sur le disque.</li>
+      </ul>
+    </div>
+    <div class="panel panel--ink">
+      <p class="s-label reveal" style="--i:3; color: #f0a468;">La sécurité, au bon endroit</p>
+      <div class="codeblock reveal" style="--i:4; background: transparent; padding: 0;">
+        <pre><code><span class="c">-- 20260829180000_task_attachments.sql</span>
+<span class="g">check</span> (url ~* <span class="a">'^https?://'</span>)</code></pre>
+      </div>
+      <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px);">Le front valide <em>aussi</em>, pour donner un message plutôt qu'une erreur SQL opaque. Mais c'est le <code>check</code> qui garantit qu'un <code>javascript:</code> entré par l'API ne devienne jamais cliquable dans l'app web.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 19 — Échéances ══════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Vague 3 — #19 · Les échéances</p>
+  <h2 class="s-heading reveal" style="--i:1">Aucun statut n'est stocké : ils sont dérivés à chaque rendu</h2>
+  <div class="cards cards--3" style="margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="card reveal" style="--i:2; border-top-color: var(--q-parking);"><div class="card__kicker">État dérivé</div><p class="card__title">Neutre</p><p class="card__body">L'échéance est posée, elle est loin. Un simple badge de date.</p></div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-deleguer);"><div class="card__kicker">État dérivé</div><p class="card__title">Bientôt</p><p class="card__body">Moins de 24 h. Le badge change de couleur, tout seul, au fil de l'horloge.</p></div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-eliminer);"><div class="card__kicker">État dérivé</div><p class="card__title">Dans le rouge</p><p class="card__body">Dépassée. La tâche <strong>remonte en tête de sa case</strong>, dans une zone à elle.</p></div>
+  </div>
+  <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px); max-width: 88ch;">Une colonne <code>due_at</code>, et rien d'autre. Stocker « en retard » aurait exigé quelqu'un pour le réécrire au fil du temps — un travail de fond, des incohérences, un bug silencieux quand il tombe en panne. <strong>Ce qui se calcule ne se stocke pas.</strong></p>
+  <p class="s-note reveal" style="--i:6; margin-top: clamp(10px, 1.8vh, 18px);">Conséquence assumée : une tâche dépassée perd ses flèches ↑/↓. Son rang appartient à son échéance, plus à l'ordre manuel.</p>
+</section>
+
+<!-- ═══ 20 — Revue périodique ═══════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">#47 — La revue périodique</p>
+  <h2 class="s-heading reveal" style="--i:1">Cinq signaux que l'usage quotidien masque</h2>
+  <div class="table-wrap reveal" style="--i:2; margin-top: clamp(10px, 1.8vh, 20px);">
+    <table class="t">
+      <thead><tr><th style="width:36%">Le signal</th><th>Ce qu'il révèle</th><th style="width:15%">Seuil</th></tr></thead>
+      <tbody>
+        <tr><td class="k">À trier depuis trop longtemps</td><td>Le tri est repoussé.</td><td>14 jours</td></tr>
+        <tr><td class="k">Jamais reclassées</td><td>Un classement posé une fois et jamais remis en cause.</td><td>30 jours</td></tr>
+        <tr><td class="k">Coincées dans « Faire »</td><td>Une urgence qui n'en était peut-être pas une.</td><td>7 jours</td></tr>
+        <tr><td class="k">Matrices sans activité</td><td>Un contexte qui n'existe peut-être plus.</td><td>21 jours</td></tr>
+        <tr><td class="k">« Éliminer » qui se remplit sans se vider</td><td>Des décisions prises mais pas assumées.</td><td>30 jours</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="s-body reveal" style="--i:3; margin-top: clamp(10px, 1.8vh, 20px);">Chaque élément est <strong>actionnable sur place</strong>, avec les vraies cartes et leur menu habituel — donc <code>Ctrl+Z</code> défait comme partout ailleurs. Les cinq signaux ne forment volontairement <em>pas</em> une partition : une tâche peut apparaître dans deux d'entre eux, ce sont deux constats différents sur le même objet.</p>
+</section>
+
+<!-- ═══ 21 — Statistiques ═══════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">#48 — Les statistiques</p>
+      <h2 class="s-heading reveal" style="--i:1">Ce que la matrice d'Eisenhower promettait depuis le début</h2>
+      <p class="s-body reveal" style="--i:2">Quatre lectures sur 30 jours, 3 mois ou 12 mois : la répartition par case, la tendance semaine après semaine, le délai moyen création → complétion, et la comparaison entre matrices.</p>
+      <ul class="bullets" style="margin-top: clamp(8px, 1.4vh, 16px);">
+        <li class="reveal" style="--i:3">Trois périodes, pas de sélecteur libre — <em>personne ne compare le 3 au 17 mars.</em></li>
+        <li class="reveal" style="--i:4">On ne moyenne <strong>jamais</strong> des moyennes : chaque agrégat porte sa somme et son compte.</li>
+        <li class="reveal" style="--i:5">Sous 5 tâches terminées, l'écran <strong>se tait</strong> plutôt que de généraliser.</li>
+      </ul>
+    </div>
+    <div class="panel panel--b">
+      <p class="s-label reveal" style="--i:3">Le constat, en une phrase</p>
+      <div class="card reveal" style="--i:4; border-top-color: var(--q-faire); background: var(--surface);">
+        <p class="card__body" style="font-size: clamp(14px, 1.6vw, 19px);">« <strong>63 % de ce que vous avez terminé venait de « Faire ».</strong> C'est la case de l'urgence — beaucoup de choses vous arrivent avant d'avoir pu être planifiées. Ces tâches ont attendu 4,2 jours en moyenne. »</p>
+      </div>
+      <p class="s-note reveal" style="--i:5; margin-top: clamp(12px, 2vh, 22px);">Et si aucune case ne domine l'autre d'un facteur 1,5 : « aucune ne se détache ». Un écran qui prétend voir un motif là où il n'y en a pas perd sa crédibilité plus vite qu'un écran qui se tait.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 22 — Le ton ═════════════════════════════════════════════════════ -->
+<section class="slide slide--quote">
+  <div class="quote-mark reveal" style="--i:0">«</div>
+  <blockquote class="reveal" style="--i:1">« Beaucoup de choses vous arrivent avant d'être planifiées » décrit une situation.<br>« Tu éteins des incendies » décrit quelqu'un.</blockquote>
+  <cite class="reveal" style="--i:2">packages/shared/src/stats.ts — l'arbitrage de ton, écrit dans le code</cite>
+</section>
+
+<!-- ═══ 23 — Mode aujourd'hui ═══════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels panels--even">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">#49 — Mode « aujourd'hui »</p>
+      <h2 class="s-heading reveal" style="--i:1">Penduline savait « qu'est-ce que j'ai ? ».<br>Il sait maintenant « qu'est-ce que je fais aujourd'hui ? »</h2>
+      <p class="s-body reveal" style="--i:2">Choisir délibérément <strong>trois</strong> tâches depuis n'importe quelle matrice, les retrouver seules sur un écran dépouillé — sans les cases, sans le reste. Le soir, un bilan dit ce qui a été fait et ce qui repart au pot commun.</p>
+      <ul class="bullets" style="margin-top: clamp(8px, 1.4vh, 16px);">
+        <li class="reveal" style="--i:3"><strong>Lister</strong> et <strong>s'engager</strong> sont deux gestes différents. Le second n'existait nulle part.</li>
+        <li class="reveal" style="--i:4">La sélection <strong>expire</strong> à la fin de la journée : repartir d'une page blanche fait partie de l'exercice.</li>
+        <li class="reveal" style="--i:5">Le bilan est un constat, <strong>jamais une note</strong> : ni pourcentage, ni « seulement 1 sur 3 ».</li>
+      </ul>
+    </div>
+    <div class="panel panel--ink">
+      <p class="s-label reveal" style="--i:3; color: #f0a468;">La contrainte est la fonctionnalité</p>
+      <blockquote class="reveal" style="--i:4; margin:0; font-family: var(--font-display); font-size: clamp(19px, 2.4vw, 31px); line-height: 1.27; color: var(--code-text);">Un focus de quinze tâches n'est plus un focus : c'est la liste qu'on essayait de fuir.</blockquote>
+      <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 24px); color: rgba(240,228,207,.72);">Réglable de 1 à 7, défaut 3. Le refus n'est pas un masquage : l'entrée de menu se désactive <strong style="color:var(--code-text)">avec son motif</strong>. Un blocage muet se lit comme un bug ; un blocage expliqué se lit comme une intention.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 24 — focus_day ══════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">La décision derrière</p>
+  <h2 class="s-heading reveal" style="--i:1">Une colonne, et l'expiration devient gratuite</h2>
+  <div class="codeblock reveal" style="--i:2; margin-top: clamp(14px, 2.4vh, 28px); max-width: 980px; width: 100%; align-self: center;">
+    <span class="codeblock__name">packages/shared/src/focus.ts</span>
+    <pre><code><span class="c">-- tasks.focus_day : une date locale, sans fuseau.</span>
+
+   lundi    focus_day = <span class="a">2026-09-07</span>   <span class="g">→ dans la sélection du jour</span>
+   mardi    focus_day = <span class="a">2026-09-07</span>   <span class="c">→ ne correspond plus, donc sortie</span>
+
+<span class="c">// Rien n'expire : la valeur CESSE DE CORRESPONDRE.</span>
+<span class="c">// Aucun cron, aucun nettoyage, aucun TTL à maintenir.</span>
+<span class="c">// Et la valeur de la veille survit exprès — c'est elle</span>
+<span class="c">// qui permet le bilan du soir.</span></code></pre>
+  </div>
+  <p class="s-body reveal" style="--i:3; margin-top: clamp(14px, 2.4vh, 26px); max-width: 92ch; align-self: center;">Le piège évité : <code>toISOString().slice(0,10)</code> donne le jour <em>UTC</em>. À Paris, tout ce qui est fait après 22 h serait attribué au lendemain — et la sélection du soir se viderait sous les doigts de l'utilisateur.</p>
+</section>
+
+<!-- ═══ 25 — Planification ══════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">#20 — Le moteur de planification</p>
+      <h2 class="s-heading reveal" style="--i:1">Un tick qui converge, et qui ne fait rien</h2>
+      <p class="s-body reveal" style="--i:2"><code>pg_cron</code> appelle <code>penduline_tick()</code> toutes les heures. La fonction ne fait <strong>rien</strong> aujourd'hui — et c'est le livrable : verrou, journal, rattrapage, droits sont en place pour que les récurrences (#21) et les actions d'échéance (#22) n'aient plus qu'à remplir le corps.</p>
+      <p class="s-body reveal" style="--i:3; margin-top: 12px;">Le tick traite « tout ce qui est dû à cet instant », jamais « ce qui s'est passé depuis la dernière fois ». Un tick par pas laisse un trou quand une exécution est manquée : il faut le détecter, le mémoriser, le rejouer — donc un curseur, donc un bug silencieux dès qu'il dérive.</p>
+    </div>
+    <div class="panel panel--b">
+      <p class="s-label reveal" style="--i:3">Ce qu'on obtient gratuitement</p>
+      <ul class="bullets bullets--sage" style="margin-top: clamp(6px, 1.2vh, 14px);">
+        <li class="reveal" style="--i:4"><strong>Rattrapage</strong> — structurel. Une exécution manquée signifie seulement que la suivante a plus à faire.</li>
+        <li class="reveal" style="--i:5"><strong>Idempotence</strong> — relancer aussitôt ne trouve plus rien à faire.</li>
+      </ul>
+      <p class="s-note reveal" style="--i:6; margin-top: clamp(14px, 2.4vh, 26px);">L'issue reposait sur une prémisse fausse : elle situait l'activation de <code>pg_cron</code> dans le dashboard supabase.com. La prod est auto-hébergée, sans dashboard. Vérification sur l'hôte avant d'écrire une ligne — l'extension était déjà chargée.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 26 — Ce qu'on retire ════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">#110 — Le retrait</p>
+  <h2 class="s-heading reveal" style="--i:1">Une fonctionnalité a été supprimée. C'est la plus importante de la liste.</h2>
+  <div class="cards cards--2" style="margin-top: clamp(14px, 2.4vh, 28px);">
+    <div class="card reveal" style="--i:2; border-top-color: var(--q-eliminer);">
+      <div class="card__kicker">Avant</div>
+      <p class="card__title">L'épinglage</p>
+      <p class="card__body">Une tâche « épinglée » remontait en tête de sa case. Fonctionnait très bien — et servait à dire « je fais ça aujourd'hui ». Sauf qu'une épingle ne se retire jamais toute seule : au bout de trois semaines, tout était épinglé, donc plus rien ne l'était.</p>
+    </div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-faire);">
+      <div class="card__kicker">Après</div>
+      <p class="card__title">Le mode « aujourd'hui »</p>
+      <p class="card__body">Même intention, mais la sélection expire à minuit. La teinte du fond de carte a été <strong>conservée</strong> : elle était juste, c'est l'usage qui ne l'était pas. Une migration retire la colonne ; le garde-fou est resté en base le temps que l'extension suive.</p>
+    </div>
+  </div>
+  <p class="s-body reveal" style="--i:4; margin-top: clamp(14px, 2.4vh, 26px); max-width: 90ch;">Retirer une fonctionnalité qui marche est le geste le plus difficile d'un produit. Le signe qu'il faut le faire : <strong>elle a un successeur qui fait mieux la même chose</strong>, pas simplement « elle sert peu ».</p>
+</section>
+
+<!-- ═══ 27 — Intercalaire III ═══════════════════════════════════════════ -->
+<section class="slide slide--divider">
+  <span class="divider-num">III</span>
+  <p class="s-label reveal" style="--i:0">Partie trois</p>
+  <h2 class="s-display reveal" style="--i:1">Deux surfaces</h2>
+  <p class="s-sub reveal" style="--i:2">Là où on capture n'est presque jamais là où on classe.</p>
+</section>
+
+<!-- ═══ 28 — L'extension ════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">L'extension Chrome</p>
+  <h2 class="s-heading reveal" style="--i:1">Capturer sans quitter la page qu'on est en train de lire</h2>
+  <div class="cards cards--3" style="margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="card reveal" style="--i:2"><div class="card__kicker">#102</div><p class="card__title">Du popup au panneau latéral</p><p class="card__body">Le popup se fermait au moindre clic ailleurs. Le panneau reste ouvert pendant qu'on navigue — et Chrome plafonnait sa hauteur à 600 px.</p><span class="card__tag">QoL</span></div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-deleguer);"><div class="card__kicker">#108</div><p class="card__title">Le badge du jour</p><p class="card__body">Le nombre de tâches restantes de la sélection « aujourd'hui », directement sur l'icône. Zéro clic pour savoir où on en est.</p><span class="card__tag">Objectif</span></div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-planifier);"><div class="card__kicker">#107</div><p class="card__title">Session partagée web → extension</p><p class="card__body">Se connecter une fois. Canal unidirectionnel : l'extension ne renvoie jamais sa session au web. Aucune permission d'hôte ajoutée.</p><span class="card__tag">Friction</span></div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-faire);"><div class="card__kicker">#52 · #87</div><p class="card__title">Le clic droit</p><p class="card__body">Depuis n'importe quelle page : « Ajouter à… » puis la matrice. Le formulaire s'ouvre, pré-rempli du titre et de l'URL.</p><span class="card__tag">Capture</span></div>
+    <div class="card reveal" style="--i:6"><div class="card__kicker">#114 · #119</div><p class="card__title">La carte, au complet</p><p class="card__body">Menu déroulant plutôt que modale plein écran ; un titre coupé se déplie d'un clic sur toute la carte — un même hook partagé par les deux surfaces.</p><span class="card__tag">Parité</span></div>
+    <div class="card reveal" style="--i:7; border-top-color: var(--q-parking);"><div class="card__kicker">Assumé</div><p class="card__title">Ce qu'elle ne fait pas</p><p class="card__body">Elle <strong>lit</strong> la sélection du jour, elle ne la compose pas. Composer relève du geste réfléchi qu'on fait devant ses matrices.</p><span class="card__tag">Périmètre</span></div>
+  </div>
+</section>
+
+<!-- ═══ 29 — Conformité / accessibilité ═════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Le travail qui ne se voit pas</p>
+  <h2 class="s-heading reveal" style="--i:1">Installable, utilisable au clavier, et sans tiers</h2>
+  <div class="cards cards--4" style="margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="card reveal" style="--i:2"><div class="card__kicker">#41 · #93</div><p class="card__title">PWA installable</p><p class="card__body">Manifeste, icônes maskables jusqu'à 1024 px — le WebAPK Android n'avait que 512 px à agrandir, d'où un splash pixelisé.</p></div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);"><div class="card__kicker">#38</div><p class="card__title">Alternative clavier</p><p class="card__body">Le glisser-déposer n'en avait aucune. <code>Alt</code>+flèches réordonne ; l'anneau de focus devient une règle globale, pas un cas par cas.</p></div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-faire);"><div class="card__kicker">#38</div><p class="card__title">Contraste AA</p><p class="card__body">Les anneaux de focus d'origine donnaient 1,09:1 — invisibles. Les fonds de case ont été approfondis, contraste mesuré et testé.</p></div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-deleguer);"><div class="card__kicker">#37</div><p class="card__title">Polices auto-hébergées</p><p class="card__body">Le CDN Google transmettait l'IP de chaque visiteur à un tiers avant tout consentement. Sujet supprimé — et deux requêtes externes avec lui.</p></div>
+  </div>
+  <p class="s-body reveal" style="--i:6; margin-top: clamp(14px, 2.4vh, 26px);">Reste ouvert : <strong>#36</strong> — suppression de compte et export des données (RGPD), et <strong>#35</strong> — suivi des erreurs et mesure d'usage.</p>
+</section>
+
+<!-- ═══ 30 — La grille des intérêts ═════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">La synthèse</p>
+  <h2 class="s-heading reveal" style="--i:1">Chaque ajout sert une chose, et une seule</h2>
+  <div class="table-wrap reveal" style="--i:2; margin-top: clamp(10px, 1.8vh, 20px);">
+    <table class="t">
+      <thead><tr><th style="width:15%">Registre</th><th style="width:38%">Ce que ça cherche à produire</th><th>Ce qui l'incarne</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="chip chip--qol">Confort</span></td>
+          <td class="k">Que le geste courant ne coûte rien<small>L'outil qu'on abandonne est celui qui résiste</small></td>
+          <td>Renommer en place · réordonner · Ctrl+Z · recherche · temps réel · déplier un titre coupé · panneau latéral</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip--simp">Simplification</span></td>
+          <td class="k">Qu'on ait moins à décider, pas plus<small>Chaque décision différée est une tâche non notée</small></td>
+          <td>« À trier » · un seul niveau d'étapes · univers facultatifs · trois périodes de stats, pas un calendrier</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip--moti">Motivation</span></td>
+          <td class="k">Qu'avancer se voie<small>Sans jamais noter la personne</small></td>
+          <td>Bilan du soir · badge du jour sur l'icône · toast d'annulation · le nid qui se tisse au chargement</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip--obj">Objectifs</span></td>
+          <td class="k">Qu'on s'engage sur peu, et qu'on tienne<small>La contrainte est la fonctionnalité</small></td>
+          <td>Mode « aujourd'hui » borné à 7 · échéances et leur remontée · revue périodique et ses cinq seuils</td>
+        </tr>
+        <tr>
+          <td><span class="chip chip--rec">Rétrospective</span></td>
+          <td class="k">Qu'on apprenne quelque chose de soi<small>La promesse originelle de la matrice</small></td>
+          <td>Statistiques par case · délai création → complétion · le constat en une phrase, factuel et sans reproche</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══ 31 — Intercalaire IV ════════════════════════════════════════════ -->
+<section class="slide slide--divider">
+  <span class="divider-num">IV</span>
+  <p class="s-label reveal" style="--i:0">Partie quatre</p>
+  <h2 class="s-display reveal" style="--i:1">Ce qui vient</h2>
+  <p class="s-sub reveal" style="--i:2">45 tickets ouverts, répartis en quatre chantiers — et une question encore non tranchée.</p>
+</section>
+
+<!-- ═══ 32 — Vague 6 ════════════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Vague 6 — La capture</p>
+  <h2 class="s-heading reveal" style="--i:1">Noter coûte encore cinq gestes. C'est cinq de trop.</h2>
+  <div class="cards cards--3" style="margin-top: clamp(12px, 2.2vh, 26px);">
+    <div class="card reveal" style="--i:2"><div class="card__kicker">#139</div><p class="card__title">Langage naturel</p><p class="card__body">« Appeler le plombier demain 14 h » pose déjà la date. L'app la fait retaper.</p></div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);"><div class="card__kicker">#128</div><p class="card__title">Capture mobile</p><p class="card__body">Cible de partage Android, URL d'ajout rapide pour iOS. Partager une page → une tâche.</p></div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);"><div class="card__kicker">#140</div><p class="card__title">Déposer une URL</p><p class="card__body">Glisser ou coller un lien directement sur une case, au lieu de cinq gestes.</p></div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-faire);"><div class="card__kicker">#141</div><p class="card__title">Dictée</p><p class="card__body"><code>SpeechRecognition</code> alimentant le parseur de langage naturel.</p></div>
+    <div class="card reveal" style="--i:6; border-top-color: var(--q-eliminer);"><div class="card__kicker">#132</div><p class="card__title">Le vrai titre</p><p class="card__body">Le titre capturé est celui du référencement, pas celui de la tâche. Nettoyage générique d'abord, motifs par site ensuite.</p></div>
+    <div class="card reveal" style="--i:7; border-top-color: var(--q-parking);"><div class="card__kicker">#130</div><p class="card__title">Deux entrées inutilisées</p><p class="card__body">Mot-clé omnibox <code>pen</code> et un raccourci clavier — l'extension y a droit gratuitement.</p></div>
+  </div>
+</section>
+
+<!-- ═══ 33 — Vagues 4 & 5 ══════════════════════════════════════════════ -->
+<section class="slide slide--split">
+  <div class="panels panels--even">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">Vague 4 — Ouverture</p>
+      <h2 class="s-heading reveal" style="--i:1">Comment ça entre, comment ça sort</h2>
+      <ul class="bullets" style="margin-top: clamp(6px, 1.2vh, 14px);">
+        <li class="reveal" style="--i:2"><strong>#23</strong> — un serveur MCP Penduline : créer et classer depuis un agent.</li>
+        <li class="reveal" style="--i:3"><strong>#25</strong> — un point d'entrée HTTP pour Home Assistant, IFTTT, un raccourci iOS.</li>
+        <li class="reveal" style="--i:4"><strong>#133</strong> — un flux iCal sortant : les échéances dans l'agenda habituel.</li>
+        <li class="reveal" style="--i:5"><strong>#136</strong> — l'import : aujourd'hui, un compte vide reste vide et il n'y a aucun chemin.</li>
+        <li class="reveal" style="--i:6"><strong>#43 · #54</strong> — internationalisation, et palette de commandes <code>Ctrl+K</code>.</li>
+      </ul>
+    </div>
+    <div class="panel panel--b">
+      <p class="s-label reveal" style="--i:3">Vague 5 — Lourd</p>
+      <h2 class="s-heading reveal" style="--i:4">Les chantiers qui touchent au modèle</h2>
+      <ul class="bullets bullets--sage" style="margin-top: clamp(6px, 1.2vh, 14px);">
+        <li class="reveal" style="--i:5"><strong>#26 → #28</strong> — le hors-ligne en trois temps : extension sans compte, import vers un compte, cache web.</li>
+        <li class="reveal" style="--i:6"><strong>#53</strong> — partager une matrice. Aujourd'hui la RLS dit « propriétaire » ; il faudra qu'elle dise « accès ».</li>
+        <li class="reveal" style="--i:7"><strong>#142</strong> — au retour d'un lien, confirmer la tâche : une question déposée, jamais surgie. Pas de traçage.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ═══ 34 — Gamification ══════════════════════════════════════════════ -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">En réflexion — rien n'est tranché</p>
+  <h2 class="s-heading reveal" style="--i:1">La récompense, sans le score</h2>
+  <p class="s-sub reveal" style="--i:2">Le produit s'interdit depuis le début les séries, les points et les classements. La question ouverte est de savoir s'il existe une forme de récompense compatible avec ce refus.</p>
+  <div class="cards cards--3" style="margin-top: clamp(14px, 2.4vh, 28px);">
+    <div class="card reveal" style="--i:3; border-top-color: var(--accent);">
+      <div class="card__kicker">Piste 1</div>
+      <p class="card__title">Le nid comme jauge</p>
+      <p class="card__body">Le logo lui-même change d'état selon la santé du tableau — six paliers, de « déserté » à « bien tenu ». Une image, pas un chiffre : rien à battre, rien à perdre.</p>
+    </div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);">
+      <div class="card__kicker">Piste 2</div>
+      <p class="card__title">Des badges de constat</p>
+      <p class="card__body">Non pas « 30 jours d'affilée », mais « un mois sans rien laisser pourrir dans Faire ». Décrire ce qui s'est produit, pas décerner une médaille de régularité.</p>
+    </div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-eliminer);">
+      <div class="card__kicker">Le risque</div>
+      <p class="card__title">Trahir le ton</p>
+      <p class="card__body">Une jauge qui se dégrade devient un reproche permanent. C'est précisément l'écueil que <code>stats.ts</code> documente : décrire une situation, jamais quelqu'un.</p>
+    </div>
+  </div>
+  <p class="s-note reveal" style="--i:6; margin-top: clamp(12px, 2.2vh, 24px);">Quatre maquettes explorées, dont une dans le langage visuel de Duolingo — avec son analyse de compromis. Le sujet reste ouvert.</p>
+</section>
+
+<!-- ═══ 35 — Clôture ═══════════════════════════════════════════════════ -->
+<section class="slide slide--title">
+  <svg class="nest reveal" style="--i:0" viewBox="11.75 5.5 88.5 88.5" aria-hidden="true">
+    <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139"/>
+    <path d="M56 20 C39 20 28 36 28 56 C28 76 39 94 56 94 C73 94 84 76 84 56 C84 36 73 20 56 20 Z" fill="#c67139"/>
+    <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#dbe3ce"/>
+    <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#dde7ef"/>
+    <path d="M44.5 58.5 L54.5 58.5 L54.5 68.5 A5 5 0 0 1 49.5 73.5 L45.5 73.5 A6 6 0 0 1 39.5 67.5 L39.5 63.5 A5 5 0 0 1 44.5 58.5 Z" fill="#f2e0c4"/>
+    <path d="M57.5 58.5 L67.5 58.5 A5 5 0 0 1 72.5 63.5 L72.5 67.5 A6 6 0 0 1 66.5 73.5 L62.5 73.5 A5 5 0 0 1 57.5 68.5 Z" fill="#e3d8d4"/>
+  </svg>
+  <h2 class="s-display reveal" style="--i:1; font-size: clamp(34px, 6vw, 76px);">Quatre cases.<br>Le reste est du soin.</h2>
+  <p class="s-sub reveal" style="--i:2">Chaque fonctionnalité de cette présentation existe parce qu'une question restait sans réponse — et disparaît le jour où une meilleure réponse arrive.</p>
+  <div class="title-meta reveal" style="--i:3">
+    <span>penduline.polemil.dev</span>
+    <span>github — 86 tickets, 6 vagues</span>
+    <span>MIT</span>
+  </div>
+</section>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function SlideEngine() {
+    this.deck = document.querySelector('.deck');
+    this.slides = [].slice.call(document.querySelectorAll('.slide'));
+    this.current = 0;
+    this.total = this.slides.length;
+    this.buildChrome();
+    this.bindEvents();
+    this.observe();
+    this.update();
+  }
+
+  SlideEngine.prototype.buildChrome = function () {
+    var self = this;
+
+    var bar = document.createElement('div');
+    bar.className = 'deck-progress';
+    document.body.appendChild(bar);
+    this.bar = bar;
+
+    var dots = document.createElement('div');
+    dots.className = 'deck-dots';
+    this.slides.forEach(function (_, i) {
+      var d = document.createElement('button');
+      d.className = 'deck-dot';
+      d.type = 'button';
+      d.title = 'Diapositive ' + (i + 1);
+      d.setAttribute('aria-label', 'Aller à la diapositive ' + (i + 1));
+      d.onclick = function () { self.goTo(i); };
+      dots.appendChild(d);
+    });
+    document.body.appendChild(dots);
+    this.dots = [].slice.call(dots.children);
+
+    var ctr = document.createElement('div');
+    ctr.className = 'deck-counter';
+    document.body.appendChild(ctr);
+    this.counter = ctr;
+
+    var hints = document.createElement('div');
+    hints.className = 'deck-hints';
+    hints.textContent = '← → ou molette pour naviguer';
+    document.body.appendChild(hints);
+    this.hints = hints;
+    this.hintTimer = setTimeout(function () { hints.classList.add('faded'); }, 4500);
+  };
+
+  SlideEngine.prototype.bindEvents = function () {
+    var self = this;
+
+    document.addEventListener('keydown', function (e) {
+      if (e.target.closest && e.target.closest('input, textarea, [contenteditable], .table-wrap')) return;
+      if (['ArrowDown', 'ArrowRight', ' ', 'PageDown'].indexOf(e.key) !== -1) {
+        e.preventDefault(); self.next();
+      } else if (['ArrowUp', 'ArrowLeft', 'PageUp'].indexOf(e.key) !== -1) {
+        e.preventDefault(); self.prev();
+      } else if (e.key === 'Home') {
+        e.preventDefault(); self.goTo(0);
+      } else if (e.key === 'End') {
+        e.preventDefault(); self.goTo(self.total - 1);
+      } else {
+        return;
+      }
+      self.fadeHints();
+    });
+
+    var touchY = null;
+    this.deck.addEventListener('touchstart', function (e) { touchY = e.touches[0].clientY; }, { passive: true });
+    this.deck.addEventListener('touchend', function (e) {
+      if (touchY === null) return;
+      var dy = touchY - e.changedTouches[0].clientY;
+      if (Math.abs(dy) > 50) { dy > 0 ? self.next() : self.prev(); }
+      touchY = null;
+    });
+  };
+
+  SlideEngine.prototype.observe = function () {
+    var self = this;
+    var obs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          self.current = self.slides.indexOf(entry.target);
+          self.update();
+        }
+      });
+    }, { threshold: 0.5 });
+    this.slides.forEach(function (s) { obs.observe(s); });
+  };
+
+  SlideEngine.prototype.goTo = function (i) {
+    this.slides[Math.max(0, Math.min(i, this.total - 1))].scrollIntoView({ behavior: 'smooth' });
+  };
+  SlideEngine.prototype.next = function () { if (this.current < this.total - 1) this.goTo(this.current + 1); };
+  SlideEngine.prototype.prev = function () { if (this.current > 0) this.goTo(this.current - 1); };
+
+  SlideEngine.prototype.update = function () {
+    var self = this;
+    this.bar.style.width = ((this.current + 1) / this.total * 100) + '%';
+    this.dots.forEach(function (d, i) { d.classList.toggle('active', i === self.current); });
+    this.counter.textContent = (this.current + 1) + ' / ' + this.total;
+  };
+
+  SlideEngine.prototype.fadeHints = function () {
+    clearTimeout(this.hintTimer);
+    this.hints.classList.add('faded');
+  };
+
+  // Filet de sécurité : ramène dans sa carte toute valeur de KPI trop large.
+  function autoFit() {
+    document.querySelectorAll('.kpi__val').forEach(function (el) {
+      if (el.scrollWidth > el.clientWidth && el.clientWidth > 0) {
+        var s = el.clientWidth / el.scrollWidth;
+        el.style.transform = 'scale(' + s + ')';
+        el.style.transformOrigin = 'left top';
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    autoFit();
+    new SlideEngine();
+  });
+})();
+</script>
+</body>
+</html>
