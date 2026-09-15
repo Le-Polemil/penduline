@@ -1,0 +1,124 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "DA Penduline"
+    },
+    {
+      "id": "page-2",
+      "name": "DA Duolingo"
+    },
+    {
+      "id": "page-3",
+      "name": "Découpes"
+    },
+    {
+      "id": "page-4",
+      "name": "Mascotte"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Main.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1180,
+      "h": 800,
+      "page": "page-1"
+    },
+    {
+      "file": "Accueil.dc.html",
+      "x": 1300,
+      "y": 0,
+      "w": 820,
+      "h": 800,
+      "page": "page-1"
+    },
+    {
+      "file": "Marqueur.dc.html",
+      "x": 0,
+      "y": 960,
+      "w": 1180,
+      "h": 880,
+      "page": "page-1"
+    },
+    {
+      "file": "Statistiques.dc.html",
+      "x": 1300,
+      "y": 960,
+      "w": 820,
+      "h": 1560,
+      "page": "page-1"
+    },
+    {
+      "file": "NidDuolingo.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1060,
+      "h": 720,
+      "page": "page-2"
+    },
+    {
+      "file": "BadgesDuolingo.dc.html",
+      "x": 1180,
+      "y": 0,
+      "w": 1000,
+      "h": 1000,
+      "page": "page-2"
+    },
+    {
+      "file": "NidSilhouette.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1340,
+      "h": 880,
+      "page": "page-3"
+    },
+    {
+      "file": "Mascotte.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1120,
+      "h": 880,
+      "page": "page-4"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "brief",
+      "x": 0,
+      "y": -170,
+      "w": 620,
+      "page": "page-1",
+      "text": "Récompenser l'entretien, pas le volume.\nRampe du nid à six crans, question déposée avec ses deux cibles de clic, badges en tête de la Rétrospective."
+    },
+    {
+      "id": "duo",
+      "x": 0,
+      "y": -150,
+      "w": 680,
+      "page": "page-2",
+      "text": "La même chose en langue Duolingo, pour comparer.\n\nRefait d'après l'asset de référence (streak-freeze.svg) : cinq couches, aucun contour, aucun anneau, aucun socle décalé. Les formes sont originales, seule la technique d'empilement est reprise."
+    },
+    {
+      "id": "decoupes",
+      "x": 0,
+      "y": -150,
+      "w": 640,
+      "page": "page-3",
+      "text": "Découpe ET volume — les deux essais précédents prenaient chacun une moitié.\nLe volume de l'asset est fait de plans francs superposés, pas d'un dégradé : aucun linearGradient dans le fichier."
+    },
+    {
+      "id": "masc",
+      "x": 0,
+      "y": -150,
+      "w": 640,
+      "page": "page-4",
+      "text": "Relevé à la main d'après ton image : neuf aplats, aucun contour, aucun dégradé."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-4"
+  }
+}

@@ -1,0 +1,143 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #f5ead8; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
+    a { color: #8c491a; } a:hover { color: #643312; }
+    .fig { margin: 0 0 18px; padding: 16px 18px 14px; background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); }
+    .fig__head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+    .fig__title { font: 400 19px/1.25 "Caprasimo", system-ui, sans-serif; color: #201e1d; }
+    .fig__hint { font: 12.5px "Figtree", system-ui, sans-serif; color: #645c50; }
+    .bar { display: grid; grid-template-columns: 5.5rem 1fr auto; align-items: center; gap: 10px; }
+    .bar__label { font: 600 13px "Figtree", system-ui, sans-serif; color: #201e1d; }
+    .bar__track { height: 14px; background: #eee7db; border-radius: 4px; overflow: hidden; }
+    .bar__fill { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+    .bar__value { font: 600 13px "Figtree", system-ui, sans-serif; color: #201e1d; display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .bar__share { font: 400 12px "Figtree", system-ui, sans-serif; color: #645c50; }
+    .dot9 { width: 9px; height: 9px; border-radius: 999px; flex: none; }
+    .period { font: 600 13px "Figtree", system-ui, sans-serif; color: #645c50; background: none; border: 1.5px solid #c0b6a5; border-radius: 999px; padding: 6px 14px; }
+    .period--on { color: #643312; background: #fff2eb; border-color: #b2622d; }
+    .note { font: italic 12px/1.45 "Figtree", system-ui, sans-serif; color: #645c50; margin: 12px 0 0; }
+    .medal { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .mname { font: 600 12px/1.3 "Figtree", system-ui, sans-serif; color: #201e1d; text-align: center; }
+    .msub { font: 10.5px/1.3 "Figtree", system-ui, sans-serif; color: #645c50; text-align: center; }
+  </style>
+</helmet>
+<div style="padding: 44px 24px 56px; background: #f5ead8; min-height: 100%; box-sizing: border-box;">
+ <div style="max-width: 760px; margin: 0 auto;">
+
+  <div style="margin-bottom: 22px;">
+    <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">Rétrospective</h1>
+    <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #645c50; margin: 8px 0 14px;">
+      Ce que vous avez terminé, et depuis quelle case. Les tâches supprimées définitivement n'y figurent pas.
+    </p>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+      <span class="period">7 jours</span><span class="period period--on">30 jours</span><span class="period">3 mois</span><span class="period">Tout</span>
+    </div>
+  </div>
+
+  <!-- Le moment : un badge qui vient de tomber -->
+  <div style="position: relative; overflow: hidden; background: #3d472b; border-radius: 28px; padding: 22px 24px; margin-bottom: 14px; display: flex; align-items: center; gap: 22px;">
+    <svg viewBox="0 0 100 100" width="96" height="96" aria-hidden="true"><defs><clipPath id="cb"><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" /></clipPath></defs><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" fill="#d98b79" /><path d="M50 18 C64 18 78 26 81 40 C84 54 82 68 74 76 C66 84 52 86 42 84 C28 81 18 72 15 58 C12 44 18 28 30 21 Z" fill="#a63d2a" /><path d="M32 40 L68 40 L63.5 77 C63.2 80 61 82 58 82 L42 82 C39 82 36.8 80 36.5 77 Z M27 31 L73 31 C75.2 31 77 32.8 77 35 C77 37.2 75.2 39 73 39 L27 39 C24.8 39 23 37.2 23 35 C23 32.8 24.8 31 27 31 Z M43 21 L57 21 C59.2 21 61 22.8 61 25 L61 30 L54 30 L54 28 L46 28 L46 30 L39 30 L39 25 C39 22.8 40.8 21 43 21 Z" fill="#f4e4df" opacity="0.92" /><g clip-path="url(#cb)"><path d="M10 58 L64 4 L98 10 L18 90 Z" fill="#f6ece9" opacity="0.593" /></g><rect fill="#FFF" x="24.5" y="24.5" width="11" height="11" rx="1.32" transform="rotate(45 30 30)" /><rect fill="#FFF" x="68.0" y="62.0" width="8" height="8" rx="0.96" transform="rotate(45 72 66)" /></svg>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <span style="font: 600 11.5px 'Figtree', system-ui, sans-serif; color: #c8d4b4; letter-spacing: 0.08em; text-transform: uppercase;">Obtenu à l'instant</span>
+      <span style="font: 400 27px/1.15 'Caprasimo', system-ui, sans-serif; color: #fdf6e9;">Premier Éliminer</span>
+      <span style="font: 13.5px/1.5 'Figtree', system-ui, sans-serif; color: #dbe3ce; max-width: 420px;">Vous avez accepté de ne pas faire quelque chose. C'est l'acte le plus difficile de la méthode, et le seul que rien d'autre ne mesure.</span>
+    </div>
+  </div>
+
+  <!-- La collection -->
+  <figure class="fig">
+    <figcaption class="fig__head">
+      <span class="fig__title">Gestes rares</span>
+      <span class="fig__hint">4 obtenus sur 9</span>
+    </figcaption>
+    <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px 10px;">
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><defs><clipPath id="cm0"><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" /></clipPath></defs><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" fill="#d98b79" /><path d="M50 18 C64 18 78 26 81 40 C84 54 82 68 74 76 C66 84 52 86 42 84 C28 81 18 72 15 58 C12 44 18 28 30 21 Z" fill="#a63d2a" /><path d="M32 40 L68 40 L63.5 77 C63.2 80 61 82 58 82 L42 82 C39 82 36.8 80 36.5 77 Z M27 31 L73 31 C75.2 31 77 32.8 77 35 C77 37.2 75.2 39 73 39 L27 39 C24.8 39 23 37.2 23 35 C23 32.8 24.8 31 27 31 Z M43 21 L57 21 C59.2 21 61 22.8 61 25 L61 30 L54 30 L54 28 L46 28 L46 30 L39 30 L39 25 C39 22.8 40.8 21 43 21 Z" fill="#f4e4df" opacity="0.92" /><g clip-path="url(#cm0)"><path d="M10 58 L64 4 L98 10 L18 90 Z" fill="#f6ece9" opacity="0.593" /></g><rect fill="#FFF" x="24.5" y="24.5" width="11" height="11" rx="1.32" transform="rotate(45 30 30)" /><rect fill="#FFF" x="68.0" y="62.0" width="8" height="8" rx="0.96" transform="rotate(45 72 66)" /></svg>
+        <span class="mname">Premier Éliminer</span>
+        <span class="msub">accepter de ne pas faire</span>
+      </div>
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><defs><clipPath id="cm1"><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" /></clipPath></defs><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" fill="#d9b775" /><path d="M50 18 C64 18 78 26 81 40 C84 54 82 68 74 76 C66 84 52 86 42 84 C28 81 18 72 15 58 C12 44 18 28 30 21 Z" fill="#8f6a14" /><path d="M22 44 L52 44 L52 30 C52 27 55 25.5 57 27.5 L78 47 C79.5 48.5 79.5 51.5 78 53 L57 72.5 C55 74.5 52 73 52 70 L52 56 L22 56 C19 56 17 54 17 51 L17 49 C17 46 19 44 22 44 Z" fill="#faf0dc" opacity="0.92" /><g clip-path="url(#cm1)"><path d="M10 58 L64 4 L98 10 L18 90 Z" fill="#faf2e2" opacity="0.593" /></g><rect fill="#FFF" x="24.5" y="24.5" width="11" height="11" rx="1.32" transform="rotate(45 30 30)" /><rect fill="#FFF" x="68.0" y="62.0" width="8" height="8" rx="0.96" transform="rotate(45 72 66)" /></svg>
+        <span class="mname">Déléguée, puis close</span>
+        <span class="msub">passée, puis terminée</span>
+      </div>
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><defs><clipPath id="cm2"><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" /></clipPath></defs><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" fill="#93a577" /><path d="M50 18 C64 18 78 26 81 40 C84 54 82 68 74 76 C66 84 52 86 42 84 C28 81 18 72 15 58 C12 44 18 28 30 21 Z" fill="#5c6b45" /><path d="M24 30 L76 30 C79 30 81 32 81 35 L81 76 C81 79 79 81 76 81 L24 81 C21 81 19 79 19 76 L19 35 C19 32 21 30 24 30 Z M31 16 C33.8 16 36 18.2 36 21 L36 32 C36 34.8 33.8 37 31 37 C28.2 37 26 34.8 26 32 L26 21 C26 18.2 28.2 16 31 16 Z M69 16 C71.8 16 74 18.2 74 21 L74 32 C74 34.8 71.8 37 69 37 C66.2 37 64 34.8 64 32 L64 21 C64 18.2 66.2 16 69 16 Z" fill="#e9efe0" opacity="0.92" /><g clip-path="url(#cm2)"><path d="M10 58 L64 4 L98 10 L18 90 Z" fill="#eef2e6" opacity="0.593" /></g><rect fill="#FFF" x="24.5" y="24.5" width="11" height="11" rx="1.32" transform="rotate(45 30 30)" /><rect fill="#FFF" x="68.0" y="62.0" width="8" height="8" rx="0.96" transform="rotate(45 72 66)" /></svg>
+        <span class="mname">Quinze jours nets</span>
+        <span class="msub">aucun dépassement</span>
+      </div>
+
+      <div class="medal">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><defs><clipPath id="cm3"><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" /></clipPath></defs><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" fill="#7c9db4" /><path d="M50 18 C64 18 78 26 81 40 C84 54 82 68 74 76 C66 84 52 86 42 84 C28 81 18 72 15 58 C12 44 18 28 30 21 Z" fill="#38607f" /><path d="M50 16 C68.8 16 84 31.2 84 50 C84 68.8 68.8 84 50 84 C31.2 84 16 68.8 16 50 C16 31.2 31.2 16 50 16 Z" fill="#e7f0f6" opacity="0.92" /><g clip-path="url(#cm3)"><path d="M10 58 L64 4 L98 10 L18 90 Z" fill="#edf4f8" opacity="0.593" /></g><rect fill="#FFF" x="24.5" y="24.5" width="11" height="11" rx="1.32" transform="rotate(45 30 30)" /><rect fill="#FFF" x="68.0" y="62.0" width="8" height="8" rx="0.96" transform="rotate(45 72 66)" /></svg>
+        <span class="mname">Décidée lundi, faite lundi</span>
+        <span class="msub">posée et close le même jour</span>
+      </div>
+
+      <div class="medal" style="opacity: 0.5;">
+        <svg viewBox="0 0 100 100" width="72" height="72" aria-hidden="true"><defs><clipPath id="cm4"><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" /></clipPath></defs><path d="M50 4 C68 4 88 14 92 32 C96 50 94 70 84 82 C74 94 56 98 42 96 C24 93 10 82 6 64 C2 46 8 24 22 13 C30 7 40 4 50 4 Z" fill="#dcd3c4" /><path d="M50 18 C64 18 78 26 81 40 C84 54 82 68 74 76 C66 84 52 86 42 84 C28 81 18 72 15 58 C12 44 18 28 30 21 Z" fill="#a19786" /><path d="M28 48 L72 48 C75 48 77 50 77 53 L77 79 C77 82 75 84 72 84 L28 84 C25 84 23 82 23 79 L23 53 C23 50 25 48 28 48 Z M50 12 C61 12 70 21 70 32 L70 48 L60 48 L60 32 C60 26.5 55.5 22 50 22 C44.5 22 40 26.5 40 32 L40 48 L30 48 L30 32 C30 21 39 12 50 12 Z" fill="#f2ece1" opacity="0.92" /><g clip-path="url(#cm4)"><path d="M10 58 L64 4 L98 10 L18 90 Z" fill="#f9f4ed" opacity="0.593" /></g></svg>
+        <span class="mname" style="color: #645c50;">À trier vidée</span>
+        <span class="msub">pas encore</span>
+      </div>
+
+    </div>
+    <p class="note">Construction reprise des icônes d'objet de Duolingo — silhouette claire, cœur saturé, motif plein, facette translucide, deux éclats — mais dans les tons des cases, jamais dans leur saturation. Et aucun badge de volume : « 100 tâches terminées » se gagne en fabriquant cent tâches triviales, et rendrait faux les deux chiffres qui suivent.</p>
+  </figure>
+
+  <p style="font: 400 19px/1.5 'Caprasimo', system-ui, sans-serif; color: #201e1d; background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); padding: 18px 20px; margin: 0 0 18px;">
+    38 tâches terminées ce mois-ci, surtout depuis « Faire ».
+  </p>
+
+  <figure class="fig">
+    <figcaption class="fig__head">
+      <span class="fig__title">Ratio Eisenhower</span>
+      <span class="fig__hint">part de ce qui comptait</span>
+    </figcaption>
+    <div style="display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px;">
+      <span style="font: 400 40px/1 'Caprasimo', system-ui, sans-serif; color: #43502f;">71 %</span>
+      <span style="font: 13px 'Figtree', system-ui, sans-serif; color: #645c50;">contre 64 % le mois dernier</span>
+    </div>
+    <div style="display: flex; height: 14px; border-radius: 4px; overflow: hidden; background: #eee7db;">
+      <span style="display: block; width: 45%; background: #5c6b45;"></span>
+      <span style="display: block; width: 26%; background: #38607f;"></span>
+      <span style="display: block; width: 21%; background: #8f6a14;"></span>
+      <span style="display: block; width: 8%; background: #a63d2a;"></span>
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 14px; margin-top: 11px;">
+      <span style="display: flex; align-items: center; gap: 6px; font: 600 12px 'Figtree', system-ui, sans-serif; color: #201e1d;"><span class="dot9" style="background: #5c6b45;"></span>Faire 45 %</span>
+      <span style="display: flex; align-items: center; gap: 6px; font: 600 12px 'Figtree', system-ui, sans-serif; color: #201e1d;"><span class="dot9" style="background: #38607f;"></span>Planifier 26 %</span>
+      <span style="display: flex; align-items: center; gap: 6px; font: 400 12px 'Figtree', system-ui, sans-serif; color: #645c50;"><span class="dot9" style="background: #8f6a14;"></span>Déléguer 21 %</span>
+      <span style="display: flex; align-items: center; gap: 6px; font: 400 12px 'Figtree', system-ui, sans-serif; color: #645c50;"><span class="dot9" style="background: #a63d2a;"></span>Éliminer 8 %</span>
+    </div>
+    <p class="note">Faire + Planifier sur le total terminé. La seule note qu'on ne puisse pas gonfler : ajouter des tâches faciles à « Éliminer » la fait baisser.</p>
+  </figure>
+
+  <figure class="fig" style="margin-bottom: 0;">
+    <figcaption class="fig__head">
+      <span class="fig__title">Par case</span>
+      <span class="fig__hint">38 tâches terminées</span>
+    </figcaption>
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div class="bar"><span class="bar__label">Faire</span><span class="bar__track"><span class="bar__fill" style="width: 100%; background: #5c6b45;"></span></span><span class="bar__value">17 <span class="bar__share">45 %</span></span></div>
+      <div class="bar"><span class="bar__label">Planifier</span><span class="bar__track"><span class="bar__fill" style="width: 59%; background: #38607f;"></span></span><span class="bar__value">10 <span class="bar__share">26 %</span></span></div>
+      <div class="bar"><span class="bar__label">Déléguer</span><span class="bar__track"><span class="bar__fill" style="width: 47%; background: #8f6a14;"></span></span><span class="bar__value">8 <span class="bar__share">21 %</span></span></div>
+      <div class="bar"><span class="bar__label">Éliminer</span><span class="bar__track"><span class="bar__fill" style="width: 18%; background: #a63d2a;"></span></span><span class="bar__value">3 <span class="bar__share">8 %</span></span></div>
+    </div>
+  </figure>
+
+ </div>
+</div>
+</x-dc>
+</body>
+</html>

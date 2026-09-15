@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #f5ead8; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
+    a { color: #8c491a; } a:hover { color: #643312; }
+    .task { background: #fdf6e9; border-radius: 12px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); border: 1.5px solid transparent; padding: 9px 12px; display: flex; align-items: center; gap: 9px; font: 14px "Figtree", system-ui, sans-serif; color: #201e1d; }
+    .grip { color: #c0b6a5; letter-spacing: 1px; flex: none; }
+    .check { width: 18px; height: 18px; border: 2px solid #5c6b45; border-radius: 50%; flex: none; box-sizing: border-box; }
+    .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
+    .att { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 4px 0 0 30px; }
+    .chip { display: inline-flex; align-items: center; background: #f9f4ed; border-radius: 999px; font: 600 11px/1 "Figtree", system-ui, sans-serif; }
+    .lnk { display: inline-block; color: #5c6b45; text-decoration: none; padding: 4px 4px 4px 9px; }
+    .del { background: none; border: none; color: #645c50; font: 10px/1 "Figtree", system-ui, sans-serif; padding: 4px 8px 4px 4px; }
+    .ask { display: inline-flex; align-items: center; gap: 5px; background: #fff2eb; border: 1px solid #ffc6a5; border-radius: 999px; font: 600 11px/1 "Figtree", system-ui, sans-serif; color: #8c491a; padding: 4px 10px 4px 8px; }
+    .step { font: 600 12.5px "Figtree", system-ui, sans-serif; color: #8c491a; }
+    .note { font: 13px/1.55 "Figtree", system-ui, sans-serif; color: #645c50; margin: 0; }
+    .board { background: #dbe3ce; border-radius: 16px; padding: 14px; }
+    .h2 { font: 400 19px/1.25 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0 0 6px; }
+  </style>
+</helmet>
+<div style="padding: 40px 40px 44px; background: #f5ead8; min-height: 100%; box-sizing: border-box;">
+
+  <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">La question déposée</h1>
+  <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #645c50; margin: 8px 0 28px; max-width: 760px;">
+    Le point ne disait pas qu'il y avait une question, et il rendait le clic sur la pastille ambigu. Deux façons de le corriger, et la même hauteur de carte partout.
+  </p>
+
+  <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-items: start; margin-bottom: 30px;">
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="step">Au repos</span>
+      <div class="board">
+        <div class="task"><span class="grip">⠿</span><span class="check"></span><span class="title">Commander des filtres à café</span></div>
+        <div class="att"><span class="chip"><span class="lnk">↗ amazon.fr</span><span class="del">✕</span></span></div>
+      </div>
+      <p class="note">La pastille d'aujourd'hui. Un seul comportement : ouvrir le lien.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="step">Option A · marqueur dans la pastille</span>
+      <div class="board">
+        <div class="task"><span class="grip">⠿</span><span class="check"></span><span class="title">Commander des filtres à café</span></div>
+        <div class="att">
+          <span class="chip" style="background: #fff2eb;">
+            <span style="display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 999px; background: #c67139; color: #fff; font: 700 10px/1 'Figtree', system-ui, sans-serif; margin-left: 5px;">?</span>
+            <span style="width: 1px; height: 13px; background: #ffc6a5; margin: 0 6px;"></span>
+            <span class="lnk" style="padding-left: 0;">↗ amazon.fr</span><span class="del">✕</span>
+          </span>
+        </div>
+      </div>
+      <p class="note">Le « ? » est un bouton à lui, séparé du lien par un filet. Compact — mais il faut deviner qu'un point d'interrogation dans une pastille de lien pose une question sur la <em>tâche</em>.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="step" style="color: #43502f;">Option B · pastille de question séparée ✓</span>
+      <div class="board" style="box-shadow: 0 3px 10px rgba(46,43,37,0.16);">
+        <div class="task"><span class="grip">⠿</span><span class="check"></span><span class="title">Commander des filtres à café</span></div>
+        <div class="att">
+          <span class="chip"><span class="lnk">↗ amazon.fr</span><span class="del">✕</span></span>
+          <span class="ask"><span style="display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 999px; border: 1.5px solid #c67139; box-sizing: border-box;"></span>C'est fait ?</span>
+        </div>
+      </div>
+      <p class="note">Une pastille de plus, à côté. <strong style="color: #474238;">Aucune ambiguïté possible</strong> : le lien reste le lien, la question est écrite en toutes lettres, et la cible fait sa taille toute seule.</p>
+    </div>
+
+  </div>
+
+  <div style="display: grid; grid-template-columns: 1.15fr 1fr; gap: 22px; align-items: start;">
+
+    <div style="background: #fdf6e9; border-radius: 28px; box-shadow: 0 1px 2px rgba(46,43,37,0.14); padding: 20px 22px;">
+      <p class="h2">Où l'on clique, exactement</p>
+      <div style="display: flex; align-items: center; gap: 5px; margin: 18px 0 8px; padding-left: 4px;">
+        <span style="position: relative; display: inline-flex;">
+          <span class="chip"><span class="lnk">↗ amazon.fr</span><span class="del">✕</span></span>
+          <span style="position: absolute; inset: -5px; border: 1.5px dashed #38607f; border-radius: 999px;"></span>
+        </span>
+        <span style="position: relative; display: inline-flex; margin-left: 8px;">
+          <span class="ask"><span style="display: inline-flex; width: 14px; height: 14px; border-radius: 999px; border: 1.5px solid #c67139; box-sizing: border-box;"></span>C'est fait ?</span>
+          <span style="position: absolute; inset: -5px; border: 1.5px dashed #c67139; border-radius: 999px;"></span>
+        </span>
+      </div>
+      <div style="display: flex; gap: 26px; padding-left: 4px;">
+        <span style="font: 600 12px 'Figtree', system-ui, sans-serif; color: #27455c;">↑ ouvre le lien</span>
+        <span style="font: 600 12px 'Figtree', system-ui, sans-serif; color: #8c491a;">↑ ouvre la question</span>
+      </div>
+      <p class="note" style="margin-top: 16px;">
+        C'était le défaut de la première version : un point posé <em>dans</em> la pastille du lien laissait un seul élément porter deux intentions. Cliquer le lien doit continuer d'ouvrir le lien — c'est le geste que l'utilisateur a déjà fait une fois, et le lui reprendre serait la pire des surprises. La question a donc sa propre cible.
+      </p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 12px;">
+      <span class="step">À l'activation</span>
+      <div class="board" style="position: relative;">
+        <div class="task"><span class="grip">⠿</span><span class="check"></span><span class="title">Commander des filtres à café</span></div>
+        <div class="att">
+          <span class="chip"><span class="lnk">↗ amazon.fr</span><span class="del">✕</span></span>
+          <span class="ask" style="background: #ffe3d2;"><span style="display: inline-flex; width: 14px; height: 14px; border-radius: 999px; border: 1.5px solid #c67139; box-sizing: border-box;"></span>C'est fait ?</span>
+        </div>
+        <div style="position: absolute; left: 128px; top: 76px; width: 210px; background: #fdf6e9; border-radius: 12px; box-shadow: 0 12px 32px rgba(46,43,37,0.22); padding: 11px 12px 10px; display: flex; flex-direction: column; gap: 4px;">
+          <span style="font: 600 12.5px 'Figtree', system-ui, sans-serif; color: #43502f; background: #dbe3ce; border-radius: 999px; padding: 7px 12px;">Fait</span>
+          <span style="font: 600 12.5px 'Figtree', system-ui, sans-serif; color: #474238; padding: 7px 12px;">Pas encore</span>
+          <span style="font: 400 12.5px 'Figtree', system-ui, sans-serif; color: #645c50; padding: 7px 12px;">Ne plus demander pour cette tâche</span>
+        </div>
+      </div>
+      <p class="note" style="margin-top: 92px;">Le panneau flotte : il ne pousse rien. La pastille porte déjà la question, il ne reste que les réponses.</p>
+    </div>
+
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

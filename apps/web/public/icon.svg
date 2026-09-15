@@ -14,7 +14,13 @@
   Sans contour : le détourage crème d'une version antérieure apparaissait en halo
   clair sur les fonds sombres.
 -->
-  <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139"></path>
+  <!-- Le col penche de 8°. C'est le dessin, pas un état : un nid PEND, et un col
+       parfaitement d'aplomb le faisait lire comme posé. Le pivot (56,14) est le
+       point d'attache, pas le centre du tracé — tourner autour du centre
+       décrocherait le col du nid. -->
+  <g transform="rotate(8 56 14)">
+    <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139"></path>
+  </g>
   <path d="M56 20 C39 20 28 36 28 56 C28 76 39 94 56 94 C73 94 84 76 84 56 C84 36 73 20 56 20 Z" fill="#c67139"></path>
   <path d="M45.5 40.5 L49.5 40.5 A5 5 0 0 1 54.5 45.5 L54.5 55.5 L44.5 55.5 A5 5 0 0 1 39.5 50.5 L39.5 46.5 A6 6 0 0 1 45.5 40.5 Z" fill="#dbe3ce"></path>
   <path d="M62.5 40.5 L66.5 40.5 A6 6 0 0 1 72.5 46.5 L72.5 50.5 A5 5 0 0 1 67.5 55.5 L57.5 55.5 L57.5 45.5 A5 5 0 0 1 62.5 40.5 Z" fill="#dde7ef"></path>

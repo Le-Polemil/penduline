@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&family=Figtree:wght@400;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #fff; color: #201e1d; font-family: "Figtree", system-ui, sans-serif; }
+    a { color: #8c491a; } a:hover { color: #643312; }
+    .card { background: #fff; border: 2px solid #EFE7DA; border-radius: 24px; padding: 18px 20px; }
+    .nm { font: 400 19px 'Caprasimo', system-ui, sans-serif; color: #201e1d; }
+    .rl { font: 12px/1.5 'Figtree', system-ui, sans-serif; color: #8a8175; margin: 4px 0 0; }
+    .h2 { font: 400 20px/1.2 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0 0 8px; }
+    .p { font: 13px/1.65 'Figtree', system-ui, sans-serif; color: #474238; margin: 0; }
+    .sw { display: flex; align-items: center; gap: 8px; font: 600 11.5px 'Figtree', system-ui, sans-serif; color: #5c5449; }
+    .ch { width: 26px; height: 26px; border-radius: 8px; flex: none; }
+    .tl { font: 600 9.5px 'Figtree', system-ui, sans-serif; color: #b0a695; letter-spacing: 0.06em; text-transform: uppercase; }
+    .size { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+  </style>
+</helmet>
+<div style="padding: 38px 40px 42px; background: #fff; min-height: 100%; box-sizing: border-box;">
+
+  <h1 style="font: 400 36px/1.1 'Caprasimo', system-ui, sans-serif; color: #201e1d; margin: 0;">La mascotte, en vectoriel</h1>
+  <p style="font: 15px/1.5 'Figtree', system-ui, sans-serif; color: #8a8175; margin: 8px 0 24px; max-width: 880px;">
+    Relevé à la main d'après ton image : neuf aplats, aucun contour, aucun dégradé. Ce qu'on gagne à la vectoriser, c'est qu'elle tient à 16 px, qu'elle se recolore, et qu'elle peut entrer dans le balancier animé du loader.
+  </p>
+
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start;">
+
+    <div class="card" style="display: flex; flex-direction: column; align-items: center;">
+      <svg viewBox="0 0 200 190" width="360" height="342" aria-hidden="true">
+        <!-- La huppe, derrière la masse : trois lobes qui retombent vers l'arrière. -->
+        <path d="M114 44 C108 30 98 22 89 25 C82 27 82 34 88 37 C79 34 71 38 71 44 C71 49 77 51 83 49 C77 52 74 57 78 61 C83 65 93 61 100 55 C106 50 111 47 114 44 Z" fill="#E3D0AE" />
+        <!-- Les pattes passent SOUS le corps : dessinées avant, leur haut disparaît. -->
+        <g stroke="#3A3A3C" stroke-width="7.5" stroke-linecap="round" fill="none">
+          <path d="M104 152 C103 162 101 169 100 174" />
+          <path d="M136 152 C136 162 136 169 136 174" />
+        </g>
+        <ellipse cx="96" cy="177" rx="10.5" ry="6" fill="#3A3A3C" transform="rotate(-7 96 177)" />
+        <ellipse cx="141" cy="177" rx="10.5" ry="6" fill="#3A3A3C" transform="rotate(7 141 177)" />
+        <!-- Le corps : un œuf, le plein vers le bas. -->
+        <path d="M118 38 C146 38 168 60 169 88 C170 122 150 162 118 162 C86 162 66 122 67 88 C68 60 90 38 118 38 Z" fill="#EFE0C6" />
+        <!-- L'aile : une seule grande forme qui mange le flanc et file en queue. -->
+        <path d="M106 74 C90 74 76 88 70 106 C65 122 56 136 44 146 C35 153 25 158 19 160 C14 162 16 167 22 166 C34 164 47 158 58 150 C74 139 90 124 99 108 C107 94 111 82 106 74 Z" fill="#C8471E" />
+        <ellipse cx="80" cy="116" rx="13" ry="33" fill="#B03C18" transform="rotate(-34 80 116)" />
+        <!-- Les trois marques de poitrine : sommet plat, ventre rond. -->
+        <g fill="#DCC09A">
+          <path d="M102 112 L120 112 C120 121 116 126 111 126 C106 126 102 121 102 112 Z" />
+          <path d="M126 112 L144 112 C144 121 140 126 135 126 C130 126 126 121 126 112 Z" />
+          <path d="M112 132 L136 132 C136 143 130 148 124 148 C118 148 112 143 112 132 Z" />
+        </g>
+        <!-- Le masque : il DÉBORDE du crâne à droite et plonge entre les yeux. -->
+        <path d="M76 68 C76 55 86 46 99 46 C109 46 116 51 120 58 C125 50 134 45 146 46 C161 47 172 58 171 72 C170 87 158 96 145 95 C134 94 126 88 121 79 C117 87 109 93 99 93 C85 93 76 82 76 68 Z" fill="#2E2E30" />
+        <ellipse cx="99" cy="68" rx="15" ry="19" fill="#FFFFFF" />
+        <ellipse cx="145" cy="70" rx="13.5" ry="17" fill="#FFFFFF" />
+        <ellipse cx="101" cy="72" rx="8" ry="11" fill="#2E2E30" />
+        <ellipse cx="147" cy="73" rx="7" ry="9.5" fill="#2E2E30" />
+        <circle cx="95" cy="61" r="4.6" fill="#FFFFFF" />
+        <circle cx="141" cy="64" r="4" fill="#FFFFFF" />
+        <!-- Le bec : une lentille effilée aux deux bouts. -->
+        <path d="M121 76 C124 69 136 68 139 76 C136 84 124 84 121 76 Z" fill="#F5A81C" />
+      </svg>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+
+      <div class="card">
+        <p class="h2">Ce que le relevé a changé dans mes réflexes</p>
+        <p class="p">
+          <strong>L'aile est une seule grande forme</strong> qui mange le flanc et file en queue jusqu'au coin. Je faisais deux petites ellipses symétriques de part et d'autre — décoratives, sans rôle.<br><br>
+          <strong>Le masque déborde du crâne</strong> à droite et plonge entre les yeux. Les miens étaient sagement inscrits dans la tête, donc sans caractère.<br><br>
+          <strong>Les proportions sont extrêmes</strong> : corps énorme, bec et pattes minuscules. Je dessinais des éléments tous de taille moyenne, ce qui ne produit aucune personnalité.<br><br>
+          <strong>Et les pointes ne sont pas interdites</strong> — le bec est une lentille effilée aux deux bouts, la queue se termine en pointe. J'avais appliqué la règle plus strictement que ton propre exemple, et c'est une des raisons pour lesquelles mes formes étaient molles.
+        </p>
+      </div>
+
+      <div class="card">
+        <p class="h2">Neuf aplats, relevés sur l'image</p>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px; margin-top: 10px;">
+          <div class="sw"><span class="ch" style="background: #EFE0C6;"></span>#EFE0C6 · corps</div>
+          <div class="sw"><span class="ch" style="background: #E3D0AE;"></span>#E3D0AE · huppe</div>
+          <div class="sw"><span class="ch" style="background: #C8471E;"></span>#C8471E · aile</div>
+          <div class="sw"><span class="ch" style="background: #B03C18;"></span>#B03C18 · lobe interne</div>
+          <div class="sw"><span class="ch" style="background: #2E2E30;"></span>#2E2E30 · masque</div>
+          <div class="sw"><span class="ch" style="background: #F5A81C;"></span>#F5A81C · bec</div>
+          <div class="sw"><span class="ch" style="background: #DCC09A;"></span>#DCC09A · poitrine</div>
+          <div class="sw"><span class="ch" style="background: #3A3A3C;"></span>#3A3A3C · pattes</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card" style="margin-top: 20px;">
+    <p class="h2">L'épreuve du vectoriel : les tailles réelles de l'app</p>
+    <div style="display: flex; align-items: flex-end; gap: 36px; margin-top: 14px; flex-wrap: wrap;">
+      <div class="size">
+        <svg viewBox="0 0 200 190" width="128" height="122" aria-hidden="true"><use href="#mascotte" /></svg>
+        <span class="tl">128 px · splash</span>
+      </div>
+      <div class="size">
+        <svg viewBox="0 0 200 190" width="64" height="61" aria-hidden="true"><use href="#mascotte" /></svg>
+        <span class="tl">64 px · tuile</span>
+      </div>
+      <div class="size">
+        <svg viewBox="0 0 200 190" width="32" height="30" aria-hidden="true"><use href="#mascotte" /></svg>
+        <span class="tl">32 px · extension</span>
+      </div>
+      <div class="size">
+        <svg viewBox="0 0 200 190" width="16" height="15" aria-hidden="true"><use href="#mascotte" /></svg>
+        <span class="tl">16 px · favicon</span>
+      </div>
+      <p class="p" style="flex: 1; min-width: 260px;">À 16 px, les trois marques de poitrine et les reflets d'œil disparaissent dans la bouillie — c'est attendu, et c'est l'argument pour garder <strong>deux dessins</strong> : la mascotte complète pour le splash et les grandes tuiles, le nid seul pour le favicon et l'icône d'extension. Aucune mascotte ne survit à 16 px, pas même Duo.</p>
+    </div>
+  </div>
+
+  <svg width="0" height="0" style="position: absolute;" aria-hidden="true"><defs><g id="mascotte">
+    <path d="M114 44 C108 30 98 22 89 25 C82 27 82 34 88 37 C79 34 71 38 71 44 C71 49 77 51 83 49 C77 52 74 57 78 61 C83 65 93 61 100 55 C106 50 111 47 114 44 Z" fill="#E3D0AE" />
+    <g stroke="#3A3A3C" stroke-width="7.5" stroke-linecap="round" fill="none">
+      <path d="M104 152 C103 162 101 169 100 174" /><path d="M136 152 C136 162 136 169 136 174" />
+    </g>
+    <ellipse cx="96" cy="177" rx="10.5" ry="6" fill="#3A3A3C" transform="rotate(-7 96 177)" />
+    <ellipse cx="141" cy="177" rx="10.5" ry="6" fill="#3A3A3C" transform="rotate(7 141 177)" />
+    <path d="M118 38 C146 38 168 60 169 88 C170 122 150 162 118 162 C86 162 66 122 67 88 C68 60 90 38 118 38 Z" fill="#EFE0C6" />
+    <path d="M106 74 C90 74 76 88 70 106 C65 122 56 136 44 146 C35 153 25 158 19 160 C14 162 16 167 22 166 C34 164 47 158 58 150 C74 139 90 124 99 108 C107 94 111 82 106 74 Z" fill="#C8471E" />
+    <ellipse cx="80" cy="116" rx="13" ry="33" fill="#B03C18" transform="rotate(-34 80 116)" />
+    <g fill="#DCC09A">
+      <path d="M102 112 L120 112 C120 121 116 126 111 126 C106 126 102 121 102 112 Z" />
+      <path d="M126 112 L144 112 C144 121 140 126 135 126 C130 126 126 121 126 112 Z" />
+      <path d="M112 132 L136 132 C136 143 130 148 124 148 C118 148 112 143 112 132 Z" />
+    </g>
+    <path d="M76 68 C76 55 86 46 99 46 C109 46 116 51 120 58 C125 50 134 45 146 46 C161 47 172 58 171 72 C170 87 158 96 145 95 C134 94 126 88 121 79 C117 87 109 93 99 93 C85 93 76 82 76 68 Z" fill="#2E2E30" />
+    <ellipse cx="99" cy="68" rx="15" ry="19" fill="#FFFFFF" /><ellipse cx="145" cy="70" rx="13.5" ry="17" fill="#FFFFFF" />
+    <ellipse cx="101" cy="72" rx="8" ry="11" fill="#2E2E30" /><ellipse cx="147" cy="73" rx="7" ry="9.5" fill="#2E2E30" />
+    <circle cx="95" cy="61" r="4.6" fill="#FFFFFF" /><circle cx="141" cy="64" r="4" fill="#FFFFFF" />
+    <path d="M121 76 C124 69 136 68 139 76 C136 84 124 84 121 76 Z" fill="#F5A81C" />
+  </g></defs></svg>
+
+</div>
+</x-dc>
+</body>
+</html>
