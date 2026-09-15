@@ -70,6 +70,8 @@ export function MatrixScreen({
   const { tasks, patchTask } = store;
   const [boardMenu, setBoardMenu] = useState(false);
   const [menuTask, setMenuTask] = useState<string | null>(null);
+  /** La carte dont le bandeau d'actions est ouvert (#89). Une seule à la fois. */
+  const [swipeTask, setSwipeTask] = useState<string | null>(null);
   const [binOpen, setBinOpen] = useState(false);
   /** La tâche que la recherche a désignée, le temps de son clignotement. */
   const [flash, setFlash] = useState<string | null>(null);
@@ -406,6 +408,8 @@ export function MatrixScreen({
         }}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}
+        swipeOpen={swipeTask === t.id}
+        onSwipe={(open) => setSwipeTask(open ? t.id : null)}
         rename={{
           value: renamingTask?.id === t.id ? renamingTask.title : null,
           start: () => setRenamingTask({ id: t.id, title: t.title }),

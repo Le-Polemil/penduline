@@ -75,6 +75,8 @@ export function GlobalScreen({
   const { tasks, patchTask } = store;
   const [scopeMenu, setScopeMenu] = useState(false);
   const [menuTask, setMenuTask] = useState<string | null>(null);
+  /** La carte dont le bandeau d'actions est ouvert (#89). Une seule à la fois. */
+  const [swipeTask, setSwipeTask] = useState<string | null>(null);
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
   const [binOpen, setBinOpen] = useState(false);
   const [drag, setDrag] = useState<string | null>(null);
@@ -233,6 +235,8 @@ export function GlobalScreen({
         universes={store.universes}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}
+        swipeOpen={swipeTask === t.id}
+        onSwipe={(open) => setSwipeTask(open ? t.id : null)}
         rename={{
           value: renamingTask?.id === t.id ? renamingTask.title : null,
           start: () => setRenamingTask({ id: t.id, title: t.title }),

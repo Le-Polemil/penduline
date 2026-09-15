@@ -30,6 +30,8 @@ export function FocusScreen({ store }: { store: Store }) {
   const [limit, setLimit] = useState(readFocusLimit);
   const [tuning, setTuning] = useState(false);
   const [menuTask, setMenuTask] = useState<string | null>(null);
+  /** La carte dont le bandeau d'actions est ouvert (#89). Une seule à la fois. */
+  const [swipeTask, setSwipeTask] = useState<string | null>(null);
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
 
   // `store.tasks` pour cocher : c'est lui qui porte l'état optimiste, et
@@ -100,6 +102,8 @@ export function FocusScreen({ store }: { store: Store }) {
         universes={store.universes}
           menuOpen={menuTask === t.id}
           onMenu={(open) => setMenuTask(open ? t.id : null)}
+          swipeOpen={swipeTask === t.id}
+          onSwipe={(open) => setSwipeTask(open ? t.id : null)}
           rename={{
             value: renamingTask?.id === t.id ? renamingTask.title : null,
             start: () => setRenamingTask({ id: t.id, title: t.title }),
