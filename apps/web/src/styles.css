@@ -96,10 +96,6 @@ button { font: inherit; }
    translate plus que sur l'axe vertical, sinon chaque toast partirait de
    travers d'une demi-largeur. */
 @keyframes mm-slideup { from { transform: translateY(22px); opacity: 0; } to { transform: none; opacity: 1; } }
-@keyframes mm-pinpulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(198, 113, 57, 0.35); }
-  50% { box-shadow: 0 0 0 5px rgba(198, 113, 57, 0); }
-}
 ::view-transition-group(*) { animation-duration: 0.28s; }
 
 /* ── Accueil ──────────────────────────────────────────────────────────────── */
@@ -864,7 +860,23 @@ button { font: inherit; }
 
 /* Le repère « ＋ ajouter » : un seul groupe, centré au repos, qui glisse vers la
    droite en saisie. On anime `left` (et non un transform de distance inconnue),
-   ce qui évite de mesurer la largeur du champ. */
+   ce qui évite de mesurer la largeur du champ.
+   ⚠️ MESURÉ, ET LAISSÉ TEL QUEL (#91). Cette ouverture anime quatre propriétés
+   qui reposent la disposition — `left` ici, `padding-right` sur `.add-input`,
+   `max-width` et `margin-left` sur `.add-word` — et l'audit de #91 l'avait
+   désignée comme la seule animation qui saccate : 58,4 ms sur sa première trame,
+   à 4× de bridage CPU.
+
+   La remesure a démenti l'attribution. Ces 58 ms sont un coût de PREMIER
+   passage : dès la deuxième ouverture, la même mesure donne 9,2 ms. Et un A/B
+   exact — retirer `padding-right` et `margin-left` de la transition, échauffer,
+   puis cinq passes de chaque côté, dans les deux ordres — donne **9,3 ms des
+   deux côtés**, zéro trame perdue. Les propriétés animées n'y sont pour rien.
+
+   On ne touche donc à rien : le geste garde son dessin, et cette note évite au
+   prochain de refaire le raisonnement qui condamnait ces transitions en théorie.
+   Le clignotement d'arrivée en `box-shadow` a connu le même sort — soupçonné,
+   mesuré, innocenté. */
 .add-cue {
   position: absolute; top: 50%; left: 50%;
   transform: translate(-50%, -50%);
@@ -1999,3 +2011,47 @@ button.uni-head__name:focus-visible {
    vaut toujours la hauteur barre DÉPLIÉE — l'écran de connexion débordait donc de
    sa hauteur sur toute la famille des navigateurs mobiles. */
 .auth { min-height: 100dvh; }
+
+/* ── « Réduire les animations », honoré PARTOUT (#91) ──────────────────────────
+   Jusqu'ici la préférence était traitée par ÉNUMÉRATION : huit blocs au cas par
+   cas, couvrant environ un tiers du mouvement réel. `mm-in` (9 usages), `mm-pop`,
+   `mm-check`, les transitions de vue et une vingtaine de transitions restaient
+   dehors. Le défaut n'est pas la taille du trou, c'est sa DYNAMIQUE : il
+   s'agrandit à chaque animation ajoutée, puisqu'en couvrir une nouvelle suppose
+   de se rappeler d'écrire un neuvième bloc. Et une préférence honorée à moitié
+   est presque pire qu'ignorée — celui qui l'a posée ne peut plus prédire ce qui
+   va bouger.
+
+   D'où un PLANCHER, et non une liste : par défaut tout est instantané, et
+   l'oubli devient impossible parce qu'il n'y a plus rien à ne pas oublier.
+
+   ⚠️ LES HUIT BLOCS CI-DESSUS RESTENT, et ils ne font pas doublon. Un plancher
+   supprime une DURÉE ; eux préservent un ÉTAT — le liseré de `.task--flash` qui
+   remplace le clignotement, le `rotate: 0deg` qui laisse le nid de chargement
+   DROIT et non figé de travers à l'angle où la trame s'est arrêtée. Un pendule
+   arrêté en biais se lit comme un défaut d'affichage, pas comme un chargement.
+   D'où l'ordre : les exceptions d'abord, le plancher ensuite.
+
+   ⚠️ `0.01ms` ET NON `none`. Une durée quasi nulle laisse jouer les
+   `animation-fill-mode` et les états finaux ; `animation: none` ferait retomber
+   certains éléments sur leur état INITIAL — une carte en `mm-in ... backwards`
+   resterait à `opacity: 0`.
+
+   ⚠️ Cette règle gagne sur toute déclaration de durée, y compris future. Une
+   animation qui devrait impérativement en garder une sous la préférence doit
+   être déclarée en exception explicite AU-DESSUS de ce bloc.
+
+   ⚠️ Elle ne couvre PAS les transitions de vue : `::view-transition-*` sont des
+   pseudo-éléments montés par le navigateur dans une couche que le sélecteur
+   universel de cette feuille n'atteint pas. La même frontière est donc exprimée
+   une seconde fois, en JavaScript — voir `lib/viewTransition.ts`. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

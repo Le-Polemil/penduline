@@ -15,6 +15,29 @@ import { flushSync } from 'react-dom';
  */
 export function withVT(fn: () => void) {
   const doc = document as Document & { startViewTransition?: (cb: () => void) => void };
-  if (doc.startViewTransition) doc.startViewTransition(() => flushSync(fn));
-  else fn();
+  if (!doc.startViewTransition || mouvementReduit()) return fn();
+  doc.startViewTransition(() => flushSync(fn));
+}
+
+/**
+ * « Réduire les animations » est-il demandé ? (#91)
+ *
+ * ⚠️ POURQUOI CETTE GARDE VIT ICI ET PAS DANS LA FEUILLE DE STYLES. Le plancher
+ * global posé en fin de `styles.css` couvre tout ce qui a une durée **dans le DOM
+ * de l'application**. Une transition de vue, elle, s'anime sur des
+ * pseudo-éléments `::view-transition-*` que le navigateur monte dans une couche à
+ * part : le sélecteur universel de la feuille ne les atteint pas, et l'animation
+ * de l'API se jouerait quand même. La même frontière doit donc être exprimée deux
+ * fois — comme `useTelephone` et `usePointeurFin` le font déjà pour la largeur et
+ * le pointeur.
+ *
+ * Relu à CHAQUE appel plutôt que mémorisé : la préférence peut changer en cours de
+ * session, et il n'y a rien à économiser sur un `matchMedia` ponctuel.
+ */
+function mouvementReduit(): boolean {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  );
 }
