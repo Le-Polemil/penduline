@@ -72,14 +72,20 @@ export function BinModal({
                 key={t.id}
                 style={{ background: tint }}
               >
-                <input
-                  type="checkbox"
-                  className="bin-check"
-                  checked={picked.has(t.id)}
-                  onChange={() => {}}
-                  onClick={(e) => select(offset + i, e.shiftKey)}
-                  aria-label={`Sélectionner « ${t.title} »`}
-                />
+                {/* L'étiquette n'est là que pour la zone de frappe : une case
+                    native est un élément REMPLACÉ, elle n'engendre pas de
+                    pseudo-élément et son rembourrage n'agrandit pas sa cible.
+                    Cliquer l'étiquette bascule la case nativement (#89). */}
+                <label className="bin-check__zone">
+                  <input
+                    type="checkbox"
+                    className="bin-check"
+                    checked={picked.has(t.id)}
+                    onChange={() => {}}
+                    onClick={(e) => select(offset + i, e.shiftKey)}
+                    aria-label={`Sélectionner « ${t.title} »`}
+                  />
+                </label>
                 <span className={`bin-item__title${doneStyle ? ' bin-item__title--done' : ''}`}>{t.title}</span>
                 <button className="bin-restore" onClick={() => onRestore(t.id)}>
                   {doneStyle ? 'Rétablir' : 'Restaurer'}

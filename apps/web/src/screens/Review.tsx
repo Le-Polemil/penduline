@@ -63,6 +63,8 @@ export function ReviewScreen({
   const [tuning, setTuning] = useState<ReviewSignalKey | null>(null);
   const [collapsed, setCollapsed] = useState<Set<ReviewSignalKey>>(new Set());
   const [menuTask, setMenuTask] = useState<string | null>(null);
+  /** La carte dont le bandeau d'actions est ouvert (#89). Une seule à la fois. */
+  const [swipeTask, setSwipeTask] = useState<string | null>(null);
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
   const [delAsk, setDelAsk] = useState<Task | null>(null);
   const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
@@ -196,6 +198,8 @@ export function ReviewScreen({
         universes={store.universes}
           menuOpen={menuTask === t.id}
           onMenu={(open) => setMenuTask(open ? t.id : null)}
+          swipeOpen={swipeTask === t.id}
+          onSwipe={(open) => setSwipeTask(open ? t.id : null)}
           rename={{
             value: renamingTask?.id === t.id ? renamingTask.title : null,
             start: () => setRenamingTask({ id: t.id, title: t.title }),

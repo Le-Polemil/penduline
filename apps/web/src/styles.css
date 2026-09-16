@@ -327,10 +327,19 @@ button { font: inherit; }
 
 /* ── En-tête matrice ──────────────────────────────────────────────────────── */
 .matrix { max-width: 1060px; margin: 0 auto; padding: 28px 24px 60px; animation: mm-in 0.3s ease backwards; }
-.matrix-head { display: flex; align-items: center; gap: 14px; padding: 0 2px 14px; }
+/* `flex-wrap` et `min-width: 0` : sans les deux, l'en-tête DÉBORDAIT (#89).
+   `.board-switch__label` porte bien `text-overflow: ellipsis`, mais aucun de ses
+   parents ne pouvait rétrécir — un élément flex a `min-width: auto`, donc la
+   taille de son contenu pour plancher — et `.board-switch__name` est en
+   `white-space: nowrap`. À 390 px sur la vue globale, « Toutes les matrices »
+   poussait le compteur hors cadre et **le bouton corbeille entièrement hors
+   écran**, donc inatteignable : 471 px de large pour 390 de fenêtre.
+   Le `wrap` est le filet : si même l'ellipse ne suffit pas, la ligne casse au
+   lieu de sortir. */
+.matrix-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 0 2px 14px; }
 .crumb { font: 600 13px var(--font-body); color: var(--color-accent-700); background: none; border: none; cursor: pointer; }
 .crumb:hover { color: var(--color-accent-800); }
-.board-switch { position: relative; }
+.board-switch { position: relative; flex: 1 1 auto; min-width: 0; }
 /* `nowrap` : sans lui, le chevron passe à la ligne dès que la largeur manque —
    très visible sur mobile, où il se retrouvait sous le nom. */
 .board-switch__name {
@@ -648,6 +657,56 @@ button { font: inherit; }
 .sub__input::placeholder { color: var(--color-neutral-700); opacity: 0.7; }
 .sub__input:focus-visible { border-bottom-color: var(--color-accent); }
 
+/* ── Le bandeau d'actions du téléphone (#89) ──────────────────────────────────
+   Au-dessus de 720 px, `.task-swipe` n'est qu'un `div` transparent : ni position,
+   ni clip, ni ombre. Le rendu desktop ne bouge pas d'un pixel, et la carte ne se
+   remonte pas en traversant le seuil.
+
+   En dessous, il devient le conteneur clippant qui cache le bandeau derrière la
+   carte. ⚠️ Il est DANS `.task-anchor` et au-dessus de la seule `.task` : le menu
+   `⋯` reste son frère, sinon `overflow: hidden` le rognerait dès l'ouverture. */
+.task-swipe { position: relative; }
+
+@media (max-width: 720px) {
+  .task-swipe {
+    overflow: hidden; border-radius: 12px;
+    /* L'ombre migre ici : un parent clippant couperait celle de `.task`. */
+    box-shadow: var(--shadow-sm);
+    /* Le navigateur garde l'axe vertical, on prend l'horizontal. Sans cette
+       ligne il faudrait annuler un `touchmove` que React pose en passif. */
+    touch-action: pan-y;
+  }
+  /* `position` + `z-index` EXPLICITES : sans eux, l'empilement ne tiendrait qu'au
+     `view-transition-name` de la carte, qui lui crée par effet de bord un
+     contexte d'empilement — le bandeau, lui, est positionné et passerait sinon
+     par-dessus. Un détail qui disparaîtrait au premier changement de transition. */
+  .task-swipe > .task { position: relative; z-index: 1; box-shadow: none; transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1); }
+  /* Pendant le suivi du doigt, aucune transition : la carte doit coller au
+     doigt, pas le rattraper. */
+  .task-swipe--suit > .task { transition: none; }
+
+  .task-swipe__actions {
+    position: absolute; right: 0; top: 0; bottom: 0; z-index: 0;
+    display: flex; align-items: stretch;
+    background: var(--q-ink, var(--color-accent));
+    border-radius: 12px;
+  }
+  .task-swipe__act {
+    flex: none; width: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: none; border: none; padding: 0; cursor: pointer;
+    color: #fff;
+  }
+  .task-swipe__act:disabled { opacity: 0.45; cursor: not-allowed; }
+  .task-swipe__act:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+}
+
+@media (max-width: 720px) and (prefers-reduced-motion: reduce) {
+  /* Le suivi du doigt est de la manipulation directe et reste ; c'est le RETOUR
+     de la carte à sa place qui s'anime, et lui seul disparaît. */
+  .task-swipe > .task { transition: none; }
+}
+
 /* ── Menu de tâche ────────────────────────────────────────────────────────── */
 /* Le menu s'ancre à la CARTE et non au bloc entier : sans ce conteneur, un
    `top: 100%` calculé sur `.card-wrap` le faisait tomber SOUS les étapes,
@@ -846,6 +905,36 @@ button { font: inherit; }
   .quad--park { grid-column: auto; }
   /* En colonne, plus de centre : on rend leur rayon aux quatre coins. */
   .grid > .quad { border-radius: var(--radius-lg); }
+
+  /* Le champ de renommage d'une matrice : 340 px de champ plus le bouton « OK »
+     ne tiennent pas dans les 342 px disponibles à 390 px de fenêtre. Il prend la
+     ligne entière et se laisse rétrécir (#89). */
+  .board-rename { flex: 1 1 100%; min-width: 0; }
+  .board-rename__input { flex: 1 1 auto; max-width: none; min-width: 0; }
+
+  /* ── Une paire s'empile ───────────────────────────────────────────────────
+     Deux cartes côte à côte dans 390 px, c'est 0 px de titre chacune et le `⋯`
+     de la seconde HORS de la case (400 px de contenu pour 390 de fenêtre).
+     Le lien, lui, ne disparaît pas : il bascule à la verticale. Et il se cale
+     sur l'AXE DES CASES À COCHER (12 px de rembourrage + 9 de demi-case) plutôt
+     qu'au centre — centré, le trait flotte entre deux blocs et se lit comme une
+     séparation ; dans l'axe, il prolonge une ligne que l'œil suit déjà. */
+  /* ── La carte au doigt ────────────────────────────────────────────────────
+     La poignée disparaît : le glisser HTML5 ne se déclenche pas depuis le
+     tactile sur téléphone, elle y annonçait donc un geste qui n'existe pas.
+     Le seuil est une LARGEUR et non `(hover: none)`, parce que le même glisser
+     FONCTIONNE sur iPad (Safari, depuis iOS 11, par appui long) — `(hover: none)`
+     confondrait les deux. Même motif que `.uni-head__grip` plus bas, mais pas le
+     même sélecteur, et c'est voulu. */
+  .task__grip { display: none; }
+
+
+  .card-row { flex-direction: column; gap: 10px; }
+  .card-row--paired::before {
+    left: 21px; translate: 0 -50%;
+    width: 0; height: 10px;
+    border-top: none; border-left: 2px dashed var(--q-ink);
+  }
 }
 
 /* ── Renommage / suppression d'une matrice ────────────────────────────────── */
@@ -892,6 +981,10 @@ button { font: inherit; }
 
 /* ── Corbeille : sélection et purge ───────────────────────────────────────── */
 .bin-check { accent-color: var(--color-accent); width: 15px; height: 15px; cursor: pointer; flex: none; }
+/* L'étiquette qui porte la case : elle ne sert qu'à lui donner une zone de
+   frappe au doigt (voir le bloc `(pointer: coarse)`), et reste au gabarit de la
+   case partout ailleurs. */
+.bin-check__zone { display: inline-flex; align-items: center; justify-content: center; flex: none; cursor: pointer; }
 .bin-item { border-radius: 10px; padding: 9px 12px; }
 .bin-item--picked { box-shadow: inset 0 0 0 2px var(--color-accent); }
 .bin-foot {
@@ -1589,3 +1682,179 @@ button.uni-head__name:focus-visible {
   flex: 1; min-width: 0; border: none; background: none; outline: none;
   font: 12.5px var(--font-body); color: var(--color-text); padding: 0;
 }
+
+/* ── Cibles tactiles, marges de sécurité, zoom iOS (#89) ──────────────────────
+   DEUX AXES DE REQUÊTE MÉDIA, ET PAS UN SEUL — c'est la décision structurante du
+   lot, et il ne faut pas les confondre :
+
+   · la LARGEUR (`max-width: 720px`) décide de la géométrie et des gestes : ce qui
+     tient sur une ligne, ce qui s'empile, quel geste horizontal est monté ;
+   · le POINTEUR (`pointer: coarse`) décide de l'ergonomie : taille des cibles,
+     taille des polices de saisie.
+
+   Une tablette a un doigt mais de la place : elle doit recevoir les grosses
+   cibles ET la mise en page desktop. Les mélanger, c'est ce que faisait déjà
+   `.task__act` sous `(hover: none)` — et c'est ce qui étranglait le titre sur
+   téléphone tout en gonflant les icônes de l'iPad pour rien. */
+
+@media (pointer: coarse) {
+  /* Le minimum des deux plateformes. `min-height` explicite plutôt qu'un calcul
+     de marges : une marge suffisante aujourd'hui cesse de l'être dès qu'on
+     touche à la police, et personne ne le remarque. */
+  .crumb,
+  .searchbtn,
+  .signout,
+  .bin-btn,
+  .board-switch__name,
+  .home-global,
+  .add-board,
+  .add-board-submit,
+  .add-board-cancel,
+  .board-act,
+  .bin-restore,
+  .bin-foot__link,
+  .bin-purge,
+  .confirm-cancel,
+  .confirm-go,
+  .confirm-danger,
+  .btn-primary,
+  .btn-link,
+  .sr-hit,
+  .review-board,
+  .board-menu__item,
+  .board-btn,
+  .move-btn,
+  .task-menu__action {
+    min-height: 44px;
+  }
+  /* Les entrées de menu sont des lignes : on les centre plutôt que de laisser le
+     texte coller en haut d'une boîte devenue deux fois trop haute. */
+  .task-menu__action,
+  .board-menu__item,
+  .board-btn,
+  .sr-hit,
+  .review-board { display: flex; align-items: center; }
+  .move-btn { display: inline-flex; align-items: center; justify-content: center; }
+  .crumb,
+  .board-switch__name,
+  .btn-link,
+  .bin-foot__link,
+  .board-act,
+  .bin-restore { display: inline-flex; align-items: center; }
+  /* « ↑ » et « ↓ » ne portent qu'un glyphe : la hauteur suffisait, la largeur non. */
+  .board-act { min-width: 44px; justify-content: center; }
+
+  /* Là où grossir déformerait le dessin, la zone de frappe s'étend SOUS
+     l'élément : le repère visuel garde sa taille, le doigt gagne la sienne.
+     `inset` négatif et non un rembourrage, qui décalerait tout ce qui suit. */
+  /* La case à cocher et le `⋯` d'une carte gardent leurs 18 px de dessin et
+     gagnent 44 px de zone de frappe. Ils vivent ici, sous le POINTEUR, et non
+     sous la largeur : une tablette a un doigt et garde la carte desktop.
+     Les 13 px horizontaux du `⋯` remplissent exactement la gouttière de 9 px qui
+     le sépare du raccourci voisin, sans mordre dessus. */
+  .task__check,
+  .task__more,
+  .uni-head__fold,
+  .uni-head__name,
+  .bin-close,
+  .att__del,
+  .sub__del,
+  .add-plus,
+  .toast__close,
+  .toast__undo,
+  .sub__toggle { position: relative; }
+  .task__check::after { content: ''; position: absolute; inset: -13px; }
+  .task__more::after { content: ''; position: absolute; inset: -13px -9px; }
+  .uni-head__fold::after { content: ''; position: absolute; inset: -12px; }
+  .uni-head__name::after { content: ''; position: absolute; inset: -11px -4px; }
+  .bin-close::after { content: ''; position: absolute; inset: -9px -7px; }
+  .att__del::after,
+  .sub__del::after { content: ''; position: absolute; inset: -14px -10px; }
+  .add-plus::after { content: ''; position: absolute; inset: -13px -9px; }
+
+  /* La carte elle-même : 39 px de haut, donc une case à cocher, un `⋯` et — sous
+     720 px — des boutons de bandeau qui ne pouvaient pas atteindre 44. C'est la
+     LIGNE qui doit faire la hauteur d'une cible, pas seulement ses contrôles. */
+  .task { min-height: 44px; }
+  .add-input { min-height: 44px; }
+  .toast__close::after,
+  .toast__undo::after { content: ''; position: absolute; inset: -15px -10px; }
+  .sub__toggle::after { content: ''; position: absolute; inset: -12px -6px; }
+
+  /* La pastille de lien : c'est la puce entière qui devient frappable, pas le
+     seul texte. */
+  .att__chip { min-height: 44px; }
+  .att__link { display: inline-flex; align-items: center; min-height: 44px; }
+  /* La case de sélection de la corbeille. Une case native est un élément REMPLACÉ :
+     elle n'engendre pas de `::after`, et le rembourrage n'agrandit pas sa zone de
+     frappe. On étend donc celle de son étiquette, qui bascule la case nativement —
+     d'où le `<label>` ajouté dans `BinModal.tsx` autour d'elle. */
+  .bin-check__zone { width: 44px; height: 44px; margin-left: -11px; }
+  .bin-check { width: 20px; height: 20px; }
+
+  /* ── Zoom automatique iOS ───────────────────────────────────────────────────
+     Sous 16 px, iOS zoome la page à la mise au point d'un champ — et n'en
+     ressort pas seul. Le seuil est celui du POINTEUR et non d'une largeur :
+     l'iPad zoome lui aussi, et il est au-dessus de 720 px.
+     La typographie desktop, elle, ne bouge pas d'un pixel. */
+  .add-input,
+  .add-board-input,
+  .att__input,
+  .due-edit__input,
+  .sub__input,
+  .sub__item--add .sub__input,
+  .task__rename-input,
+  .auth-card input,
+  .uni-head__input,
+  .review-tune input,
+  .focus-limit__field input,
+  .board-row__input,
+  .board-rename__input,
+  .sr-input {
+    font-size: 16px;
+  }
+  /* `.review-tune` et `.focus-limit__field` fixaient une largeur calibrée sur du
+     13 px : à 16 px le nombre n'y tenait plus. */
+  .review-tune input { width: 84px; }
+  .focus-limit__field input { width: 78px; }
+}
+
+/* ── Marges de sécurité ───────────────────────────────────────────────────────
+   `index.html` déclare `viewport-fit=cover` — la page s'étend donc SOUS
+   l'encoche, la barre d'état et la barre gestuelle. Jusqu'ici une seule règle en
+   tenait compte (`.sheet`), et la barre du haut passait sous l'encoche tandis
+   que les notifications passaient sous la barre gestuelle.
+
+   `max()` et non une addition : sur un écran sans encoche l'inset vaut zéro, et
+   additionner ne changerait rien — mais sur un écran qui en a une, additionner
+   doublerait une marge déjà suffisante. On veut le plus grand des deux, pas leur
+   somme. */
+.userbar { padding-top: max(14px, env(safe-area-inset-top)); }
+.home,
+.matrix,
+.review,
+.stats,
+.focus,
+.userbar {
+  padding-left: max(24px, env(safe-area-inset-left));
+  padding-right: max(24px, env(safe-area-inset-right));
+}
+@media (max-width: 720px) {
+  .review,
+  .stats,
+  .focus {
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+  }
+}
+/* En paysage, la barre gestuelle passe à droite ou à gauche : l'inset du bas
+   tombe à zéro et celui du côté prend le relais, d'où les deux. */
+.toast-stack {
+  bottom: calc(26px + env(safe-area-inset-bottom));
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+/* `dvh` et non `vh` : la barre d'URL mobile se rétracte au défilement, et `100vh`
+   vaut toujours la hauteur barre DÉPLIÉE — l'écran de connexion débordait donc de
+   sa hauteur sur toute la famille des navigateurs mobiles. */
+.auth { min-height: 100dvh; }
