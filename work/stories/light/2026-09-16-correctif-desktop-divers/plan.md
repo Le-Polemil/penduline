@@ -2,7 +2,7 @@
 story: "Correctif Desktop — divers"
 story_code: "correctif-desktop-divers"
 created: 2026-09-16
-status: "In Progress"
+status: "Done"
 ---
 
 # #92 — Correctif Desktop : divers
