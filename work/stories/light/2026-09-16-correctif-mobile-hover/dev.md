@@ -2,7 +2,7 @@
 story: "Correctif Mobile 2/3 — les états de survol"
 story_code: "correctif-mobile-hover"
 created: 2026-09-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
