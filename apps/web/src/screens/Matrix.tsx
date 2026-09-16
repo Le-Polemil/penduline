@@ -406,6 +406,7 @@ export function MatrixScreen({
             ),
           onDelete: (st) => store.group('Étape supprimée', () => void patchTask(st.id, { deleted: true })),
         }}
+        paired={!single}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}
         swipeOpen={swipeTask === t.id}
@@ -620,6 +621,18 @@ export function MatrixScreen({
               {lateRows.map((cards, i) => (
                 <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`late-${i}`}>
                   {cards.map((t) => card(t, q, cards.length === 1, 0, 1))}
+                  {/* Le lien de paire EST le bouton qui la rompt (#92) : un
+                      pseudo-élément pouvait dire qu'un lien existe, jamais offrir
+                      de le défaire. `unpair` passe par `store.group`, donc
+                      `Ctrl+Z` rétablit la paire — d'où l'absence de confirmation. */}
+                  {cards.length === 2 && (
+                    <button
+                      className="unpair"
+                      aria-label={`Dissocier « ${cards[0].title} » et « ${cards[1].title} »`}
+                      title="Dissocier"
+                      onClick={() => unpair(cards[0])}
+                    />
+                  )}
                 </div>
               ))}
               {lateRows.length > 0 && rows.length > 0 && <div className="zone-split" />}
@@ -649,6 +662,14 @@ export function MatrixScreen({
                     </div>
                     <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`}>
                       {cards.map((t) => card(t, q, cards.length === 1, i, rows.length))}
+                      {cards.length === 2 && (
+                        <button
+                          className="unpair"
+                          aria-label={`Dissocier « ${cards[0].title} » et « ${cards[1].title} »`}
+                          title="Dissocier"
+                          onClick={() => unpair(cards[0])}
+                        />
+                      )}
                     </div>
                   </div>
                 );

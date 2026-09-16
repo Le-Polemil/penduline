@@ -97,6 +97,16 @@ button { font: inherit; }
    travers d'une demi-largeur. */
 @keyframes mm-slideup { from { transform: translateY(22px); opacity: 0; } to { transform: none; opacity: 1; } }
 ::view-transition-group(*) { animation-duration: 0.28s; }
+/* ⚠️ L'EMPILEMENT SE DÉCLARE ICI, PAS DANS LE DOCUMENT (#92).
+   Pendant une transition, les éléments nommés sortent de l'arbre de rendu normal
+   vers des `::view-transition-group`, et le `z-index` du document ne les ordonne
+   plus : les groupes sont peints dans l'ordre de RENCONTRE DES NOMS. Trois choses
+   en portent un — le bouton corbeille, le panneau (`bin`) et CHAQUE carte
+   (`vt-{id}`) — d'où des cartes peintes par-dessus le panneau pendant toute son
+   ouverture. Reproduit en ralentissant cette durée à 4 s.
+   `.bin-backdrop` porte pourtant bien `z-index: 60`, et il est correct : il ne
+   sert simplement à rien tant que la transition dure. */
+::view-transition-group(bin) { z-index: 100; }
 
 /* ── Accueil ──────────────────────────────────────────────────────────────── */
 .home { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
@@ -507,27 +517,62 @@ button { font: inherit; }
 /* Une paire est un LIEN, pas deux cartes qui partagent une ligne : sans marque,
    rien ne la distingue d'une coïncidence de mise en page — et c'est ce qui
    rendait la fonctionnalité indevinable.
-   Le trait occupe l'espace entre les deux cartes, et le tireté ne repose pas sur
-   la seule couleur. */
+
+   ⚠️ C'ÉTAIT UN PSEUDO-ÉLÉMENT, C'EST DÉSORMAIS UN VRAI BOUTON (#92). Un
+   `::before` de 10 px pouvait DIRE qu'un lien existe, jamais offrir de le rompre :
+   le seul geste était `⋯` → « Dissocier », c'est-à-dire chercher dans un menu ce
+   qu'on a sous les yeux. Le trait est maintenant rendu par `Matrix.tsx` et
+   `Global.tsx`, les deux seuls écrans qui composent des `card-row`.
+
+   Il est visible SANS SURVOL — sans quoi on remplacerait une action cachée dans un
+   menu par une action introuvable au doigt (#90) — et il porte 44 px de cible sous
+   `(pointer: coarse)` bien qu'il n'en dessine que 10 (#89). */
 .card-row--paired { position: relative; }
-.card-row--paired::before {
-  content: ''; position: absolute; z-index: 1;
-  left: 50%; top: 50%; translate: -50% -50%;
-  width: 10px; height: 0; border-top: 2px dashed var(--q-ink); opacity: 0.55;
+.unpair {
+  position: absolute; z-index: 2; left: 50%; top: 50%; translate: -50% -50%;
+  width: 16px; height: 16px; padding: 0; border: none; background: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--q-ink, var(--color-neutral-600)); opacity: 0.55; cursor: pointer;
+  border-radius: 999px; transition: opacity 0.15s, background 0.15s;
+}
+/* Le trait lui-même : dessiné par le bouton, pour qu'il n'y ait qu'UNE chose à
+   l'écran et non un trait plus une commande posée dessus. */
+.unpair::before {
+  content: ''; width: 10px; border-top: 2px dashed currentColor;
+}
+.unpair:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) {
+  .unpair:hover { opacity: 1; background: var(--color-accent-100); }
+}
+/* La cible déborde le dessin plutôt que de le grossir — même technique que la case
+   à cocher et le `⋯` (#89). */
+@media (pointer: coarse) {
+  .unpair::after { content: ''; position: absolute; inset: -14px; }
+}
+/* Empilée, la paire a un lien VERTICAL : le bouton s'y pose de la même façon,
+   dans l'axe des cases à cocher. */
+@media (max-width: 720px) {
+  .unpair { left: 21px; top: 50%; translate: -50% -50%; }
+  .unpair::before { width: 0; height: 10px; border-top: none; border-left: 2px dashed currentColor; }
 }
 .card-wrap { position: relative; flex: 1; min-width: 0; }
 
 .task {
   background: var(--card-warm); border-radius: 12px; box-shadow: var(--shadow-sm);
   border: 1.5px solid transparent; padding: 9px 12px; display: flex; align-items: center; gap: 9px;
-  font: 14px var(--font-body); color: var(--color-text); cursor: grab;
+  font: 14px var(--font-body); color: var(--color-text);
   transition: box-shadow 0.18s, transform 0.18s, opacity 0.18s, border-color 0.15s; animation: mm-in 0.28s ease backwards;
 }
 @media (hover: hover) and (pointer: fine) {
-  .task:hover { box-shadow: var(--shadow-md); }
+  /* Le curseur suit la classe posée par `TaskCard`, plus le simple fait d'être une
+   carte : « Aujourd'hui » et « Revue » n'offrent aucun déplacement, une tâche
+   cochée non plus, et le curseur y promettait pourtant un geste (#92). */
+.task--saisissable { cursor: grab; }
+.task--saisissable:active { cursor: grabbing; }
+.task:hover { box-shadow: var(--shadow-md); }
 }
 .task--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); transform: rotate(-2deg) scale(1.03); border-color: var(--color-accent); }
-.task--split { transform: scale(0.97); border: 1.5px dotted var(--q-ink); }
+.task--split { transform: scale(0.97); border: 1.5px dotted var(--q-ink, var(--color-neutral-600)); }
 .task--done { opacity: 0.55; }
 /* Une tâche engagée pour aujourd'hui porte le contour et le fond que l'épinglage
    portait avant elle. Pas son animation de pulsation, en revanche : elle servait
@@ -540,14 +585,24 @@ button { font: inherit; }
 }
 
 .task__grip { color: var(--color-neutral-400); letter-spacing: 1px; flex: none; }
+/* ⚠️ `var(--q-ink, …)` AVEC UN REPLI, et ce n'est pas une précaution de couleur.
+   `--q-ink` n'est posée que sur `.quad` (Matrix.tsx, Global.tsx). « Aujourd'hui »
+   et « Revue » rendent des `TaskCard` HORS quadrant : la substitution y échoue, la
+   déclaration devient invalide au calcul, et **tout le raccourci `border` tombe** —
+   largeur et style compris. La case n'avait donc AUCUN contour sur ces deux écrans,
+   sur les deux modes, depuis toujours : 18 × 18 px de fond de carte (#92).
+
+   La règle vaut au-delà d'ici : toute lecture d'une variable de quadrant depuis un
+   composant qui peut être rendu hors `.quad` porte un repli. `styles.test.ts` le
+   verrouille. */
 .task__check {
-  width: 18px; height: 18px; border: 2px solid var(--q-ink); border-radius: 50%; flex: none;
+  width: 18px; height: 18px; border: 2px solid var(--q-ink, var(--color-neutral-600)); border-radius: 50%; flex: none;
   cursor: pointer; background: transparent; padding: 0; transition: background 0.15s, transform 0.12s;
 }
 @media (hover: hover) and (pointer: fine) {
   .task__check:hover { transform: scale(1.15); }
 }
-.task__check--done { background: var(--q-ink); animation: mm-check 0.3s ease; }
+.task__check--done { background: var(--q-ink, var(--color-neutral-600)); animation: mm-check 0.3s ease; }
 .task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .task__title--done { text-decoration: line-through; }
 /* Un titre coupé n'est pas seulement inélégant, il est INUTILE : « Appeler le
@@ -645,7 +700,7 @@ button { font: inherit; }
 }
 .att__link {
   display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  color: var(--q-ink); text-decoration: none; padding: 4px 4px 4px 9px;
+  color: var(--q-ink, var(--color-accent-700)); text-decoration: none; padding: 4px 4px 4px 9px;
 }
 @media (hover: hover) and (pointer: fine) {
   .att__link:hover { text-decoration: underline; }
@@ -693,18 +748,18 @@ button { font: inherit; }
 }
 /* Une tâche QUI A des étapes affiche toujours son compteur : c'est une
    information sur son avancement, pas une commande. */
-.sub--filled .sub__toggle { opacity: 1; color: var(--q-ink); }
+.sub--filled .sub__toggle { opacity: 1; color: var(--q-ink, var(--color-neutral-700)); }
 .sub__chevron { transition: rotate 0.18s ease; flex: none; }
 .sub__chevron--open { rotate: 90deg; }
 
 .sub__check {
-  width: 13px; height: 13px; border: 1.5px solid var(--q-ink); border-radius: 50%; flex: none;
+  width: 13px; height: 13px; border: 1.5px solid var(--q-ink, var(--color-neutral-600)); border-radius: 50%; flex: none;
   cursor: pointer; background: transparent; padding: 0; transition: background 0.15s, transform 0.12s;
 }
 @media (hover: hover) and (pointer: fine) {
   .sub__check:hover { transform: scale(1.2); }
 }
-.sub__check--done { background: var(--q-ink); }
+.sub__check--done { background: var(--q-ink, var(--color-neutral-600)); }
 .sub__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .sub__del {
   flex: none; opacity: 0; background: none; border: none; cursor: pointer;
@@ -1033,11 +1088,6 @@ button { font: inherit; }
 
 
   .card-row { flex-direction: column; gap: 10px; }
-  .card-row--paired::before {
-    left: 21px; translate: 0 -50%;
-    width: 0; height: 10px;
-    border-top: none; border-left: 2px dashed var(--q-ink);
-  }
 }
 
 /* ── Renommage / suppression d'une matrice ────────────────────────────────── */
@@ -1327,6 +1377,10 @@ button.uni-head__name:focus-visible {
   padding: 18px 24px; font: 400 17px var(--font-body); color: var(--color-text); outline: none;
 }
 .sr-input::placeholder { color: var(--color-neutral-700); }
+/* `type="search"` fait dessiner à Chrome sa propre croix d'effacement, en bleu
+   système au milieu d'une palette beige et terracotta. Elle ne dit rien que la
+   croix du panneau et `Échap` ne disent déjà (#92). */
+.sr-input::-webkit-search-cancel-button { display: none; }
 .sr-panel:focus-within .sr-input { border-bottom-color: var(--color-accent-600); }
 
 .sr-results { overflow-y: auto; padding: 8px 12px 14px; }
@@ -1406,7 +1460,9 @@ button.uni-head__name:focus-visible {
   background: none; border: none; padding: 0; cursor: pointer; text-align: left;
   font: 400 19px/1.25 var(--font-heading); color: var(--color-text);
 }
-.review-signal__caret { flex: none; font-size: 12px; color: var(--color-neutral-700); }
+/* 12 px donnaient un « ▾ » de 5,7 px de large, qui se lisait comme un point — or
+   c'est le seul indice qu'un signal se déplie (#92). */
+.review-signal__caret { flex: none; font-size: 17px; line-height: 1; color: var(--color-neutral-700); }
 .review-signal__count {
   flex: none; font: 700 14px var(--font-body); color: var(--color-accent-800);
   background: var(--color-accent-100); border-radius: 999px; padding: 2px 11px;
@@ -1898,6 +1954,7 @@ button.uni-head__name:focus-visible {
   .bin-close,
   .att__del,
   .sub__del,
+  .sub__check,
   .add-plus,
   .toast__close,
   .toast__undo,
@@ -1907,8 +1964,13 @@ button.uni-head__name:focus-visible {
   .uni-head__fold::after { content: ''; position: absolute; inset: -12px; }
   .uni-head__name::after { content: ''; position: absolute; inset: -11px -4px; }
   .bin-close::after { content: ''; position: absolute; inset: -9px -7px; }
-  .att__del::after,
-  .sub__del::after { content: ''; position: absolute; inset: -14px -10px; }
+  /* ⚠️ Ces trois-là n'étaient PAS MESURABLES quand #89 a fait sa passe : ils
+     étaient à `opacity: 0`, révélés au seul survol, et le relevé les ignorait
+     comme invisibles. C'est #90 qui les a rendus visibles au doigt — donc
+     mesurables, donc soumis à la même règle. 39,6 · 33,6 et 13 px de large. */
+  .att__del::after { content: ''; position: absolute; inset: -14px -13px; }
+  .sub__del::after { content: ''; position: absolute; inset: -14px -16px; }
+  .sub__check::after { content: ''; position: absolute; inset: -16px; }
   .add-plus::after { content: ''; position: absolute; inset: -13px -9px; }
 
   /* La carte elle-même : 39 px de haut, donc une case à cocher, un `⋯` et — sous
