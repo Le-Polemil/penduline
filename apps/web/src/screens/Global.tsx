@@ -221,7 +221,7 @@ export function GlobalScreen({
    * `split` est volontairement absent : appairer suppose de poser la nouvelle
    * venue juste après sa partenaire, donc un ordre — et il n'en existe pas ici.
    */
-  function card(t: Task, q: Quadrant) {
+  function card(t: Task, q: Quadrant, paired = false) {
     return (
       <TaskCard
         key={t.id}
@@ -233,6 +233,7 @@ export function GlobalScreen({
         // sortir de l'écran, et c'est la conséquence juste.
         otherBoards={store.boards.filter((b) => b.id !== t.board_id)}
         universes={store.universes}
+        paired={paired}
         menuOpen={menuTask === t.id}
         onMenu={(open) => setMenuTask(open ? t.id : null)}
         swipeOpen={swipeTask === t.id}
@@ -420,13 +421,32 @@ export function GlobalScreen({
                           l'ordre manuel — le même découpage que la matrice. */}
                       {g.overdue.map((cards, i) => (
                         <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`late-${i}`}>
-                          {cards.map((t) => card(t, q))}
+                          {cards.map((t) => card(t, q, cards.length === 2))}
+                          {/* Le lien de paire EST le bouton qui la rompt (#92).
+                              `unpair` passe par `store.group`, donc `Ctrl+Z`
+                              rétablit la paire — d'où l'absence de confirmation. */}
+                          {cards.length === 2 && (
+                            <button
+                              className="unpair"
+                              aria-label={`Dissocier « ${cards[0].title} » et « ${cards[1].title} »`}
+                              title="Dissocier"
+                              onClick={() => unpair(cards[0])}
+                            />
+                          )}
                         </div>
                       ))}
                       {g.overdue.length > 0 && g.rows.length > 0 && <div className="zone-split" />}
                       {g.rows.map((cards, i) => (
                         <div className={`card-row${cards.length === 2 ? ' card-row--paired' : ''}`} key={`row-${i}`}>
-                          {cards.map((t) => card(t, q))}
+                          {cards.map((t) => card(t, q, cards.length === 2))}
+                          {cards.length === 2 && (
+                            <button
+                              className="unpair"
+                              aria-label={`Dissocier « ${cards[0].title} » et « ${cards[1].title} »`}
+                              title="Dissocier"
+                              onClick={() => unpair(cards[0])}
+                            />
+                          )}
                         </div>
                       ))}
                     </div>

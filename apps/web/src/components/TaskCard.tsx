@@ -103,6 +103,7 @@ export function TaskCard({
   onMenu,
   swipeOpen = false,
   onSwipe,
+  paired = false,
   rename,
   onCheck,
   onMoveQuad,
@@ -145,6 +146,17 @@ export function TaskCard({
    */
   swipeOpen?: boolean;
   onSwipe?: (open: boolean) => void;
+  /**
+   * Cette carte partage-t-elle sa ligne avec sa partenaire ? (#92)
+   *
+   * Une paire ne dispose que d'une demi-case : à 1440 px comme à 2560, les deux
+   * titres tombaient à ~80 px et affichaient « [AUDIT]… ». La carte appairée perd
+   * donc sa poignée — c'est la PAIRE qui se déplace d'un bloc, la poignée
+   * individuelle promettait un geste faux — et ses deux raccourcis, qui restent
+   * dans son `⋯`. ~170 px de titre au lieu de 80, sans sacrifier la lecture côte à
+   * côte, qui est tout l'intérêt de la paire.
+   */
+  paired?: boolean;
   rename: CardRename;
   onCheck: () => void;
   onMoveQuad: (key: QuadrantKey) => void;
@@ -373,6 +385,11 @@ export function TaskCard({
     task.done ? 'task--done' : '',
     flash ? 'task--flash' : '',
     statut ? `task--${statut}` : '',
+    /* `cursor: grab` ne doit s'afficher que là où la carte se déplace VRAIMENT
+       (#92). C'est la même expression que `draggable` ci-dessous, et elle vit ici
+       parce que c'est ici qu'on la connaît — une règle CSS ne pourrait que la
+       deviner. « Aujourd'hui » et « Revue » ne passent pas `drag` du tout. */
+    !!drag && !task.done && !renaming && !telephone ? 'task--saisissable' : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -461,7 +478,7 @@ export function TaskCard({
         {/* La poignée est conditionnée à `drag`, comme le geste qu'elle annonce :
             absente, elle mènerait à rien. Masquée au lecteur d'écran — sans quoi
             il énonce les points braille de « ⠿ » sur chaque carte. */}
-        {drag && (
+        {drag && !paired && (
           <span className="task__grip" aria-hidden="true">
             ⠿
           </span>
@@ -530,8 +547,8 @@ export function TaskCard({
             grille de trente tâches reste une grille de trente titres — une
             pastille « ＋ étape » vivait auparavant SOUS la carte, invisible au
             repos mais occupant sa ligne. */}
-        {!telephone && btnEtape}
-        {!telephone && btnAujourdhui}
+        {!telephone && !paired && btnEtape}
+        {!telephone && !paired && btnAujourdhui}
         {/* Le glyphe seul nommait ce bouton « ⋯ » dans l'arbre d'accessibilité :
             autant de boutons identiques et anonymes qu'il y a de tâches. */}
         <button
