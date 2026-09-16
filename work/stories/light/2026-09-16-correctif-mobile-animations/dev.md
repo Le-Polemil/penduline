@@ -2,7 +2,7 @@
 story: "Correctif Mobile 3/3 — les animations"
 story_code: "correctif-mobile-animations"
 created: 2026-09-16
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
