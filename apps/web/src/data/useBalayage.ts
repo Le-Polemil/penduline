@@ -198,15 +198,38 @@ export const LARGEUR_ACTION = 44;
 
 /** Sommes-nous sous le seuil téléphone ? Suivi, parce qu'on tourne l'appareil. */
 export function useTelephone(): boolean {
-  const [etroit, setEtroit] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia(`(max-width: ${SEUIL_TELEPHONE}px)`).matches,
+  return useRequeteMedia(`(max-width: ${SEUIL_TELEPHONE}px)`);
+}
+
+/**
+ * Le pointeur est-il FIN — une souris, un trackpad, un stylet précis ?
+ *
+ * Le pendant JS de la garde `(hover: hover) and (pointer: fine)` posée sur tout
+ * le survol de `styles.css` (#90). Il sert là où un effet de survol est piloté en
+ * JavaScript plutôt qu'en CSS : on ne MONTE alors les gestionnaires de souris que
+ * sur un pointeur qui peut se promener sans rien déclencher, au lieu d'arbitrer
+ * dans le gestionnaire lui-même. Même exclusion à la construction que pour le
+ * balayage — voir l'en-tête de ce fichier.
+ *
+ * ⚠️ C'est le TROISIÈME axe, et il ne se confond ni avec `useTelephone` (la
+ * largeur, donc la géométrie) ni avec `(pointer: coarse)` (la taille du doigt,
+ * donc les cibles). L'iPad les sépare à lui seul : large, grossier, sans survol.
+ */
+export function usePointeurFin(): boolean {
+  return useRequeteMedia('(hover: hover) and (pointer: fine)');
+}
+
+/** Le rouage commun aux deux : une requête média suivie dans le temps. */
+function useRequeteMedia(requete: string): boolean {
+  const [vrai, setVrai] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia(requete).matches,
   );
   useEffect(() => {
-    const mq = window.matchMedia(`(max-width: ${SEUIL_TELEPHONE}px)`);
-    const suivre = () => setEtroit(mq.matches);
+    const mq = window.matchMedia(requete);
+    const suivre = () => setVrai(mq.matches);
     suivre();
     mq.addEventListener('change', suivre);
     return () => mq.removeEventListener('change', suivre);
-  }, []);
-  return etroit;
+  }, [requete]);
+  return vrai;
 }
