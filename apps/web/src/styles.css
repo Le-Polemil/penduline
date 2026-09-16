@@ -118,7 +118,39 @@ button { font: inherit; }
   font: 600 14px var(--font-body); color: var(--color-accent-700);
   cursor: pointer; text-align: left; transition: background 0.15s, border-color 0.15s;
 }
-.home-global:hover { background: var(--color-accent-100); border-color: var(--color-accent-300); }
+/* ── LE TROISIÈME AXE : les affordances de survol (#90) ───────────────────────
+   Sur un écran tactile, `:hover` ne se comporte pas comme à la souris — il se
+   COLLE. Un tap le déclenche, et l'élément le garde jusqu'au tap suivant
+   ailleurs. Mesuré au doigt : après un appui sur le `⋯` d'une carte, treize
+   éléments restent en état survolé, la ligne tapée reste soulevée, la case reste
+   agrandie de 15 %. L'interface cesse alors de dire où l'on EST : elle affiche où
+   l'on a été.
+
+   D'où la garde `(hover: hover) and (pointer: fine)` qui enveloppe désormais
+   chaque règle de survol de ce fichier. Elle ne SUPPRIME pas le survol, elle le
+   réserve au pointeur qui peut se promener sans rien déclencher.
+
+   ⚠️ TROIS AXES, ET ILS NE MESURENT PAS LA MÊME CHOSE. Les mélanger est l'erreur
+   qui a produit ce ticket et le précédent :
+
+     axe 1 — LARGEUR           `max-width: 720px`   → la géométrie et les gestes
+     axe 2 — TAILLE DU DOIGT   `pointer: coarse`    → la taille des cibles
+     axe 3 — AFFORDANCES       `hover: hover` + fin → ce qui n'existe qu'au survol
+
+   L'iPad suffit à prouver qu'ils sont distincts : large (mise en page desktop),
+   pointeur grossier (grosses cibles), sans survol (aucun effet de survol).
+
+   ⚠️ `:focus-visible` ET `:focus-within` NE SONT PAS DU SURVOL et restent DEHORS,
+   sans exception. Ce sont eux qui portent le chemin clavier rendu par #38 : les
+   enfermer ici les couperait sur tout écran tactile — iPad muni d'un clavier
+   compris, où le pointeur est grossier et le clavier bien réel. Plusieurs règles
+   mêlaient les deux dans une même déclaration ; elles ont été SCINDÉES.
+
+   `a:hover` reste hors garde : un changement de couleur de lien ne colle pas et
+   ne se lit pas comme un état. */
+@media (hover: hover) and (pointer: fine) {
+  .home-global:hover { background: var(--color-accent-100); border-color: var(--color-accent-300); }
+}
 .home-global__hint { font: 400 12.5px var(--font-body); color: var(--color-neutral-700); }
 
 .board-list { display: flex; flex-direction: column; }
@@ -141,14 +173,18 @@ button { font: inherit; }
   background: var(--card-warm); border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm); transition: box-shadow 0.18s, transform 0.18s;
 }
-.board-row:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+@media (hover: hover) and (pointer: fine) {
+  .board-row:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+}
 /* Pendant un déplacement, ce soulèvement décalerait la ligne sous le curseur au
    moment précis où l'on vise : la cible bougerait pendant qu'on la choisit.
    La ligne saisie, elle, garde son inclinaison — c'est le retour visuel du
    geste. Les deux règles passent après `:hover` et le battent en spécificité :
    le navigateur FIGE l'état de survol pendant un glisser, et la ligne saisie
    l'était forcément au départ. */
-.board-list--dragging .board-row:hover:not(.board-row--dragging) { transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .board-list--dragging .board-row:hover:not(.board-row--dragging) { transform: none; }
+}
 .board-row.board-row--dragging { transform: rotate(-1deg) scale(1.01); }
 .board-card {
   display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0;
@@ -179,9 +215,11 @@ button { font: inherit; }
 }
 /* `padding-right` : la ligne a 28 px d'arrondi, et le bouton collé au bord
    tombait dans la courbe — il paraissait coupé en deux. */
-.board-row:hover .board-row__actions,
 .board-row:focus-within .board-row__actions,
 .board-row:has(.board-row-menu) .board-row__actions { max-width: 60px; padding-right: 14px; }
+@media (hover: hover) and (pointer: fine) {
+  .board-row:hover .board-row__actions { max-width: 60px; padding-right: 14px; }
+}
 /* Discret jusqu'au survol, comme les actions qu'il remplace : une liste de
    matrices doit se lire comme une liste de noms, pas comme une barre d'outils.
    Il reste visible tant que SON menu est ouvert — sinon il disparaîtrait sous le
@@ -191,8 +229,10 @@ button { font: inherit; }
   padding: 6px 8px; border-radius: 999px; cursor: pointer; background: none; border: none;
   transition: background 0.15s, color 0.15s;
 }
-.board-more:hover,
 .board-more[aria-expanded='true'] { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .board-more:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 
 /* Le menu d'une matrice EST celui d'une tâche : il en porte la classe et ne
    redéfinit que son ancrage. Deux menus qui font la même chose doivent se
@@ -254,8 +294,10 @@ button { font: inherit; }
   padding: 7px 11px; font: 600 12px var(--font-body);
   color: var(--color-neutral-700); cursor: pointer; white-space: nowrap;
 }
-.board-act:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
-.board-act--danger:hover { background: #f6e4df; color: #a63d2a; }
+@media (hover: hover) and (pointer: fine) {
+  .board-act:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+  .board-act--danger:hover { background: #f6e4df; color: #a63d2a; }
+}
 .board-act--ok { background: var(--color-accent); color: #fff; opacity: 1 !important; }
 .board-act--ok:disabled { opacity: 0.45 !important; cursor: not-allowed; }
 .board-row__rename { display: flex; align-items: center; gap: 8px; flex: 1; padding: 12px 14px 12px 20px; }
@@ -276,7 +318,9 @@ button { font: inherit; }
   background: transparent; border-radius: 999px; padding: 9px 18px;
   font: 600 13px var(--font-body); color: var(--color-accent-700); cursor: pointer; transition: background 0.15s;
 }
-.add-board:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .add-board:hover { background: var(--color-accent-100); }
+}
 
 .home-empty {
   font: 14.5px/1.6 var(--font-body); color: var(--color-neutral-700);
@@ -338,7 +382,9 @@ button { font: inherit; }
    lieu de sortir. */
 .matrix-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 0 2px 14px; }
 .crumb { font: 600 13px var(--font-body); color: var(--color-accent-700); background: none; border: none; cursor: pointer; }
-.crumb:hover { color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .crumb:hover { color: var(--color-accent-800); }
+}
 .board-switch { position: relative; flex: 1 1 auto; min-width: 0; }
 /* `nowrap` : sans lui, le chevron passe à la ligne dès que la largeur manque —
    très visible sur mobile, où il se retrouvait sous le nom. */
@@ -361,14 +407,18 @@ button { font: inherit; }
 }
 .board-menu__item { font: 400 14px var(--font-body); color: var(--color-text); padding: 8px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; background: none; border: none; text-align: left; }
 .board-menu__item--active { font-weight: 700; }
-.board-menu__item:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .board-menu__item:hover { background: var(--color-accent-100); }
+}
 .matrix-total { margin-left: auto; font: 13px var(--font-body); color: var(--color-neutral-700); }
 .bin-btn {
   display: flex; align-items: center; gap: 7px; border: 1.5px solid var(--color-neutral-300);
   background: none; border-radius: 999px; padding: 7px 13px; cursor: pointer;
   color: var(--color-neutral-700); font: 700 12px var(--font-body); transition: background 0.15s, color 0.15s;
 }
-.bin-btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .bin-btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 
 /* ── Grille des cases ─────────────────────────────────────────────────────── */
 /* ⚠️ `auto auto` et surtout PAS `1fr 1fr`.
@@ -477,7 +527,9 @@ button { font: inherit; }
   font: 14px var(--font-body); color: var(--color-text); cursor: grab;
   transition: box-shadow 0.18s, transform 0.18s, opacity 0.18s, border-color 0.15s; animation: mm-in 0.28s ease backwards;
 }
-.task:hover { box-shadow: var(--shadow-md); }
+@media (hover: hover) and (pointer: fine) {
+  .task:hover { box-shadow: var(--shadow-md); }
+}
 .task--dragging { opacity: 0.45; box-shadow: var(--shadow-lg); transform: rotate(-2deg) scale(1.03); border-color: var(--color-accent); }
 .task--split { transform: scale(0.97); border: 1.5px dotted var(--q-ink); }
 .task--done { opacity: 0.55; }
@@ -496,7 +548,9 @@ button { font: inherit; }
   width: 18px; height: 18px; border: 2px solid var(--q-ink); border-radius: 50%; flex: none;
   cursor: pointer; background: transparent; padding: 0; transition: background 0.15s, transform 0.12s;
 }
-.task__check:hover { transform: scale(1.15); }
+@media (hover: hover) and (pointer: fine) {
+  .task__check:hover { transform: scale(1.15); }
+}
 .task__check--done { background: var(--q-ink); animation: mm-check 0.3s ease; }
 .task__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; min-width: 0; }
 .task__title--done { text-decoration: line-through; }
@@ -535,7 +589,9 @@ button { font: inherit; }
 }
 .task__rename-input:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 1px; }
 .task__more { margin-left: auto; color: var(--color-neutral-700); font: 700 14px/1 var(--font-body); padding: 2px 6px; border-radius: 999px; cursor: pointer; background: none; border: none; }
-.task__more:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .task__more:hover { background: var(--color-accent-100); }
+}
 
 /* ── Échéances (#19) ──────────────────────────────────────────────────────────
    Une pastille DANS la carte, entre le titre et le `⋯` : contrairement au lien
@@ -588,19 +644,26 @@ button { font: inherit; }
   background: var(--color-neutral-100); border-radius: 999px;
   font: 600 11px/1 var(--font-body); transition: background 0.15s;
 }
-.att__chip:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .att__chip:hover { background: var(--color-accent-100); }
+}
 .att__link {
   display: inline-block; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   color: var(--q-ink); text-decoration: none; padding: 4px 4px 4px 9px;
 }
-.att__link:hover { text-decoration: underline; }
+@media (hover: hover) and (pointer: fine) {
+  .att__link:hover { text-decoration: underline; }
+}
 .att__link:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 1px; border-radius: 999px; }
 .att__del {
   flex: none; background: none; border: none; cursor: pointer; color: var(--color-neutral-700);
   font: 10px/1 var(--font-body); padding: 4px 8px 4px 4px; border-radius: 999px; opacity: 0;
   transition: opacity 0.15s;
 }
-.att__chip:hover .att__del, .att__del:focus-visible { opacity: 1; }
+.att__del:focus-visible { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .att__chip:hover .att__del { opacity: 1; }
+}
 .att__add { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 140px; }
 .att__input {
   font: 12px var(--font-body); color: var(--color-text);
@@ -626,10 +689,12 @@ button { font: inherit; }
   background: none; border: none; padding: 1px 6px; border-radius: 999px; cursor: pointer;
   opacity: 0; transition: opacity 0.15s, background 0.15s;
 }
-.card-wrap:hover .sub__toggle,
 .sub__toggle:focus-visible,
 .sub__toggle[aria-expanded='true'] { opacity: 1; }
-.sub__toggle:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .card-wrap:hover .sub__toggle { opacity: 1; }
+  .sub__toggle:hover { background: var(--color-accent-100); }
+}
 /* Une tâche QUI A des étapes affiche toujours son compteur : c'est une
    information sur son avancement, pas une commande. */
 .sub--filled .sub__toggle { opacity: 1; color: var(--q-ink); }
@@ -640,7 +705,9 @@ button { font: inherit; }
   width: 13px; height: 13px; border: 1.5px solid var(--q-ink); border-radius: 50%; flex: none;
   cursor: pointer; background: transparent; padding: 0; transition: background 0.15s, transform 0.12s;
 }
-.sub__check:hover { transform: scale(1.2); }
+@media (hover: hover) and (pointer: fine) {
+  .sub__check:hover { transform: scale(1.2); }
+}
 .sub__check--done { background: var(--q-ink); }
 .sub__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .sub__del {
@@ -648,7 +715,10 @@ button { font: inherit; }
   color: var(--color-neutral-700); font: 10px/1 var(--font-body); padding: 3px; border-radius: 999px;
   transition: opacity 0.15s;
 }
-.sub__item:hover .sub__del, .sub__del:focus-visible { opacity: 1; }
+.sub__del:focus-visible { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .sub__item:hover .sub__del { opacity: 1; }
+}
 .sub__input {
   flex: 1; min-width: 0; font: 12.5px var(--font-body); color: var(--color-text);
   background: none; border: none; border-bottom: 1px dashed var(--color-neutral-400);
@@ -735,9 +805,11 @@ button { font: inherit; }
 
 .task-menu__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .move-btn { border: none; border-radius: 10px; padding: 9px 6px; font: 700 12px var(--font-body); text-align: center; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; }
-.move-btn:hover { box-shadow: var(--shadow-sm); transform: scale(1.05); }
 .move-btn:disabled { opacity: 0.4; cursor: default; }
-.move-btn:disabled:hover { box-shadow: none; transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .move-btn:hover { box-shadow: var(--shadow-sm); transform: scale(1.05); }
+  .move-btn:disabled:hover { box-shadow: none; transform: none; }
+}
 /* Les autres matrices : une colonne, contrairement à la grille 2×2 des cases.
    Un nom de matrice est libre et souvent long — le forcer sur une demi-largeur
    le tronquerait, alors qu'il est le seul repère pour choisir. */
@@ -749,7 +821,9 @@ button { font: inherit; }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   transition: background 0.12s;
 }
-.board-btn:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .board-btn:hover { background: var(--color-accent-100); }
+}
 /* Alignées à GAUCHE, comme les libellés de section et les matrices — elles
    étaient centrées, ce qui donnait trois alignements différents dans un même
    menu. Et `gap` sépare l'icône du texte, qui se touchaient. */
@@ -762,7 +836,9 @@ button { font: inherit; }
 .task-menu__action > svg { flex: none; color: var(--color-neutral-700); }
 .task-menu__action--del { color: var(--color-accent-700); }
 .task-menu__action--del > svg { color: var(--color-accent-700); }
-.task-menu__action:hover:not(:disabled) { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .task-menu__action:hover:not(:disabled) { background: var(--color-accent-100); }
+}
 /* Visibles mais grisées en bout de liste : un menu dont les lignes vont et
    viennent selon la position se relit à chaque ouverture. */
 .task-menu__action:disabled { opacity: 0.4; cursor: not-allowed; }
@@ -770,6 +846,11 @@ button { font: inherit; }
 .task-menu__action--move .task-menu__key { margin-left: auto; }
 /* Le raccourci s'apprend en lisant le menu — comme Ctrl+S dans un menu Fichier. */
 .task-menu__key { font: 500 10.5px var(--font-body); color: var(--color-neutral-700); letter-spacing: 0.02em; }
+/* …mais seulement là où il y a un clavier pour l'exécuter. Au doigt, `Alt+↑` et
+   `Alt+↓` n'étaient que deux colonnes de texte sans objet (#90). */
+@media (hover: none) {
+  .task-menu__key { display: none; }
+}
 
 /* ── Ajout inline ─────────────────────────────────────────────────────────── */
 /* Le focus se marque sur le contrôle composé (champ + bouton ＋), pas sur le
@@ -826,7 +907,9 @@ button { font: inherit; }
 .bin-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
 .bin-title { font: 400 24px var(--font-heading); color: var(--color-text); }
 .bin-close { margin-left: auto; cursor: pointer; color: var(--color-neutral-700); font: 700 15px var(--font-body); padding: 4px 10px; border-radius: 999px; background: none; border: none; }
-.bin-close:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .bin-close:hover { background: var(--color-accent-100); }
+}
 .bin-section { font: 700 11.5px var(--font-body); letter-spacing: 0.07em; text-transform: uppercase; margin: 0 0 8px; }
 .bin-section--done { color: var(--color-accent-2-800); }
 .bin-section--del { color: var(--color-accent-700); }
@@ -836,7 +919,9 @@ button { font: inherit; }
 .bin-item__title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
 .bin-item__title--done { text-decoration: line-through; color: var(--color-neutral-700); }
 .bin-restore { margin-left: auto; flex: none; font: 600 12px var(--font-body); color: var(--color-accent-700); cursor: pointer; border-radius: 999px; padding: 4px 10px; background: none; border: none; }
-.bin-restore:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .bin-restore:hover { background: var(--color-accent-100); }
+}
 
 /* ── Toast ──────────────────────────────────────────────────────────────────
    L'hôte est monté en permanence (`components/Toast.tsx`), donc souvent vide :
@@ -864,7 +949,9 @@ button { font: inherit; }
   background: none; border: none; color: #fff; opacity: 0.65; cursor: pointer;
   font: 13px var(--font-body); padding: 0; line-height: 1;
 }
-.toast__close:hover { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .toast__close:hover { opacity: 1; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   /* Le toast apparaît, il ne glisse plus. */
@@ -880,7 +967,9 @@ button { font: inherit; }
 .auth-card input { font: 14px var(--font-body); padding: 9px 14px; border: 1px solid var(--color-divider); border-radius: 999px; background: var(--color-surface); color: var(--color-text); }
 .auth-card input:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 0; border-color: var(--color-accent); }
 .btn-primary { font: 600 14px var(--font-body); background: var(--color-accent); color: var(--color-bg); border: none; border-radius: 999px; padding: 10px 16px; cursor: pointer; }
-.btn-primary:hover { background: var(--color-accent-600); }
+@media (hover: hover) and (pointer: fine) {
+  .btn-primary:hover { background: var(--color-accent-600); }
+}
 .btn-primary:disabled { opacity: 0.5; cursor: default; }
 .btn-link { background: none; border: none; color: var(--color-accent-700); font: 600 13px var(--font-body); cursor: pointer; }
 .error { color: #a63d2a; font: 13px var(--font-body); margin: 0; }
@@ -897,7 +986,9 @@ button { font: inherit; }
    quand il n'y a pas de retour, pour que « Déconnexion » ne se recentre pas. */
 .userbar { max-width: 1060px; margin: 0 auto; padding: 14px 24px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .signout { background: none; border: 1.5px solid var(--color-neutral-300); color: var(--color-neutral-700); border-radius: 999px; padding: 6px 14px; font: 600 12px var(--font-body); cursor: pointer; }
-.signout:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .signout:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 
 /* ── Responsive : la grille 2×2 s'empile sur mobile ───────────────────────── */
 @media (max-width: 720px) {
@@ -940,7 +1031,9 @@ button { font: inherit; }
 /* ── Renommage / suppression d'une matrice ────────────────────────────────── */
 .board-menu__sep { display: block; height: 1px; background: var(--color-neutral-200); margin: 6px 4px; }
 .board-menu__item--danger { color: #a63d2a; }
-.board-menu__item--danger:hover { background: #f6e4df; }
+@media (hover: hover) and (pointer: fine) {
+  .board-menu__item--danger:hover { background: #f6e4df; }
+}
 
 .board-rename { display: inline-flex; align-items: center; gap: 8px; }
 .board-rename__input {
@@ -973,7 +1066,9 @@ button { font: inherit; }
   border: none; background: var(--color-accent); color: #fff; border-radius: 999px;
   padding: 9px 18px; font: 600 13px var(--font-body); cursor: pointer;
 }
-.confirm-go:hover { background: var(--color-accent-600); }
+@media (hover: hover) and (pointer: fine) {
+  .confirm-go:hover { background: var(--color-accent-600); }
+}
 .confirm-danger {
   border: none; background: #a63d2a; color: #fff; border-radius: 999px;
   padding: 9px 18px; font: 600 13px var(--font-body); cursor: pointer;
@@ -1065,7 +1160,9 @@ button { font: inherit; }
    les autres boutons de l'application : un soulignement l'aurait fait passer
    pour un lien, ce qu'il n'est pas. */
 button.uni-head__name { cursor: pointer; }
-button.uni-head__name:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  button.uni-head__name:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 button.uni-head__name:focus-visible {
   outline: 2px solid var(--color-accent-600); outline-offset: 1px;
 }
@@ -1083,9 +1180,11 @@ button.uni-head__name:focus-visible {
   font: 400 13px var(--font-body); color: var(--color-neutral-400);
   opacity: 0; transition: opacity 0.18s;
 }
-.uni-head:hover .uni-head__grip,
 .uni-head:focus-within .uni-head__grip { opacity: 1; }
-.uni-head__grip:hover { color: var(--color-neutral-700); background: var(--color-neutral-200); }
+@media (hover: hover) and (pointer: fine) {
+  .uni-head:hover .uni-head__grip { opacity: 1; }
+  .uni-head__grip:hover { color: var(--color-neutral-700); background: var(--color-neutral-200); }
+}
 .uni-head__grip:active { cursor: grabbing; }
 /* Au doigt, le glisser HTML5 n'existe pas : la poignée y serait une cible morte,
    et l'appui long sur le nom prend le relais. Un `display: none` est ici sans
@@ -1104,7 +1203,9 @@ button.uni-head__name:focus-visible {
   border: none; background: none; cursor: pointer; padding: 0;
   border-radius: 6px; color: var(--color-neutral-700);
 }
-.uni-head__fold:hover { background: var(--color-neutral-200); color: var(--color-text); }
+@media (hover: hover) and (pointer: fine) {
+  .uni-head__fold:hover { background: var(--color-neutral-200); color: var(--color-text); }
+}
 .uni-head__fold:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 1px; }
 /* Un seul dessin qui pivote, et non deux glyphes : « ⌄ » et « › » n'ont ni la
    même hauteur d'œil ni le même centre optique, et l'en-tête se décalait
@@ -1127,8 +1228,10 @@ button.uni-head__name:focus-visible {
   max-width: 0; overflow: hidden;
   transition: max-width 0.26s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.uni-head:hover .uni-head__actions,
 .uni-head:focus-within .uni-head__actions { max-width: 320px; }
+@media (hover: hover) and (pointer: fine) {
+  .uni-head:hover .uni-head__actions { max-width: 320px; }
+}
 /* L'univers en cours de déplacement, comme `.board-row--dragging` : sans ce
    retour, on ne sait pas ce qu'on tient. */
 .uni--dragging { opacity: 0.45; }
@@ -1142,8 +1245,10 @@ button.uni-head__name:focus-visible {
 .uni-gap__line { flex: 1; border-top: 3px dotted transparent; }
 .uni-gap--active .uni-gap__line { border-top-color: var(--color-accent); }
 .uni-head__actions .board-act { opacity: 0; transition: opacity 0.18s; }
-.uni-head:hover .board-act,
 .uni-head:focus-within .board-act { opacity: 1; }
+@media (hover: hover) and (pointer: fine) {
+  .uni-head:hover .board-act { opacity: 1; }
+}
 .uni-head__actions .board-act:disabled { opacity: 0.3 !important; cursor: default; }
 /* Sans survol (tactile), ces actions ne se déplient pas : on passe par l'appui
    long sur le nom, qui ouvre `.sheet`.
@@ -1156,12 +1261,6 @@ button.uni-head__name:focus-visible {
    Règles portées par `.uni-head__actions` et non par `.uni-head` : les boutons
    OK / Annuler du formulaire de renommage sont eux aussi des `.board-act`, et
    n'ont rien à faire dans ce calcul. */
-@media (hover: none) {
-  .uni-head:hover .uni-head__actions { max-width: 0; }
-  .uni-head:hover .uni-head__actions .board-act { opacity: 0; }
-  .uni-head:focus-within .uni-head__actions { max-width: 320px; }
-  .uni-head:focus-within .uni-head__actions .board-act { opacity: 1; }
-}
 .uni-head__rename { display: flex; align-items: center; gap: 8px; flex: 1; }
 .uni-head__input {
   flex: 1; min-width: 0; font: 600 13px var(--font-body); color: var(--color-text);
@@ -1177,7 +1276,9 @@ button.uni-head__name:focus-visible {
    ligne et devenait un grand ovale. */
 .home-actions { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin-top: 18px; }
 .add-board--uni { border-style: dotted; color: var(--color-neutral-700); border-color: var(--color-neutral-400); }
-.add-board--uni:hover { background: var(--color-neutral-200); }
+@media (hover: hover) and (pointer: fine) {
+  .add-board--uni:hover { background: var(--color-neutral-200); }
+}
 
 /* Intitulé de section dans la feuille tactile. */
 .sheet__label {
@@ -1198,7 +1299,9 @@ button.uni-head__name:focus-visible {
   color: var(--color-neutral-700); border-radius: 999px; padding: 6px 14px;
   font: 600 12px var(--font-body); cursor: pointer;
 }
-.searchbtn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .searchbtn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 
 .sr-panel {
   background: var(--card-warm); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
@@ -1265,7 +1368,9 @@ button.uni-head__name:focus-visible {
 .home-lenses .home-global { flex: 1 1 240px; margin: 0; }
 /* La revue se distingue par sa teinte, pas par sa forme : même rang, autre nature. */
 .home-global--review { color: var(--color-accent-2-800); }
-.home-global--review:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+@media (hover: hover) and (pointer: fine) {
+  .home-global--review:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+}
 
 .review { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
 .review-head { margin-bottom: 26px; }
@@ -1311,7 +1416,9 @@ button.uni-head__name:focus-visible {
   background: var(--color-neutral-100); border: none; border-radius: 999px;
   padding: 4px 11px; cursor: pointer;
 }
-.review-signal__tune:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .review-signal__tune:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 .review-tune { display: inline-flex; align-items: center; gap: 8px; font: 600 12px var(--font-body); color: var(--color-neutral-700); }
 .review-tune input {
   width: 72px; font: 600 13px var(--font-body); padding: 4px 8px;
@@ -1335,7 +1442,9 @@ button.uni-head__name:focus-visible {
   font: 600 14px var(--font-body); color: var(--color-text);
   transition: background 0.15s;
 }
-.review-board:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .review-board:hover { background: var(--color-accent-100); }
+}
 .review-board__name { flex: 1; }
 .review-board__detail { flex: none; font: 400 12px var(--font-body); color: var(--color-neutral-700); }
 
@@ -1377,7 +1486,9 @@ button.uni-head__name:focus-visible {
    tickets ajoutent un bouton frère dans le même conteneur, et c'est elle qui
    l'a introduit. Ne pas le redéclarer ici. */
 .home-global--stats { color: var(--color-accent-2-800); }
-.home-global--stats:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+@media (hover: hover) and (pointer: fine) {
+  .home-global--stats:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
+}
 
 .stats { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
 .stats-head { margin-bottom: 22px; }
@@ -1390,7 +1501,9 @@ button.uni-head__name:focus-visible {
   background: none; border: 1.5px solid var(--color-neutral-400); border-radius: 999px;
   padding: 6px 14px; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
-.stats-period:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .stats-period:hover { background: var(--color-accent-100); }
+}
 .stats-period--on {
   color: var(--color-accent-800); background: var(--color-accent-100);
   border-color: var(--color-accent-600);
@@ -1480,7 +1593,9 @@ button.uni-head__name:focus-visible {
    ajoutent un bouton frère dans le même conteneur, et c'est elle qui l'a
    introduit. Ne pas le redéclarer ici. */
 .home-global--focus { color: var(--color-accent-800); border-style: solid; }
-.home-global--focus:hover { background: var(--color-accent-100); border-color: var(--color-accent-600); }
+@media (hover: hover) and (pointer: fine) {
+  .home-global--focus:hover { background: var(--color-accent-100); border-color: var(--color-accent-600); }
+}
 
 .focus { max-width: 620px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
 .focus-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 22px; }
@@ -1516,7 +1631,9 @@ button.uni-head__name:focus-visible {
   background: var(--color-neutral-100); border: none; border-radius: 999px;
   padding: 5px 12px; cursor: pointer;
 }
-.focus-limit__btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .focus-limit__btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 .focus-limit__field { display: inline-flex; align-items: center; gap: 8px; font: 600 12px var(--font-body); color: var(--color-neutral-700); }
 .focus-limit__field input {
   width: 66px; font: 600 13px var(--font-body); padding: 5px 8px;
@@ -1577,20 +1694,26 @@ button.uni-head__name:focus-visible {
   padding: 3px; border-radius: 999px; cursor: pointer;
   opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s;
 }
-.card-wrap:hover .task__act,
 .task__act:focus-visible { opacity: 1; }
-.task__act:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+@media (hover: hover) and (pointer: fine) {
+  .card-wrap:hover .task__act { opacity: 1; }
+  .task__act:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
 /* Désactivé : visible au survol comme les autres, mais inerte et sans promesse.
    Son `title` porte le motif — un bouton qui disparaît n'explique rien. */
 .task__act:disabled { cursor: not-allowed; color: var(--color-neutral-400); }
-.task__act:disabled:hover { background: none; color: var(--color-neutral-400); }
+@media (hover: hover) and (pointer: fine) {
+  .task__act:disabled:hover { background: none; color: var(--color-neutral-400); }
+}
 
 /* Une tâche DÉJÀ du jour garde son icône visible : ce n'est plus une commande,
    c'est une information — même règle que le compteur d'étapes. */
 /* Même teinte que le contour de la carte : le fanion et le cadre disent la
    même chose, ils ne doivent pas le dire de deux couleurs. */
 .task__today--on { opacity: 1; color: var(--color-accent); }
-.card-wrap:hover .task__today--on:hover { background: var(--color-accent-100); }
+@media (hover: hover) and (pointer: fine) {
+  .card-wrap:hover .task__today--on:hover { background: var(--color-accent-100); }
+}
 
 @media (hover: none) {
   /* Sans survol, les commandes seraient inatteignables : elles restent là,
@@ -1663,7 +1786,9 @@ button.uni-head__name:focus-visible {
   padding: 6px 9px; font: 12.5px var(--font-body); color: var(--color-text);
   transition: box-shadow 0.15s;
 }
-.sub__item:hover { box-shadow: var(--shadow-md); }
+@media (hover: hover) and (pointer: fine) {
+  .sub__item:hover { box-shadow: var(--shadow-md); }
+}
 .sub__item--done { opacity: 0.55; }
 .sub__item--done .sub__title { text-decoration: line-through; }
 
@@ -1677,7 +1802,9 @@ button.uni-head__name:focus-visible {
 /* La case à cocher, présente mais inerte : sans elle, la ligne changeait de
    gabarit au moment de la validation. */
 .sub__check--ghost { border-color: var(--color-neutral-400); opacity: 0.55; cursor: default; }
-.sub__check--ghost:hover { transform: none; }
+@media (hover: hover) and (pointer: fine) {
+  .sub__check--ghost:hover { transform: none; }
+}
 .sub__item--add .sub__input {
   flex: 1; min-width: 0; border: none; background: none; outline: none;
   font: 12.5px var(--font-body); color: var(--color-text); padding: 0;
@@ -1780,6 +1907,20 @@ button.uni-head__name:focus-visible {
   .toast__close::after,
   .toast__undo::after { content: ''; position: absolute; inset: -15px -10px; }
   .sub__toggle::after { content: ''; position: absolute; inset: -12px -6px; }
+
+  /* ── Ce qui n'existait qu'au survol (#90) ─────────────────────────────────
+     Détacher un lien et supprimer une étape passaient par une croix à
+     `opacity: 0`, révélée par le survol de sa pastille ou de sa ligne. Au doigt :
+     ni visibles, ni atteignables — une fonction qu'aucun geste ne découvre.
+
+     55 % et non 100 % : à pleine opacité, une croix sur chaque pastille et chaque
+     étape mettrait la SUPPRESSION au même niveau visuel que ce qu'elle supprime,
+     sur un écran déjà dense. On passerait d'une action introuvable à une action
+     qu'on redoute de frôler. C'est le dosage que `.task__act` reçoit déjà sous
+     `(hover: none)` : l'utilisateur retrouve une convention, il n'en découvre
+     pas une de plus. La zone de frappe de 44 px, elle, vient de #89. */
+  .att__del,
+  .sub__del { opacity: 0.55; }
 
   /* La pastille de lien : c'est la puce entière qui devient frappable, pas le
      seul texte. */

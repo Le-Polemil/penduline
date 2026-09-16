@@ -21,7 +21,7 @@ import {
   IconTrash,
 } from './Icons';
 import { useTitreDepliable } from '../data/useTitreDepliable';
-import { LARGEUR_ACTION, useBalayage, useTelephone } from '../data/useBalayage';
+import { LARGEUR_ACTION, useBalayage, usePointeurFin, useTelephone } from '../data/useBalayage';
 import { Attachments } from './Attachments';
 import { Deadline } from './Deadline';
 import { Subtasks } from './Subtasks';
@@ -255,6 +255,11 @@ export function TaskCard({
    * supplémentaire.
    */
   const telephone = useTelephone();
+  /* Le survol piloté en JS — le sous-menu d'univers — ne se MONTE que sur un
+     pointeur fin (#90). Au doigt, `mouseenter` est bien synthétisé par le
+     navigateur, mais il se superpose alors au clic qui sert déjà de repli : deux
+     chemins concurrents pour un seul geste. On n'en monte qu'un. */
+  const pointeurFin = usePointeurFin();
   const actionsBandeau = telephone ? [subtasks, focus, deadline].filter(Boolean).length : 0;
   const bandeau = !!onSwipe && actionsBandeau > 0 && !renaming;
   const largeurBandeau = actionsBandeau * LARGEUR_ACTION;
@@ -587,10 +592,14 @@ export function TaskCard({
                     <div
                       className={`task-menu__uni${ouvert ? ' task-menu__uni--open' : ''}`}
                       key={cle}
-                      // Le survol ouvre sur pointeur fin ; le clic sert de
-                      // repli au doigt, où `mouseenter` n'arrive jamais (#90).
-                      onMouseEnter={() => setOpenUni(cle)}
-                      onMouseLeave={() => setOpenUni((c) => (c === cle ? null : c))}
+                      // Le survol ouvre sur pointeur fin, et LÀ SEULEMENT : au
+                      // doigt le clic ci-dessous est le chemin unique (#90).
+                      {...(pointeurFin
+                        ? {
+                            onMouseEnter: () => setOpenUni(cle),
+                            onMouseLeave: () => setOpenUni((c) => (c === cle ? null : c)),
+                          }
+                        : {})}
                     >
                       <button
                         className="task-menu__action task-menu__uni-head"
