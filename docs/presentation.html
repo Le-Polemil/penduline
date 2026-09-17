@@ -557,7 +557,36 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 02 — Ce qu'apporte la méthode -->
+<!-- 02 — La charge mentale -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">Avant même de classer</p>
+  <h2 class="s-heading reveal" style="--i:1">Noter une tâche, c'est cesser de la porter</h2>
+  <p class="s-sub reveal" style="--i:2">Une tâche inachevée occupe la mémoire plus qu'une tâche terminée — c'est l'effet Zeigarnik. Tant qu'elle n'existe nulle part ailleurs, elle revient.</p>
+  <div class="cards cards--2" style="margin-top: clamp(14px, 2.4vh, 28px);">
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-eliminer);">
+      <div class="card__kicker">Le mécanisme</div>
+      <p class="card__title">Ce qui n'est pas noté ne se tait pas</p>
+      <p class="card__body">Tant qu'une tâche ne vit que dans la tête, la mémoire est la seule garantie qu'elle ne sera pas oubliée. Elle se rappelle donc régulièrement — et rarement au bon moment.</p>
+    </div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-faire);">
+      <div class="card__kicker">Ce que ça change</div>
+      <p class="card__title">Écrire, c'est confier la vigilance</p>
+      <p class="card__body">La garantie passe à un support extérieur. Ce n'est plus à la mémoire de veiller, donc elle peut lâcher.</p>
+    </div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-deleguer);">
+      <div class="card__kicker">L'unité de mesure</div>
+      <p class="card__title">Le poids n'est pas le nombre</p>
+      <p class="card__body">Trente tâches notées pèsent moins que trois tâches qu'on redoute d'oublier. Ce qui coûte, ce n'est pas d'en avoir — c'est de les tenir.</p>
+    </div>
+    <div class="card reveal" style="--i:6; border-top-color: var(--q-planifier);">
+      <div class="card__kicker">La condition</div>
+      <p class="card__title">Il faut faire confiance au support</p>
+      <p class="card__body">On ne lâche que ce qu'on est sûr de retrouver. D'où une capture immédiate, et un classement qu'on peut remettre à plus tard.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 03 — Ce qu'apporte la méthode -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">La méthode</p>
   <h2 class="s-heading reveal" style="--i:1">Ce qu'apporte une matrice d'Eisenhower</h2>
@@ -581,7 +610,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 03 — La matrice -->
+<!-- 04 — La matrice -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Les quatre cases</p>
   <h2 class="s-heading reveal" style="--i:1">Une couleur par case, et une seule</h2>
@@ -615,7 +644,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 04 — Une matrice = un contexte -->
+<!-- 05 — Une matrice = un contexte -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Le modèle</p>
   <h2 class="s-heading reveal" style="--i:1">Une matrice = un contexte, au choix de l'utilisateur</h2>
@@ -627,7 +656,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px);">Un compte vide reste vide : <strong>le découpage appartient à l'utilisateur, l'app n'en impose aucun.</strong></p>
 </section>
 
-<!-- 05 — Les partis pris -->
+<!-- 06 — Les partis pris -->
 <section class="slide slide--split">
   <div class="panels panels--even">
     <div class="panel panel--a">
@@ -651,7 +680,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 06 — Architecture -->
+<!-- 07 — Architecture -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Technique</p>
   <h2 class="s-heading reveal" style="--i:1">Deux surfaces, un modèle partagé</h2>
@@ -700,7 +729,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 07 — Les chiffres -->
+<!-- 08 — Les chiffres -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Où en est le projet</p>
   <h2 class="s-heading reveal" style="--i:1">Deux mois de développement</h2>
@@ -715,7 +744,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   <p class="s-body reveal" style="--i:3; margin-top: clamp(14px, 2.4vh, 26px);">Les tests couvrent <code>packages/shared</code>, où vit la logique pure — ordre fractionnaire, paires, seuils. Le rendu se vérifie à l'œil : ni test de composant, ni E2E, délibérément.</p>
 </section>
 
-<!-- 08 — Les six vagues -->
+<!-- 09 — Les six vagues -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">La trajectoire</p>
   <h2 class="s-heading reveal" style="--i:1">Six vagues</h2>
@@ -735,7 +764,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 09 — Vague 1 -->
+<!-- 10 — Vague 1 -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Vague 1 — Quick wins</p>
   <h2 class="s-heading reveal" style="--i:1">Les gestes du quotidien</h2>
@@ -749,7 +778,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 10 — L'appairage -->
+<!-- 11 — L'appairage -->
 <section class="slide slide--split">
   <div class="panels">
     <div class="panel panel--a">
@@ -777,7 +806,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 11 — Univers et vue globale -->
+<!-- 12 — Univers et vue globale -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Vague 2 — Structure</p>
   <h2 class="s-heading reveal" style="--i:1">Regrouper, et voir l'ensemble</h2>
@@ -797,7 +826,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 12 — Recherche, Ctrl+Z, temps réel -->
+<!-- 13 — Recherche, Ctrl+Z, temps réel -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Vague 2 — Structure</p>
   <h2 class="s-heading reveal" style="--i:1">Retrouver, annuler, rester à jour</h2>
@@ -823,7 +852,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 13 — Les étapes -->
+<!-- 14 — Les étapes -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">#50 — Les étapes</p>
   <h2 class="s-heading reveal" style="--i:1">Un seul niveau, tenu par trois règles</h2>
@@ -847,7 +876,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 14 — Les liens -->
+<!-- 15 — Les liens -->
 <section class="slide slide--split">
   <div class="panels">
     <div class="panel panel--a">
@@ -869,7 +898,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 15 — Les échéances -->
+<!-- 16 — Les échéances -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">#19 — Les échéances</p>
   <h2 class="s-heading reveal" style="--i:1">Aucun statut n'est stocké</h2>
@@ -881,7 +910,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px);">Les trois états sont <strong>dérivés</strong> de <code>due_at</code> et de l'heure courante à chaque rendu — sans quoi il faudrait quelqu'un pour les réécrire au fil du temps.</p>
 </section>
 
-<!-- 16 — La revue périodique -->
+<!-- 17 — La revue périodique -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">#47 — La revue périodique</p>
   <h2 class="s-heading reveal" style="--i:1">Ce qui stagne, ce qui n'a jamais bougé</h2>
@@ -900,7 +929,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   <p class="s-body reveal" style="--i:3; margin-top: clamp(10px, 1.8vh, 20px);">Chaque élément est actionnable sur place, avec les vraies cartes et leur menu habituel.</p>
 </section>
 
-<!-- 17 — Les statistiques -->
+<!-- 18 — Les statistiques -->
 <section class="slide slide--split">
   <div class="panels">
     <div class="panel panel--a">
@@ -922,7 +951,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 18 — Mode aujourd'hui -->
+<!-- 19 — Mode aujourd'hui -->
 <section class="slide slide--split">
   <div class="panels panels--even">
     <div class="panel panel--a">
@@ -944,7 +973,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 19 — L'extension -->
+<!-- 20 — L'extension -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">L'extension Chrome</p>
   <h2 class="s-heading reveal" style="--i:1">Capturer sans quitter la page</h2>
@@ -958,7 +987,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 20 — Le travail invisible -->
+<!-- 21 — Le travail invisible -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Mise en conformité</p>
   <h2 class="s-heading reveal" style="--i:1">Installable, utilisable au clavier, sans tiers</h2>
@@ -970,7 +999,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 21 — La grille des intérêts -->
+<!-- 22 — La grille des intérêts -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Synthèse</p>
   <h2 class="s-heading reveal" style="--i:1">Ce que chaque ajout cherche à produire</h2>
@@ -988,7 +1017,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 22 — Ce qui vient -->
+<!-- 23 — Ce qui vient -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">45 tickets ouverts</p>
   <h2 class="s-heading reveal" style="--i:1">Ce qui vient</h2>
@@ -1000,7 +1029,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 23 — Clôture -->
+<!-- 24 — Clôture -->
 <section class="slide slide--title">
   <svg class="nest reveal" style="--i:0" viewBox="11.75 5.5 88.5 88.5" aria-hidden="true">
     <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139"/>
