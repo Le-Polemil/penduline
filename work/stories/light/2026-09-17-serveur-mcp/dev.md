@@ -402,3 +402,40 @@ status: "In Progress"
 - Le dépôt n'a **pas de linter** : la qualité y tient au typecheck strict (`noUnusedLocals`, `noUnusedParameters`) et aux tests. Rien à lancer de plus, et rien n'a été ajouté pour l'occasion.
 - 371 tests au total, dont 97 nouveaux sur `apps/mcp` et 4 sur `apps/web`.
 - Les trois conventions verrouillées par `styles.test.ts` (aucune `@keyframes` orpheline, plancher `prefers-reduced-motion`, aucun `:hover` hors garde) restent vertes avec le CSS ajouté.
+
+### 2026-09-17 : Correctif — le serveur MCP ne lisait pas le `.env` racine
+
+**Statut** : Terminé
+
+**Symptôme** : `npm run dev -w @penduline/mcp` sortait immédiatement sur six
+variables manquantes. `apps/mcp` était le **seul** workspace à exiger sa
+configuration sur la ligne de commande — l'app web et l'extension lisent le
+`.env` de la racine par l'`envDir` commun de Vite. Remonté par l'utilisateur à
+la validation manuelle.
+
+**Actions réalisées** :
+- `src/dotenv.ts` : `analyseEnv` (analyseur minimal `CLÉ=valeur`) et `chargeEnvFile`
+- `src/index.ts` : chargement du `.env` racine avant `loadEnv()`
+- `src/env.ts` : message d'erreur actionnable — « manquante » plutôt que le texte anglais de zod, et trois lignes disant **où** ces variables se déclarent
+- `.env.example` : bloc « Serveur MCP » avec les six variables et l'avertissement sur les deux secrets
+- `apps/mcp/README.md` : section « Démarrage local » réécrite — trois commandes, plus rien à recopier
+- `src/dotenv.test.ts` : 8 tests. **105 tests sur `apps/mcp`**
+
+**Fichiers modifiés** :
+- `apps/mcp/src/dotenv.ts`, `apps/mcp/src/dotenv.test.ts` (nouveaux)
+- `apps/mcp/src/index.ts`, `apps/mcp/src/env.ts`, `apps/mcp/README.md`, `.env.example`
+
+**Notes** :
+- ⚠️ **L'environnement réel gagne toujours ; on ne remplit que ce qui manque.**
+  C'est l'inverse de `process.loadEnvFile()` de Node, qui écrase — un `.env`
+  oublié dans une image écraserait alors les variables posées par Coolify, en
+  silence et avec les valeurs d'une machine de développement. C'est la raison
+  pour laquelle l'analyseur est écrit à la main plutôt qu'emprunté.
+- Analyseur volontairement minimal : pas d'interpolation, pas de multi-lignes.
+  Un `.env` qui en aurait besoin serait un fichier de configuration déguisé.
+- Chemin vérifié à l'exécution : `apps/mcp/src/index.ts` résout bien
+  `/…/penduline/.env`, les clés existantes sont lues, et une variable déjà posée
+  n'est pas écrasée.
+- Le message d'échec ne dit plus seulement *ce qui* manque mais *où* le
+  déclarer : la réponse n'était pas devinable — c'est le `.env` de la **racine**,
+  partagé, et non un fichier propre à `apps/mcp`.

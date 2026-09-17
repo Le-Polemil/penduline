@@ -58,6 +58,21 @@ export type Env = z.infer<typeof schema>;
 
 export class EnvError extends Error {}
 
+/**
+ * Le message doit dire quoi FAIRE, pas seulement ce qui manque.
+ *
+ * Une liste de noms de variables laisse chercher où on les déclare — et la
+ * réponse n'est pas devinable ici : c'est le `.env` de la RACINE, partagé avec
+ * l'app web et l'extension, et non un fichier propre à `apps/mcp`.
+ */
+const OU = [
+  '',
+  '',
+  'Ces variables sont documentées dans `.env.example`, bloc « Serveur MCP ».',
+  'Le `.env` de la RACINE est lu au démarrage (comme pour l’app web et l’extension) ;',
+  'une variable déjà posée dans l’environnement l’emporte sur ce fichier.',
+].join('\n');
+
 export function readEnv(source: Record<string, string | undefined>): Env {
   const result = schema.safeParse(source);
   if (result.success) {
@@ -66,16 +81,24 @@ export function readEnv(source: Record<string, string | undefined>): Env {
     if (result.data.SUPABASE_JWT_SECRET === result.data.MCP_TOKEN_SECRET) {
       throw new EnvError(
         'Configuration invalide :\n' +
-          "  · MCP_TOKEN_SECRET est identique à SUPABASE_JWT_SECRET — un jeton d'accès MCP serait alors accepté par PostgREST.",
+          "  · MCP_TOKEN_SECRET est identique à SUPABASE_JWT_SECRET — un jeton d'accès MCP serait alors accepté par PostgREST." +
+          OU,
       );
     }
     return result.data;
   }
 
   const details = result.error.issues
-    .map((issue) => `  · ${issue.path.join('.') || '(racine)'} : ${issue.message}`)
+    .map((issue) => {
+      const nom = issue.path.join('.') || '(racine)';
+      // Le cas de très loin le plus fréquent — la variable n'est pas posée du
+      // tout — mérite un mot juste plutôt que le message anglais de zod, qui
+      // parle de types là où l'utilisateur pense « oubliée ».
+      const absente = issue.code === 'invalid_type' && issue.message.includes('undefined');
+      return `  · ${nom} : ${absente ? 'manquante' : issue.message}`;
+    })
     .join('\n');
-  throw new EnvError(`Configuration invalide :\n${details}`);
+  throw new EnvError(`Configuration invalide :\n${details}${OU}`);
 }
 
 let cached: Env | undefined;

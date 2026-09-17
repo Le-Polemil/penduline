@@ -84,22 +84,32 @@ Vite l'inline (voir `.env.example`).
 
 ## Démarrage local
 
+Le serveur lit le **`.env` de la racine**, comme l'app web et l'extension par
+l'`envDir` commun de Vite. Copier le bloc « Serveur MCP » de `.env.example`
+suffit, il n'y a rien à recopier sur la ligne de commande :
+
 ```bash
-# Supabase local démarré (voir apps/supabase/README.md), puis :
-SUPABASE_URL=http://127.0.0.1:54321 \
-SUPABASE_ANON_KEY="$(npm run --silent status -w @penduline/supabase | grep -A1 'anon key' | tail -1)" \
-SUPABASE_JWT_SECRET='super-secret-jwt-token-with-at-least-32-characters-long' \
-MCP_TOKEN_SECRET='un-autre-secret-de-32-caracteres-au-moins' \
-MCP_PUBLIC_URL=http://127.0.0.1:8787 \
-WEB_APP_URL=http://localhost:5173 \
-npm run dev -w @penduline/mcp
+npm run start -w @penduline/supabase   # la stack locale
+npm run dev -w @penduline/mcp          # le serveur
+npm run dev                            # l'app web
 ```
 
-Le secret JWT local est celui du CLI Supabase, en clair et identique partout —
-il n'a rien à protéger sur une machine de développement.
+⚠️ **L'environnement réel l'emporte sur le fichier** — on ne remplit que ce qui
+manque. C'est l'inverse de `process.loadEnvFile()` de Node, et c'est
+volontaire : un `.env` oublié dans une image écraserait sinon les variables
+posées par Coolify, en silence et avec les valeurs d'une machine de
+développement.
+
+En local, `SUPABASE_JWT_SECRET` est celui du CLI Supabase
+(`super-secret-jwt-token-with-at-least-32-characters-long`) — identique partout,
+il n'a rien à protéger sur une machine de développement. `MCP_TOKEN_SECRET`, lui,
+doit en **différer** : le serveur refuse de démarrer sinon.
+
+Une configuration incomplète ne démarre pas et liste d'un coup tout ce qui
+manque, en disant où ces variables se déclarent.
 
 ```bash
-npm run test -w @penduline/mcp       # 97 tests
+npm run test -w @penduline/mcp       # 105 tests
 npm run typecheck -w @penduline/mcp
 ```
 

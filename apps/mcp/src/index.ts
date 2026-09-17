@@ -1,7 +1,9 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { fileURLToPath } from 'node:url';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { AuthInfo } from '@modelcontextprotocol/sdk/server/auth/types.js';
 import { createDb } from './db';
+import { chargeEnvFile } from './dotenv';
 import { loadEnv } from './env';
 import { HttpError, cors, json, lireFormulaire, lireJson, redirige } from './http';
 import { TokenError, createTokens } from './jwt';
@@ -25,6 +27,11 @@ import { QuotaError, createQuota } from './quota';
  *   POST /token                                  code ou rafraîchissement → jetons
  *   POST /mcp                                    les outils, derrière le jeton d'accès
  */
+
+// Le `.env` de la racine, comme l'app web et l'extension via l'`envDir` commun
+// de Vite. Absent en production, où tout vient de l'environnement du conteneur —
+// et de toute façon sans effet sur ce qui y est déjà posé.
+chargeEnvFile(fileURLToPath(new URL('../../../.env', import.meta.url)), process.env);
 
 const env = loadEnv();
 const tokens = createTokens(env);
