@@ -35,6 +35,9 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     // Aligné sur `created_at` par défaut : une tâche fraîchement créée n'a jamais
     // changé de case. Un test de revue qui veut le contraire le dit (#47).
     quadrant_changed_at: '2026-01-01T00:00:00.000Z',
+    // `'user'` par défaut : c'est l'origine de tout ce que l'application crée.
+    // Un test de la pastille « agent » le dit (#23).
+    origin: 'user',
     ...partial,
   };
 }
@@ -54,6 +57,7 @@ export function makeBoard(partial: Partial<Board> = {}): Board {
     universe_id: null,
     position: 0,
     created_at: '2026-01-01T00:00:00.000Z',
+    origin: 'user',
     ...partial,
   };
 }
@@ -66,6 +70,7 @@ export function makeUniverse(partial: Partial<Universe> = {}): Universe {
     name: `Univers ${seq}`,
     position: 0,
     created_at: '2026-01-01T00:00:00.000Z',
+    origin: 'user',
     ...partial,
   };
 }

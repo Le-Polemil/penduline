@@ -23,6 +23,7 @@ import { Confirm } from '../components/Confirm';
 import { dropTarget, gapIndexAt } from '../dnd/gap';
 import { ordinal, useAnnounce } from '../a11y/announce';
 import type { Scope } from './Global';
+import { OriginBadge } from '../components/OriginBadge';
 
 /** Durée d'un appui long, alignée sur la convention des OS mobiles. */
 const LONG_PRESS_MS = 500;
@@ -633,6 +634,9 @@ export function Home({
                         ) : (
                           <span className="uni-head__name">Sans univers</span>
                         )}
+                        {/* Le groupe « Sans univers » n'est pas une ligne en
+                            base : il n'a pas d'origine à afficher. */}
+                        {group.universe && <OriginBadge origin={group.universe.origin} />}
                         {/* Replié, l'en-tête doit dire ce qu'il cache : sinon le
                             repli n'est plus un rangement, c'est un trou. */}
                         {folded && (
@@ -784,6 +788,7 @@ export function Home({
                               <span className="board-card__name">{board.name}</span>
                               <span className="board-card__meta">{meta}</span>
                               <span className="board-card__pills">
+                                <OriginBadge origin={board.origin} />
                                 {pills.map((p, i) => (
                                   <span key={i} className="pill" style={{ background: p.ink }}>
                                     {p.n}

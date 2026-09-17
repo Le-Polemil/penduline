@@ -1,6 +1,18 @@
 import type { QuadrantKey } from './quadrants';
 
 /**
+ * Qui a créé cette ligne (#23).
+ *
+ * Un enum et non un booléen `created_by_agent` : les deux valeurs d'aujourd'hui
+ * ne sont pas celles de toujours. Un import ou une récurrence en demanderaient
+ * une troisième, qu'un booléen ne saurait pas porter.
+ *
+ * Toujours renseigné — la base pose `'user'` par défaut, l'application n'écrit
+ * donc jamais cette colonne.
+ */
+export type Origin = 'user' | 'agent';
+
+/**
  * Un regroupement de matrices — Perso, Boulot, Maison…
  *
  * Facultatif de bout en bout : on peut n'en créer aucun, et une matrice peut
@@ -12,6 +24,7 @@ export interface Universe {
   name: string;
   position: number;
   created_at: string;
+  origin: Origin;
 }
 
 /**
@@ -29,6 +42,7 @@ export interface Board {
   universe_id: string | null;
   position: number;
   created_at: string;
+  origin: Origin;
 }
 
 /** Un élément placé dans une case d'une matrice. */
@@ -91,6 +105,7 @@ export interface Task {
    * faux positif, quand ceci n'est qu'une absence.
    */
   quadrant_changed_at: string;
+  origin: Origin;
 }
 
 /**

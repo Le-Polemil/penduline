@@ -25,6 +25,7 @@ import { LARGEUR_ACTION, useBalayage, usePointeurFin, useTelephone } from '../da
 import { Attachments } from './Attachments';
 import { Deadline } from './Deadline';
 import { Subtasks } from './Subtasks';
+import { OriginBadge } from './OriginBadge';
 
 /** Le déplacement au doigt/à la souris. Absent, la carte n'est pas déplaçable. */
 export interface CardDrag {
@@ -541,6 +542,9 @@ export function TaskCard({
             ⏰ {formatDeadline(task.due_at, deadline?.now)}
           </time>
         )}
+        {/* Même emplacement et même patron que l'échéance : ce qui QUALIFIE la
+            tâche se lit d'un même coup d'œil que son titre (#23). */}
+        <OriginBadge origin={task.origin} />
         {/* Les deux raccourcis, ici seulement AU-DESSUS de 720 px : en dessous
             ils vivent dans le bandeau, où ils ne mangent plus le titre.
             Ils ne s'affichent qu'au survol ou au focus clavier, pour qu'une

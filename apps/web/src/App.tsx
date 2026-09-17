@@ -15,6 +15,9 @@ import { Search, type SearchHit } from './components/Search';
 import { useUndoShortcut } from './data/useUndoShortcut';
 import { clearSessionNotice, readSessionNotice } from './lib/session-notice';
 import { shareSession, shareSignOut } from './lib/extension-bridge';
+import { readAuthorizeRequest } from './lib/mcp';
+import { AuthorizeScreen } from './screens/Authorize';
+import { ConnectedApps } from './components/ConnectedApps';
 
 /**
  * Les événements qui valent la peine d'être poussés vers l'extension.
@@ -61,6 +64,8 @@ export function App() {
   // Initialiseur paresseux : évalué au premier rendu, avant qu'auth-js n'ait
   // eu le temps de consommer le fragment.
   const [hash] = useState(readAuthHash);
+  // Même motif, et pour la même raison : pure, lue une fois, avant tout effet.
+  const [demandeMcp] = useState(() => readAuthorizeRequest());
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [recovering, setRecovering] = useState(hash.recovery);
@@ -109,6 +114,10 @@ export function App() {
   // Prime délibérément sur `session` : c'est tout l'objet du drapeau.
   if (recovering) return <NewPassword onDone={() => setRecovering(false)} />;
   if (!session) return <SignIn linkError={hash.linkError} />;
+  // APRÈS `!session`, délibérément : un visiteur déconnecté se connecte d'abord
+  // et retombe sur cet écran, l'URL n'ayant pas bougé. L'inverse lui demanderait
+  // d'autoriser une application au nom d'une session qui n'existe pas.
+  if (demandeMcp) return <AuthorizeScreen demande={demandeMcp} jeton={session.access_token} />;
   return <AppRoot userId={session.user.id} />;
 }
 
@@ -197,6 +206,7 @@ function Workspace({ userId }: { userId: string }) {
   const store = useStore(userId);
   const [view, setView] = useState<View>(readView);
   const [searching, setSearching] = useState(false);
+  const [apps, setApps] = useState(false);
   useUndoShortcut(store);
 
   // Changer d'écran change le contexte : une entrée d'annulation viserait des
@@ -250,6 +260,11 @@ function Workspace({ userId }: { userId: string }) {
             </svg>
             Rechercher
           </button>
+          {/* À côté de « Déconnexion » : c'est le même registre — ce qui
+              concerne le compte, pas les matrices. */}
+          <button className="signout" onClick={() => setApps(true)}>
+            Applications
+          </button>
           <button className="signout" onClick={() => supabase.auth.signOut()}>
             Déconnexion
           </button>
@@ -258,6 +273,7 @@ function Workspace({ userId }: { userId: string }) {
       {searching && (
         <Search boards={store.boards} tasks={store.tasks} onClose={() => setSearching(false)} onPick={allerA} />
       )}
+      {apps && <ConnectedApps onClose={() => setApps(false)} />}
       {board ? (
         <MatrixScreen
           store={store}

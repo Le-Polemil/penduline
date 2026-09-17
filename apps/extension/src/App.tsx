@@ -821,6 +821,14 @@ function Detail({ store, board, onHome }: { store: ExtStore; board: Board; onHom
                               ⏰ {formatDeadline(t.due_at, now)}
                             </time>
                           )}
+                          {/* Même colonne, même pastille que le web (#23) :
+                              la marque suit la donnée, elle n'est pas refabriquée
+                              d'un côté ni de l'autre. */}
+                          {t.origin === 'agent' && (
+                            <span className="agent-badge" title="Créé par une application connectée">
+                              agent
+                            </span>
+                          )}
                           {/* « Actions » tout court nommait autant de boutons
                               anonymes qu'il y a de tâches dans l'arbre
                               d'accessibilité — même correctif que le web. */}
