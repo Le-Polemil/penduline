@@ -99,5 +99,25 @@ jobs:
           build-args: |
             VITE_SUPABASE_URL=${{ vars.VITE_SUPABASE_URL }}
             VITE_SUPABASE_ANON_KEY=${{ vars.VITE_SUPABASE_ANON_KEY }}
+            VITE_EXTENSION_ID=${{ vars.VITE_EXTENSION_ID }}
+            VITE_MCP_URL=${{ vars.VITE_MCP_URL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Le serveur MCP (#23) — une seconde image, dans le même job.
+      #
+      # AUCUN build arg, contrairement au web : rien n'est inliné, tout se lit à
+      # l'exécution. On ne vérifie donc aucune variable ici — une image MCP est
+      # identique quelle que soit l'instance qui la fera tourner, et c'est
+      # précisément ce qui la rend rejouable.
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/mcp/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ghcr.io/le-polemil/penduline-mcp:latest
+            ghcr.io/le-polemil/penduline-mcp:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

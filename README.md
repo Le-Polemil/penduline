@@ -11,6 +11,7 @@ penduline/
 ├── apps/
 │   ├── web/          # App web (Vite + React + TS), responsive/PWA-ready
 │   ├── extension/    # Extension Chrome MV3 (popup + service worker)
+│   ├── mcp/          # Serveur MCP + OAuth 2.1 : les matrices, ouvertes aux agents
 │   └── supabase/     # Projet Supabase : migrations SQL + RLS + seed local
 ├── packages/
 │   └── shared/       # Types, modèle des quadrants + couleurs, client Supabase
@@ -130,11 +131,19 @@ matrices (actives + « calmes » repliables), détail d'une matrice (4 quadrants
 drag & drop vertical, filtres par quadrant, épinglage, complétion, ajout ciblé,
 reprise de la dernière matrice ouverte (2 h), connexion embarquée. Typecheck + build OK.
 
+**Serveur MCP** (#23) : neuf outils (lecture des univers/matrices/tâches ;
+création, modification, déplacement et complétion de tâches) derrière un parcours
+OAuth 2.1 complet — découverte, enregistrement dynamique, PKCE S256, consentement
+dans l'app web, rotation du jeton de rafraîchissement, révocation immédiate. Ce
+qu'un agent crée porte une pastille « agent » dans l'app web et dans l'extension.
+Voir [apps/mcp/README.md](apps/mcp/README.md).
+
 À faire : édition du titre d'une tâche, renommage de matrice, temps réel Supabase,
 notifications. Détails dans `work/architecture.md`.
 
 ## Production
 
 Déployée sur Coolify : app web sur https://penduline.polemil.dev, Supabase
-auto-hébergé sur https://api.penduline.polemil.dev. Voir
+auto-hébergé sur https://api.penduline.polemil.dev, serveur MCP sur
+https://mcp.penduline.polemil.dev. Voir
 [work/coolify-deploy.md](work/coolify-deploy.md) pour les décisions et les pièges.

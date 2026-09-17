@@ -20,11 +20,21 @@ ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
 ARG VITE_EXTENSION_ID
 ENV VITE_EXTENSION_ID=$VITE_EXTENSION_ID
 
+# L'URL du serveur MCP (#23), que l'écran de consentement appelle. Inlinée aussi.
+# Absente, l'application reste entière : seul l'écran d'autorisation le dit.
+ARG VITE_MCP_URL
+ENV VITE_MCP_URL=$VITE_MCP_URL
+
 # Manifests d'abord : la couche `npm ci` reste en cache tant qu'ils ne bougent pas.
 COPY package.json package-lock.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/web/package.json apps/web/
 COPY apps/extension/package.json apps/extension/
+# ⚠️ Le manifeste du serveur MCP, alors que le build web n'en a AUCUN usage :
+# `npm ci` échoue si un workspace déclaré dans le package.json racine n'a pas son
+# manifeste. Oublier cette ligne casse le build de l'APP WEB, pas celui du MCP —
+# exactement le piège déjà rencontré avec `apps/extension`.
+COPY apps/mcp/package.json apps/mcp/
 COPY apps/supabase/package.json apps/supabase/
 RUN npm ci --no-audit --no-fund
 
