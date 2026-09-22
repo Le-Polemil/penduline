@@ -12,7 +12,7 @@ status: "In Progress"
 | Tâche | Statut | Date |
 |-------|--------|------|
 | 0. Spike temps réel — `realtime.send()` depuis un trigger, filtre `in.(…)` sur DELETE, longueur d'URL | Terminé | 2026-09-22 |
-| 1. Migration A — appartenance (`board_members`, `peut_lire`/`peut_ecrire`, réécriture RLS, `task_attachments.board_id`) | En attente | |
+| 1. Migration A — appartenance (`board_members`, `peut_lire`/`peut_ecrire`, réécriture RLS, `task_attachments.board_id`) | Terminé | 2026-09-22 |
 | 2. Migration B — rangement par personne (`board_placements`, backfill, retrait de `boards.universe_id`/`position`) | En attente | |
 | 3. Migration C — attribution (`author_id`, `completed_by`, correctif `completion_stats`, revue des RPC) | En attente | |
 | 4. Migration D — invitations (`board_invitations`, `accepter_invitation`) | En attente | |
@@ -75,3 +75,47 @@ jeu de matrices accessibles sera découpé en tranches de 100, une liaison
 `on('postgres_changes', …)` par tranche sur le même canal. Un compte réel en a une
 poignée — mais le mode de défaillance est total et muet, donc il se traite maintenant, pas
 le jour où quelqu'un franchit le seuil.
+
+
+### 2026-09-22 : Migration A — appartenance et réécriture RLS
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Enum `board_role`, table `board_members` (le propriétaire n'y figure pas :
+  `boards.user_id` reste l'autorité), index sur le parcours inverse `(user_id)`.
+- Trois fonctions `security definer` : `est_proprietaire`, `peut_lire`, `peut_ecrire`.
+- `task_attachments.board_id` dénormalisé, rempli par trigger — **et** un second trigger
+  `tasks_propager_board_id` pour le cas oublié du plan : une tâche déplacée vers une
+  autre matrice laissait ses liens rattachés à l'ancienne, donc délivrés en temps réel à
+  qui voit l'ancienne. Une fuite qui survit au déplacement.
+- Les quatre policies `for all` remplacées par **16 policies**, une par verbe et par table.
+- Migration appliquée à la base locale et enregistrée dans `schema_migrations`.
+
+**Fichiers modifiés** :
+- `apps/supabase/migrations/20260922130000_partage_appartenance.sql` (nouveau)
+
+**Validation à deux comptes** (seeds `demo@penduline.test` / `intrus@penduline.test`,
+le tout dans une transaction annulée — aucun résidu en base) :
+
+| Situation | Attendu | Obtenu |
+|---|---|---|
+| demo, ses matrices | 4 | 4 |
+| intrus, sans partage | 0 matrice, 0 tâche | 0 / 0 |
+| intrus en `lecture` | voit la matrice et ses tâches | 1 matrice, 3 tâches |
+| intrus en `lecture`, insertion d'une tâche | refus | `new row violates row-level security policy` |
+| intrus en `ecriture`, insertion | acceptée | acceptée |
+| intrus en `ecriture`, renommage de la matrice | refus | 0 ligne touchée |
+
+Aucune erreur de récursion : le `security definer` fait bien son office.
+
+**Notes** :
+
+⚠️ **Piège d'environnement, à ne pas réapprendre.** `supabase … migration up --local`
+et `db reset --local` visent le port **54322**, qui est occupé par le conteneur d'un
+AUTRE projet (`supabase_db_pcb-fidfe`). Le Postgres de Penduline écoute sur **55322**
+(et Kong sur 55321), la CLI ayant décalé les ports au démarrage faute de trouver ceux de
+`config.toml` libres. La commande a heureusement échoué sur un contrôle d'historique —
+elle aurait sinon appliqué cette migration à la base d'un autre projet. Les migrations
+sont donc appliquées via `docker exec -i supabase_db_penduline psql`, et la ligne de
+`supabase_migrations.schema_migrations` posée à la main.
