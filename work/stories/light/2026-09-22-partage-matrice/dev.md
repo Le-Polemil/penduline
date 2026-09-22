@@ -15,7 +15,7 @@ status: "In Progress"
 | 1. Migration A — appartenance (`board_members`, `peut_lire`/`peut_ecrire`, réécriture RLS, `task_attachments.board_id`) | Terminé | 2026-09-22 |
 | 2. Migration B — rangement par personne (`board_placements`, backfill, retrait de `boards.universe_id`/`position`) | Terminé | 2026-09-22 |
 | 3. Migration C — attribution (`author_id`, `completed_by`, correctif `completion_stats`, revue des RPC) | Terminé | 2026-09-22 |
-| 4. Migration D — invitations (`board_invitations`, `accepter_invitation`) | En attente | |
+| 4. Migration D — invitations (`board_invitations`, `accepter_invitation`) | Terminé | 2026-09-22 |
 | 5. ~~Migration E — canal de révocation~~ — abandonnée, redondante avec `board_placements` | Abandonnée | 2026-09-22 |
 | 6. Suite de tests RLS à deux comptes (`partage.live.test.ts`) — avant le client | En attente | |
 | 7. Temps réel conforme à l'accès (`packages/shared/src/realtime.ts` + tests unitaires) | En attente | |
@@ -197,3 +197,39 @@ personnelle. ⚠️ Et c'est en le décidant qu'on voit le résidu : `focus_day`
 colonne de `tasks`, donc **une seule valeur pour tout le monde**. Sur une matrice
 partagée, deux personnes qui mettent la même tâche dans leur journée s'écrasent. Hors
 périmètre de #53, noté ici parce que c'est ici qu'on s'en aperçoit.
+
+### 2026-09-22 : Migration D — invitations par lien
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Table `board_invitations` : hachage du jeton (jamais le clair), expiration à 7 jours,
+  **usage unique** (`accepted_at`).
+- `creer_invitation(board, role, email)` — `security invoker`, la policy d'insertion
+  vérifie déjà la propriété ; le jeton est fabriqué en base et rendu une seule fois.
+- `lire_invitation(jeton)` — `security definer`, rend ce que l'écran affiche.
+- `accepter_invitation(jeton)` — `security definer`, le seul endroit du schéma où
+  quelqu'un s'inscrit lui-même, et il lui faut un jeton émis par le propriétaire.
+- Trois policies : propriétaire seul en select / insert / delete. **Aucune `for update`** —
+  personne ne peut rouvrir une invitation consommée ni repousser une expiration.
+
+**Fichiers modifiés** :
+- `apps/supabase/migrations/20260922160000_partage_invitations.sql` (nouveau)
+
+**Validation de bout en bout** (transaction annulée), huit assertions :
+
+| Vérifié | Résultat |
+|---|---|
+| Le jeton clair n'est pas en base, le hachage y est | 0 / 1 |
+| `lire_invitation` rend les données du SERVEUR | « Cuisine », demo@penduline.test, écriture |
+| Jeton inventé | 0 ligne, sans message distinctif |
+| Acceptation | rend le `board_id` |
+| Adhésion créée avec le bon rôle | `ecriture` |
+| Placement créé dans la foulée (chaînage migration B) | 1 |
+| Rejeu du même jeton | « Cette invitation n'est plus valable. » |
+| L'invité lit `board_invitations` | 0 ligne |
+
+**Notes** : un seul message d'erreur pour les trois cas (inconnu / expiré / consommé).
+Les distinguer ferait de la fonction un oracle permettant de tester des jetons au hasard.
+
+Le côté base est complet : quatre migrations, la cinquième abandonnée.
