@@ -2,7 +2,7 @@
 story: "Partager une matrice avec quelqu'un"
 story_code: "partage-matrice"
 created: 2026-09-22
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
