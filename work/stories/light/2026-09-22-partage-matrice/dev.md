@@ -19,8 +19,8 @@ status: "In Progress"
 | 5. ~~Migration E — canal de révocation~~ — abandonnée, redondante avec `board_placements` | Abandonnée | 2026-09-22 |
 | 6. Suite de tests RLS à deux comptes (`partage.live.test.ts`) — avant le client | Terminé | 2026-09-22 |
 | 7. Temps réel conforme à l'accès (`packages/shared/src/realtime.ts` + tests unitaires) | Terminé | 2026-09-22 |
-| 8. Web — store, types, modale de partage, menu matrice, écran d'invitation | En attente | |
-| 9. Attribution visible sur la carte de tâche | En attente | |
+| 8. Web — store, types, modale de partage, menu matrice, écran d'invitation | Terminé | 2026-09-22 |
+| 9. Attribution visible sur la carte de tâche | Terminé | 2026-09-22 |
 | 10. Extension et serveur MCP — colonnes et filtres alignés | Terminé | 2026-09-22 |
 | 11. Portes de qualité (lint, typecheck, tests) | En attente | |
 
@@ -340,3 +340,47 @@ antérieurs — beaucoup de machinerie pour ce qu'on a déjà.
 
 **Portes de qualité** : `typecheck` propre, **397 tests** (250 shared + 106 mcp + 41 web),
 `build` vert, et les **31 tests live** passent, deux fois de suite, sans résidu en base.
+
+### 2026-09-22 : L'interface
+
+**Statut** : Terminé (actions 8 et 9)
+
+**Fichiers créés** :
+- `apps/web/src/lib/partage.ts` — lecture PURE de l'URL (`readInvitation`), fabrication du
+  lien, et les trois appels RPC. Même patron que `lib/mcp.ts` : deux fonctionnalités qui
+  entrent par l'URL doivent entrer de la même façon.
+- `apps/web/src/screens/Invitation.tsx` — sur `AuthorizeScreen` de bout en bout.
+- `apps/web/src/components/ShareModal.tsx` — sur `ConnectedApps`.
+- `apps/web/src/data/useMembres.ts` — ne charge **rien** sur une matrice personnelle.
+
+**Fichiers modifiés** : `App.tsx`, `Home.tsx`, `Matrix.tsx`, `BoardMenu.tsx`, `TaskCard.tsx`,
+`OriginBadge.tsx`, `store.ts`, `styles.css`.
+
+**Les trois points remontés par la revue UX, tous tenus** :
+
+- **Lecture seule** : le champ d'ajout et la case à cocher sont désactivés **en portant
+  leur motif** (`lectureSeule?: string | null`, exactement la forme de `CardFocus.refusal`
+  — une chaîne, pas un booléen). Le champ reste VISIBLE : le retirer laisserait croire que
+  la matrice n'a pas d'ajout, alors qu'elle en a un, pour d'autres.
+- **Révocation pendant la consultation** : `AppRoot` retombait déjà sur l'accueil quand la
+  vue pointait dans le vide, mais **en silence** — ce qui convenait tant que le seul cas
+  était « je l'ai supprimée moi-même ailleurs ». Le hook `useMatriceDisparue` nomme
+  désormais la matrice (nom tenu dans une ref : à l'instant de la disparition elle n'est
+  déjà plus dans `store.boards`), pose un toast et **annonce**.
+- **`aria-live`** : création de lien, copie, changement de rôle, retrait d'accès,
+  disparition d'une matrice. Un changement poussé par le temps réel est par construction
+  un changement que personne n'a déclenché — sans annonce, il n'existe pas.
+
+**Deux entrées de menu mutuellement exclusives**, pas une entrée grisée : « Partager… /
+Renommer / Supprimer » chez le propriétaire, « Quitter le partage » chez l'invité. Un
+invité n'a pas à découvrir qu'il n'est pas propriétaire en cliquant sur un bouton mort.
+
+**`SharedBadge`** est le jumeau d'`OriginBadge`, à la ligne près : il porte son texte
+(la couleur seule n'informe pas un daltonien) et ne s'affiche pas dans le cas ordinaire.
+
+**Le point de rupture nommé par le plan est refermé** : `SignIn` reçoit `invitation` et
+passe `emailRedirectTo: window.location.href` — l'URL qui porte le jeton. Sans ça, la
+confirmation d'adresse ramenait l'invité sur un accueil vide, sans aucun moyen de savoir
+qu'il lui manquait un clic.
+
+**Portes de qualité** : `typecheck` propre, **397 tests**, `build` vert, **31 tests live**.

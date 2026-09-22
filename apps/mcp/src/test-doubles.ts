@@ -73,7 +73,7 @@ export function fausseDb(tables: Record<string, object[]> = {}) {
         for (const b of creees) {
           placements.push({
             board_id: b.id,
-            user_id: b.user_id,
+            user_id: (b as Ligne).user_id,
             universe_id: null,
             position: placements.length,
           });

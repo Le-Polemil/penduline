@@ -119,6 +119,8 @@ export function TaskCard({
   subtasks,
   attachments,
   deadline,
+  attribution,
+  lectureSeule,
 }: {
   task: Task;
   quad: Quadrant;
@@ -172,6 +174,23 @@ export function TaskCard({
   reorder?: CardReorder;
   /** Mise en évidence passagère, à l'arrivée depuis la recherche. */
   flash?: boolean;
+  /**
+   * Qui a créé, qui a coché (#53). Absent = matrice personnelle.
+   *
+   * L'ABSENCE vaut configuration, comme `drag` ou `focus` : sur une matrice à
+   * soi, l'auteur est toujours soi, et l'afficher décorerait 99 % des cartes
+   * pour signaler le 1 % restant — l'erreur déjà refusée pour `OriginBadge`.
+   */
+  attribution?: { auteur: string | null; coche: string | null };
+  /**
+   * Le motif d'un accès en LECTURE SEULE. `null` ou absent = on peut écrire.
+   *
+   * ⚠️ Une chaîne et non un booléen, exactement comme `CardFocus.refusal` et
+   * pour la même raison : un blocage muet se lit comme un bug, un blocage
+   * expliqué se lit comme une intention. La RLS refuserait de toute façon ;
+   * l'interface doit rendre ce refus prévisible AVANT le geste, pas après.
+   */
+  lectureSeule?: string | null;
   /**
    * Les étapes de cette tâche. Absent = la carte n'en affiche aucune.
    *
@@ -487,7 +506,11 @@ export function TaskCard({
         <button
           className={`task__check${task.done ? ' task__check--done' : ''}`}
           onClick={onCheck}
-          aria-label={task.done ? 'Rétablir' : 'Terminer'}
+          disabled={!!lectureSeule}
+          title={lectureSeule ?? undefined}
+          aria-label={
+            lectureSeule ?? (task.done ? 'Rétablir' : 'Terminer')
+          }
         />
         {renaming ? (
           <form
@@ -545,6 +568,15 @@ export function TaskCard({
         {/* Même emplacement et même patron que l'échéance : ce qui QUALIFIE la
             tâche se lit d'un même coup d'œil que son titre (#23). */}
         <OriginBadge origin={task.origin} />
+        {/* Sur une matrice partagée seulement : « par Alice », « coché par Bob ».
+            Du TEXTE, jamais une icône seule — même règle que les pastilles. */}
+        {attribution && (attribution.auteur || attribution.coche) && (
+          <span className="task__par">
+            {attribution.coche
+              ? `coché par ${attribution.coche}`
+              : `par ${attribution.auteur}`}
+          </span>
+        )}
         {/* Les deux raccourcis, ici seulement AU-DESSUS de 720 px : en dessous
             ils vivent dans le bandeau, où ils ne mangent plus le titre.
             Ils ne s'affichent qu'au survol ou au focus clavier, pour qu'une

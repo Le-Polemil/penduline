@@ -23,6 +23,8 @@ export function BoardMenu({
   onMoveUniverse,
   onRename,
   onDelete,
+  onShare,
+  onLeave,
   onClose,
 }: {
   board: BoardRange;
@@ -35,6 +37,10 @@ export function BoardMenu({
   onMoveUniverse: (universeId: string | null) => void;
   onRename: () => void;
   onDelete: () => void;
+  /** Ouvre le partage. Propriétaire seulement. */
+  onShare: () => void;
+  /** Quitte le partage. Invité seulement. */
+  onLeave: () => void;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -142,14 +148,30 @@ export function BoardMenu({
       </button>
 
       <div className="task-menu__sep" role="separator" />
-      <button className="task-menu__action" onClick={onRename}>
-        <IconPenLine size={13} />
-        Renommer
-      </button>
-      <button className="task-menu__action task-menu__action--del" onClick={onDelete}>
-        <IconTrash size={13} />
-        Supprimer
-      </button>
+      {/* ⚠️ DEUX ENTRÉES MUTUELLEMENT EXCLUSIVES, pas une entrée grisée (#53).
+          Un invité n'a pas à découvrir qu'il n'est pas propriétaire en cliquant
+          sur un bouton mort — et les gestes de propriétaire (renommer,
+          supprimer) disparaissent pour la même raison : la base les refuserait,
+          et un refus se prévoit avant le geste, pas après. */}
+      {board.partagee ? (
+        <button className="task-menu__action" onClick={onLeave}>
+          Quitter le partage
+        </button>
+      ) : (
+        <>
+          <button className="task-menu__action" onClick={onShare}>
+            Partager…
+          </button>
+          <button className="task-menu__action" onClick={onRename}>
+            <IconPenLine size={13} />
+            Renommer
+          </button>
+          <button className="task-menu__action task-menu__action--del" onClick={onDelete}>
+            <IconTrash size={13} />
+            Supprimer
+          </button>
+        </>
+      )}
     </div>
   );
 }

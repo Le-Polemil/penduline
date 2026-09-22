@@ -1075,6 +1075,52 @@ button { font: inherit; }
   background: var(--color-accent-100); border-radius: 14px; padding: 10px 14px;
 }
 
+/* ── Partage d'une matrice (#53) ──────────────────────────────────────────── */
+/* Tout reprend le vocabulaire de « Applications connectées » (`.app-row`) : le
+   même geste — retirer un accès — doit se présenter de la même façon. Seule la
+   création du lien est neuve, parce qu'elle est neuve en effet : le lien se
+   partage à la main, et l'écran assume cette étape au lieu de la déguiser. */
+.share-role {
+  font: 13px var(--font-body); padding: 5px 10px; border-radius: 999px;
+  border: 1px solid var(--color-divider); background: var(--color-surface);
+  color: var(--color-text); cursor: pointer;
+}
+.share-invite { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--color-divider); display: flex; flex-direction: column; gap: 10px; }
+.share-invite__titre { font: 600 12px var(--font-body); color: var(--color-neutral-700); text-transform: uppercase; letter-spacing: 0.04em; margin: 0; }
+/* `wrap` et non une grille fixe : à 390 px les trois contrôles ne tiennent pas
+   sur une ligne, et les comprimer rendrait le champ d'adresse inutilisable. */
+.share-invite__champs { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.share-invite__email {
+  flex: 1 1 180px; min-width: 0; font: 14px var(--font-body); padding: 8px 14px;
+  border: 1px solid var(--color-divider); border-radius: 999px;
+  background: var(--color-surface); color: var(--color-text);
+}
+.share-lien { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; background: var(--color-accent-100); border-radius: 14px; padding: 12px 14px; }
+/* Monospace : un jeton se relit caractère par caractère quand on vérifie qu'il
+   a bien été copié. Et `flex: 1 1 100%` pour la phrase qui suit, qui doit
+   occuper sa propre ligne. */
+.share-lien__url {
+  flex: 1 1 220px; min-width: 0; font: 12px var(--font-mono, monospace);
+  padding: 8px 12px; border: 1px solid var(--color-divider); border-radius: 10px;
+  background: var(--color-surface); color: var(--color-text);
+}
+.share-lien .muted { flex: 1 1 100%; margin: 0; font: 12px/1.5 var(--font-body); color: var(--color-neutral-700); }
+.share-attente { margin-top: 6px; }
+
+/* « par Alice », « coché par Bob » — sur une matrice partagée SEULEMENT.
+   Même emplacement et même discrétion que la pastille d'origine : ce qui
+   qualifie la tâche se lit d'un même coup d'œil que son titre. Du TEXTE, jamais
+   une icône seule. */
+.task__par {
+  flex: none; font: 11px/1 var(--font-body); white-space: nowrap;
+  color: var(--color-neutral-700);
+}
+/* Un champ d'ajout désactivé reste VISIBLE, et porte son motif en indication :
+   le retirer laisserait croire que la matrice n'a pas d'ajout, alors qu'elle en
+   a un — pour d'autres. */
+.add-input:disabled { cursor: not-allowed; opacity: 0.75; }
+.task__check:disabled { cursor: not-allowed; opacity: 0.5; }
+
 /* ── Barre du haut (déconnexion) ──────────────────────────────────────────── */
 /* Retour à gauche, déconnexion à droite. `space-between` avec un `<span/>` vide
    quand il n'y a pas de retour, pour que « Déconnexion » ne se recentre pas. */

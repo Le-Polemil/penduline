@@ -110,6 +110,15 @@ function taskLabel(patch: TaskPatch): string {
 
 export interface Store {
   ready: boolean;
+  /**
+   * Le compte courant.
+   *
+   * Exposé depuis #53 : le partage introduit une SECONDE personne, et plusieurs
+   * écrans doivent désormais distinguer « moi » des autres — « coché par Bob »,
+   * « Quitter » plutôt que « Révoquer ». Le faire descendre en prop depuis `App`
+   * l'aurait fait traverser quatre composants qui n'en ont que faire.
+   */
+  userId: string;
   universes: Universe[];
   /**
    * Les matrices telles que les écrans les reçoivent : la matrice ET son
@@ -1098,6 +1107,7 @@ export function useStore(userId: string): Store {
 
   return {
     ready,
+    userId,
     boards: matrices,
     tasks,
     universes,
