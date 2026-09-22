@@ -146,6 +146,12 @@ mono-utilisateur.
 Trigger sur `board_members` (et `board_placements`) : `realtime.send()` vers le topic
 `penduline:user:<user_id>`, avec la raison (`acces_accorde` | `acces_retire`).
 
+⚠️ **Et une policy sur `realtime.messages`**, sans quoi rien n'arrive. Le spike l'a
+mesuré : la RLS y est activée avec **zéro policy** — un canal privé se connecte et reste
+muet, sans erreur. La policy borne chacun à son propre canal :
+`for select to authenticated using (realtime.topic() = 'penduline:user:' || auth.uid())`.
+Canal **privé**, pas public : un topic public serait écoutable par qui connaît l'UUID.
+
 C'est ce qui ferme les deux trous que le filtre `in.(…)` ouvre : un invité tout juste
 ajouté ne verrait rien arriver (son filtre ne couvre pas la nouvelle matrice), et un
 révoqué continuerait de recevoir les `{id}` de suppressions jusqu'à son prochain
@@ -181,6 +187,11 @@ Deux comptes réels, et au minimum :
 - `subscribeRealtime(client, userId, getSink, options)` prend désormais **le jeu de
   matrices accessibles**. Filtres : `tasks` et `task_attachments` en `board_id=in.(…)`,
   `boards` en `id=in.(…)`, `universes` et `board_placements` en `user_id=eq.<moi>`.
+- ⚠️ **Le filtre `in` est plafonné à 100 valeurs** (constat du spike, voir `dev.md`), et
+  le dépassement fait LEVER `realtime.subscription_check_filters` : l'abonnement échoue
+  en entier, donc plus aucun temps réel. Le jeu est donc **découpé en tranches de 100**,
+  une liaison `on('postgres_changes', …)` par tranche, sur le même canal. Ce n'est pas
+  une optimisation pour plus tard : au-delà du seuil, tout tombe d'un coup.
 - Réabonnement quand ce jeu change, **suivi d'un rechargement complet** : Realtime ne
   rejoue rien, chaque réabonnement ouvre une fenêtre d'événements perdus. Le mécanisme
   existe déjà pour la reconnexion (`dejaAbonne`) — on le réemploie, on n'en invente pas
