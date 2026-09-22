@@ -6,7 +6,7 @@ import {
   partnerOf,
   QUADS,
   type Attachment,
-  type Board,
+  type BoardRange,
   type Quadrant,
   type QuadrantKey,
   type Task,
@@ -125,7 +125,7 @@ export function TaskCard({
   /** Toutes les tâches — pour savoir si la partenaire existe encore (« Dissocier »). */
   tasks: Task[];
   /** Les matrices proposées par « Vers une autre matrice » (la sienne exclue). */
-  otherBoards: Board[];
+  otherBoards: BoardRange[];
   /**
    * Les univers, pour ranger les matrices comme l'accueil le fait (#62).
    *
@@ -161,7 +161,7 @@ export function TaskCard({
   rename: CardRename;
   onCheck: () => void;
   onMoveQuad: (key: QuadrantKey) => void;
-  onMoveBoard: (board: Board) => void;
+  onMoveBoard: (board: BoardRange) => void;
   onUnpair: () => void;
   onDelete: () => void;
   /** Absent = la carte ne propose pas l'engagement du jour (#49). */

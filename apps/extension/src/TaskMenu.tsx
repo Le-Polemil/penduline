@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from
 import {
   ALL,
   groupByUniverse,
-  type Board,
+  type BoardRange,
   type QuadrantKey,
   type Task,
   type Universe,
@@ -68,11 +68,11 @@ export function TaskMenu({
   /** La case actuelle : son bouton se grise, on n'y « affecte » pas deux fois. */
   quad: QuadrantKey;
   /** Les matrices proposées, la sienne déjà exclue par l'appelant. */
-  boards: Board[];
+  boards: BoardRange[];
   /** Aucun univers — ou un seul groupe — et la liste reste PLATE, comme le web. */
   universes: Universe[];
   onMoveQuad: (key: QuadrantKey) => void;
-  onMoveBoard: (board: Board) => void;
+  onMoveBoard: (board: BoardRange) => void;
   onDeadline: () => void;
   onRename: () => void;
   onClose: () => void;

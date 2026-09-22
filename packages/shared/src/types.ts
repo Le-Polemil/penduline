@@ -31,24 +31,125 @@ export interface Universe {
  * Une matrice. Le découpage est libre : un lieu, un moment de la journée, un
  * projet… Chaque matrice porte ses tâches directement.
  *
- * Elle peut être rangée dans un univers, ou non. Supprimer un univers ne
- * supprime pas ses matrices : elles repassent simplement à `null`.
+ * ⚠️ **Elle ne porte plus son rangement** (#53). `universe_id` et `position` ont
+ * déménagé dans `BoardPlacement`, parce qu'une matrice partagée est rangée
+ * DIFFÉREMMENT par chaque personne, et que les univers restent privés.
  */
 export interface Board {
   id: string;
+  /** Le PROPRIÉTAIRE — celui qui peut la renommer, la supprimer, la partager. */
   user_id: string;
   name: string;
+  created_at: string;
+  origin: Origin;
+}
+
+/** Lecture seule, ou écriture sur le contenu (#53). */
+export type BoardRole = 'lecture' | 'ecriture';
+
+/**
+ * Quelqu'un à qui une matrice a été ouverte (#53).
+ *
+ * ⚠️ Le propriétaire n'y figure PAS : `Board.user_id` reste l'autorité. Deux
+ * représentations du même fait finissent toujours par diverger.
+ */
+export interface BoardMember {
+  board_id: string;
+  user_id: string;
+  role: BoardRole;
+  /** `null` si le compte qui a invité a depuis été supprimé. */
+  invited_by: string | null;
+  created_at: string;
+}
+
+/**
+ * Où CETTE personne range CETTE matrice (#53).
+ *
+ * Une ligne par (matrice, personne). Mono-utilisateur par construction : c'est
+ * ce qui permet à l'invité de classer une matrice partagée dans SES univers sans
+ * rien déplacer chez les autres, et ce qui garde la policy et le filtre temps
+ * réel de cette table triviaux.
+ */
+export interface BoardPlacement {
+  board_id: string;
+  user_id: string;
   /** `null` = pas rangée dans un univers. Un état normal. */
   universe_id: string | null;
   position: number;
+}
+
+/**
+ * Une matrice telle que l'accueil l'affiche : la matrice, et SON rangement.
+ *
+ * Assemblée à la volée par le store, jamais lue telle quelle : deux tables la
+ * composent. Ce type existe pour que les écrans continuent de recevoir un objet
+ * unique, comme avant #53.
+ */
+export interface BoardRange extends Board {
+  universe_id: string | null;
+  position: number;
+  /** `null` si on est le propriétaire ; le rôle reçu sinon. */
+  role: BoardRole | null;
+  /** Raccourci de lecture : `role !== null`. */
+  partagee: boolean;
+}
+
+/**
+ * Une invitation en attente (#53). Ce que le PROPRIÉTAIRE en voit — l'invité,
+ * lui, n'a aucun droit de lecture sur cette table.
+ *
+ * ⚠️ Pas de jeton : la base n'en garde que le hachage, et le clair ne sort
+ * qu'une fois, dans le retour de `creer_invitation`.
+ */
+export interface Invitation {
+  id: string;
+  board_id: string;
+  /** Un LIBELLÉ mnémotechnique, jamais une autorité. C'est le jeton qui fait foi. */
+  email: string | null;
+  role: BoardRole;
   created_at: string;
-  origin: Origin;
+  expires_at: string;
+  accepted_at: string | null;
+}
+
+/**
+ * Quelqu'un qui a accès à une matrice, avec son adresse (#53).
+ *
+ * Rendu par la RPC `membres_matrice` et non lu dans une table : les adresses
+ * vivent dans `auth.users`, fermé à l'application. Le propriétaire y figure,
+ * marqué, bien qu'il ne soit pas dans `board_members`.
+ */
+export interface Membre {
+  user_id: string;
+  /** `null` si le compte a été supprimé depuis. */
+  email: string | null;
+  /** `null` pour le propriétaire — il n'a pas de rôle, il a la matrice. */
+  role: BoardRole | null;
+  proprietaire: boolean;
+}
+
+/** Ce que l'écran d'acceptation affiche — rendu par le SERVEUR, pas lu dans l'URL. */
+export interface InvitationLue {
+  board_name: string;
+  /** L'adresse de qui invite. `null` si le compte a été supprimé depuis. */
+  invited_by: string | null;
+  role: BoardRole;
+  expires_at: string;
+  /** Déjà propriétaire ou déjà membre : l'écran propose d'ouvrir, pas de rejoindre. */
+  deja_accessible: boolean;
 }
 
 /** Un élément placé dans une case d'une matrice. */
 export interface Task {
   id: string;
-  user_id: string;
+  /**
+   * QUI A ÉCRIT cette ligne — pas qui la possède (#53).
+   *
+   * La propriété est celle de la MATRICE (`Board.user_id`). Cette colonne ne
+   * sert à aucune policy : l'accès passe par `board_id`. Elle ne sert qu'à
+   * afficher « par Alice » sur une matrice partagée.
+   */
+  author_id: string;
   board_id: string;
   title: string;
   quadrant: QuadrantKey;
@@ -124,6 +225,15 @@ export interface Task {
    * `TaskPatch`. Décocher la remet à `null` toute seule.
    */
   completed_at: string | null;
+  /**
+   * Qui a coché (#53). `null` = pas cochée, ou cochée avant que la colonne
+   * n'existe et par un compte depuis supprimé.
+   *
+   * Tenue par le MÊME trigger que `completed_at`, et effacée avec elle au
+   * décochage : les deux répondent à la même transition et ne doivent jamais
+   * diverger. Absente de `TaskPatch` pour la même raison.
+   */
+  completed_by: string | null;
   origin: Origin;
 }
 
@@ -168,7 +278,17 @@ export type TaskPatch = Partial<
 export interface Attachment {
   id: string;
   task_id: string;
-  user_id: string;
+  /** Qui a attaché ce lien. Même sens que `Task.author_id`, aucun rôle en policy. */
+  author_id: string;
+  /**
+   * La matrice dont relève la tâche, DÉNORMALISÉE (#53).
+   *
+   * Pas une commodité : un filtre temps réel ne sait pas joindre — c'est une
+   * chaîne évaluée sur la ligne telle qu'elle voyage — et pour les DELETE il est
+   * la seule barrière. Tenue par trigger, y compris quand la tâche change de
+   * matrice.
+   */
+  board_id: string;
   /**
    * Toujours `http(s)` : la base le vérifie par un `check`, et pas seulement le
    * champ de saisie. Un `javascript:` entré par l'API finirait cliquable.

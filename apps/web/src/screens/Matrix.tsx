@@ -21,7 +21,7 @@ import {
   subtasksOf,
   visibleTasks,
   type QuadrantKey,
-  type Board,
+  type BoardRange,
   type Quadrant,
   type Task,
   type TaskWrite,
@@ -59,7 +59,7 @@ export function MatrixScreen({
   openBin,
 }: {
   store: Store;
-  board: Board;
+  board: BoardRange;
   onHome: () => void;
   onSwitch: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
@@ -111,7 +111,7 @@ export function MatrixScreen({
   /** Renommage en place : `{ id, titre en cours de saisie }`. */
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
-  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
+  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: BoardRange } | null>(null);
   /** Suppression d'une tâche à étapes, en attente de confirmation. */
   const [delAsk, setDelAsk] = useState<Task | null>(null);
   /** La tâche dont le champ « attacher un lien » est ouvert. Une seule à la fois. */
@@ -206,7 +206,7 @@ export function MatrixScreen({
    * l'ordre est scopé à `(board_id, quadrant)`, la conserver produirait un
    * classement incohérent dans la matrice d'arrivée.
    */
-  function moveToBoard(task: Task, target: Board) {
+  function moveToBoard(task: Task, target: BoardRange) {
     const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
     withVT(() => apply(`Déplacée vers « ${target.name} »`, planPairMove(tasks, task, { board_id: target.id }, pos)));
   }
@@ -217,7 +217,7 @@ export function MatrixScreen({
    * une seule mérite d'être annoncé : d'où la confirmation, **uniquement** dans
    * ce cas. La demander à chaque déplacement lasserait pour rien.
    */
-  function askMoveToBoard(task: Task, target: Board) {
+  function askMoveToBoard(task: Task, target: BoardRange) {
     setMenuTask(null);
     const mate = partnerOf(tasks, task);
     if (mate) setMoveAsk({ task, mate, target });

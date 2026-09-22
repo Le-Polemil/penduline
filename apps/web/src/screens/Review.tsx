@@ -12,7 +12,7 @@ import {
   signalCount,
   subtasksOf,
   visibleTasks,
-  type Board,
+  type BoardRange,
   type QuadrantKey,
   type ReviewSignal,
   type ReviewSignalKey,
@@ -67,7 +67,7 @@ export function ReviewScreen({
   const [swipeTask, setSwipeTask] = useState<string | null>(null);
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
   const [delAsk, setDelAsk] = useState<Task | null>(null);
-  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
+  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: BoardRange } | null>(null);
   const [linking, setLinking] = useState<string | null>(null);
 
   const { onCheck, pending } = useCompletion(tasks, patchTask);
@@ -133,7 +133,7 @@ export function ReviewScreen({
     refresh();
   }
 
-  function moveToBoard(task: Task, target: Board) {
+  function moveToBoard(task: Task, target: BoardRange) {
     const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
     withVT(() =>
       apply(`Déplacée vers « ${target.name} »`, planPairMove(tasks, task, { board_id: target.id }, pos)),
@@ -142,7 +142,7 @@ export function ReviewScreen({
   }
 
   /** Même règle que les autres écrans : on n'annonce que le départ d'une PAIRE. */
-  function askMoveToBoard(task: Task, target: Board) {
+  function askMoveToBoard(task: Task, target: BoardRange) {
     setMenuTask(null);
     const mate = partnerOf(tasks, task);
     if (mate) setMoveAsk({ task, mate, target });
@@ -228,7 +228,7 @@ export function ReviewScreen({
     );
   }
 
-  function boardRow(b: Board, signal: ReviewSignal) {
+  function boardRow(b: BoardRange, signal: ReviewSignal) {
     return (
       <button className="review-board" key={b.id} onClick={() => onOpenBoard(b.id)}>
         <span className="review-board__name">{b.name}</span>

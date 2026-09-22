@@ -1,4 +1,4 @@
-import type { Attachment, Board, Task, Universe } from './types';
+import type { Attachment, BoardPlacement, BoardRange, Task, Universe } from './types';
 
 /**
  * Fabrique de tâches pour les tests.
@@ -15,7 +15,7 @@ export function makeTask(partial: Partial<Task> = {}): Task {
   seq += 1;
   return {
     id: `t${seq}`,
-    user_id: 'u1',
+    author_id: 'u1',
     board_id: 'b1',
     title: `Tâche ${seq}`,
     quadrant: 'faire',
@@ -35,8 +35,9 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     // Aligné sur `created_at` par défaut : une tâche fraîchement créée n'a jamais
     // changé de case. Un test de revue qui veut le contraire le dit (#47).
     quadrant_changed_at: '2026-01-01T00:00:00.000Z',
-    /** Pas cochée par défaut, donc pas de date. Un test de corbeille la pose. */
+    /** Pas cochée par défaut, donc pas de date, et personne à nommer. */
     completed_at: null,
+    completed_by: null,
     // `'user'` par défaut : c'est l'origine de tout ce que l'application crée.
     // Un test de la pastille « agent » le dit (#23).
     origin: 'user',
@@ -49,17 +50,38 @@ export function makeList(ids: string[], partial: Partial<Task> = {}): Task[] {
   return ids.map((id, i) => makeTask({ id, position: i, ...partial }));
 }
 
-/** Une matrice, non rangée par défaut — c'est l'état le plus courant. */
-export function makeBoard(partial: Partial<Board> = {}): Board {
+/**
+ * Une matrice ASSEMBLÉE — la matrice et son rangement — non rangée et non
+ * partagée par défaut, c'est l'état le plus courant.
+ *
+ * `BoardRange` et non `Board` : depuis #53, `universe_id` et `position` vivent
+ * dans `board_placements`, et c'est la forme assemblée que tous les écrans
+ * reçoivent. Les tests de rangement doivent donc travailler dessus.
+ */
+export function makeBoard(partial: Partial<BoardRange> = {}): BoardRange {
   seq += 1;
   return {
     id: `b${seq}`,
     user_id: 'u1',
     name: `Matrice ${seq}`,
-    universe_id: null,
-    position: 0,
     created_at: '2026-01-01T00:00:00.000Z',
     origin: 'user',
+    universe_id: null,
+    position: 0,
+    /** `null` = on est le propriétaire. Une matrice reçue porte son rôle. */
+    role: null,
+    partagee: false,
+    ...partial,
+  };
+}
+
+/** Un rangement personnel, hors univers par défaut. */
+export function makePlacement(partial: Partial<BoardPlacement> = {}): BoardPlacement {
+  return {
+    board_id: 'b1',
+    user_id: 'u1',
+    universe_id: null,
+    position: 0,
     ...partial,
   };
 }
@@ -83,7 +105,8 @@ export function makeAttachment(partial: Partial<Attachment> = {}): Attachment {
   return {
     id: `a${seq}`,
     task_id: 't1',
-    user_id: 'u1',
+    author_id: 'u1',
+    board_id: 'b1',
     url: `https://exemple.test/${seq}`,
     label: null,
     position: 0,

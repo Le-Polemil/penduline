@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   endPosition,
   isSafeUrl,
@@ -7,6 +7,12 @@ import {
   type QuadrantKey,
   type Attachment,
   type Board,
+  type BoardMember,
+  type BoardPlacement,
+  type BoardRange,
+  type BoardRole,
+  type Invitation,
+  type Membre,
   type Task,
   type TaskPatch,
   type TaskWrite,
@@ -39,7 +45,7 @@ export function inWorkingSet(t: Task): boolean {
 const PAGE = 1000;
 
 /** Colonnes de pièce jointe qu'on lit/écrit (l'ordre suit le schéma). */
-const ATTACHMENT_COLS = 'id, task_id, user_id, url, label, position, created_at';
+const ATTACHMENT_COLS = 'id, task_id, author_id, board_id, url, label, position, created_at';
 
 /**
  * Colonnes de tâche qu'on lit/écrit (l'ordre suit le schéma).
@@ -49,7 +55,7 @@ const ATTACHMENT_COLS = 'id, task_id, user_id, url, label, position, created_at'
  * source évite que ça recommence.
  */
 export const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, quadrant_changed_at, completed_at';
+  'id, author_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, quadrant_changed_at, completed_at, completed_by';
 
 /** Tout ce qui s'ordonne par position se retrie pareil. */
 function byPosition<T extends { position: number }>(a: T, b: T): number {
@@ -105,7 +111,11 @@ function taskLabel(patch: TaskPatch): string {
 export interface Store {
   ready: boolean;
   universes: Universe[];
-  boards: Board[];
+  /**
+   * Les matrices telles que les écrans les reçoivent : la matrice ET son
+   * rangement, réunis par le store (#53). Triées, donc directement affichables.
+   */
+  boards: BoardRange[];
   tasks: Task[];
   /** Les liens de toutes les tâches, à plat (#78). */
   attachments: Attachment[];
@@ -149,6 +159,20 @@ export interface Store {
    */
   addAttachment: (taskId: string, url: string, label?: string) => Promise<boolean>;
   removeAttachment: (id: string) => Promise<void>;
+
+  /** Qui a accès à cette matrice, avec les adresses (RPC `membres_matrice`). */
+  membres: (boardId: string) => Promise<Membre[]>;
+  /** Les liens d'invitation encore en attente. Propriétaire seulement. */
+  invitations: (boardId: string) => Promise<Invitation[]>;
+  /**
+   * Crée un lien et rend le JETON CLAIR, une seule fois. `null` si l'écriture a
+   * échoué. À afficher pour copie, jamais à conserver.
+   */
+  inviter: (boardId: string, role: BoardRole, email?: string) => Promise<string | null>;
+  annulerInvitation: (id: string) => Promise<void>;
+  changerRole: (boardId: string, memberId: string, role: BoardRole) => Promise<void>;
+  /** Retirer quelqu'un, ou partir soi-même (`memberId === userId`) : même écriture. */
+  retirer: (boardId: string, memberId: string) => Promise<void>;
 
   /**
    * Charge la corbeille des matrices demandées et la FUSIONNE dans `tasks`.
@@ -212,6 +236,14 @@ export function useStore(userId: string): Store {
   const [ready, setReady] = useState(false);
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
+  /**
+   * Le rangement — le MIEN (#53). Séparé de `boards` parce que la matrice est
+   * partagée et que le rangement ne l'est pas : chacun classe la même matrice
+   * dans ses propres univers, à sa propre place.
+   */
+  const [placements, setPlacements] = useState<BoardPlacement[]>([]);
+  /** Qui d'autre a accès, et à quel titre. Vide tant que rien n'est partagé. */
+  const [members, setMembers] = useState<BoardMember[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   /** Les matrices dont la corbeille est déjà en mémoire. En ref : `loadBin` se
@@ -261,9 +293,16 @@ export function useStore(userId: string): Store {
   }, []);
 
   const load = useCallback(async () => {
-    const [universesRes, boardsRes, tasksRes, attachmentsRes] = await Promise.all([
+    const [universesRes, boardsRes, placementsRes, membersRes, tasksRes, attachmentsRes] = await Promise.all([
       supabase.from('universes').select('*').order('position'),
-      supabase.from('boards').select('*').order('position'),
+      // Plus d'`order('position')` ici : la matrice ne porte plus son rang. Il
+      // vient du placement, et c'est `matrices` (plus bas) qui les réunit.
+      supabase.from('boards').select('*'),
+      supabase.from('board_placements').select('*').order('position'),
+      // Toutes les adhésions lisibles — c'est-à-dire celles des matrices
+      // auxquelles on a accès, la policy s'en charge. Le volume est de l'ordre
+      // de la personne par matrice partagée, pas de la ligne par tâche.
+      supabase.from('board_members').select('*'),
       // ⚠️ On ne charge QUE ce que la grille affiche (#40). Le reste — terminé,
       // supprimé — arrive à l'ouverture de la corbeille, via `loadBin`.
       //
@@ -305,6 +344,8 @@ export function useStore(userId: string): Store {
     setRedoStack([]);
     setUniverses(universesRes.data ?? []);
     setBoards(boardsRes.data ?? []);
+    setPlacements((placementsRes.data as BoardPlacement[] | null) ?? []);
+    setMembers((membersRes.data as BoardMember[] | null) ?? []);
     setTasks((tasksRes.data as Task[] | null) ?? []);
     setAttachments(attachmentsRes);
     setReady(true);
@@ -314,20 +355,66 @@ export function useStore(userId: string): Store {
     void load();
   }, [load]);
 
+  /**
+   * La matrice telle que les écrans la reçoivent : la matrice ET son rangement.
+   *
+   * Deux tables la composent depuis #53, et c'est ici — à un seul endroit —
+   * qu'elles se rejoignent. Les écrans continuent de manipuler un objet unique,
+   * comme avant : la scission ne remonte pas jusqu'à eux.
+   *
+   * ⚠️ Le placement FILTRE autant qu'il complète. Une matrice sans placement ne
+   * s'affiche pas — c'est ce qui fait disparaître une matrice révoquée dès que
+   * son placement part, sans rien avoir à nettoyer ailleurs.
+   */
+  const matrices = useMemo<BoardRange[]>(() => {
+    const parBoard = new Map(placements.map((p) => [p.board_id, p]));
+    const roles = new Map(members.filter((m) => m.user_id === userId).map((m) => [m.board_id, m.role]));
+    return boards
+      .flatMap((b) => {
+        const p = parBoard.get(b.id);
+        if (!p) return [];
+        const role = roles.get(b.id) ?? null;
+        return [{ ...b, universe_id: p.universe_id, position: p.position, role, partagee: role !== null }];
+      })
+      .sort(byPosition);
+  }, [boards, placements, members, userId]);
+
+  /**
+   * Le jeu de matrices accessibles, pour le filtre temps réel (#53).
+   *
+   * Il vient des PLACEMENTS et non de `boards` : c'est le placement qui arrive
+   * et qui part quand un partage s'ouvre ou se ferme, et c'est donc lui qui dit
+   * quand il faut se réabonner.
+   */
+  const boardIds = useMemo(() => placements.map((p) => p.board_id), [placements]);
+
   const addBoard = useCallback(
     async (name: string) => {
-      const position = Math.max(0, ...boards.map((r) => r.position)) + 1;
       // Rien à appliquer d'avance : une création n'a pas de ligne à montrer
       // avant que le serveur ne l'ait attribuée. D'où `commit` et non `apply`.
+      //
+      // ⚠️ Plus de `position` à l'insertion : c'est le trigger
+      // `boards_placement_proprietaire` qui crée le rangement, en fin de liste.
+      // Le calculer ici le dédoublerait — et il faudrait le tenir d'accord avec
+      // la version SQL, qui sert aussi le panneau d'extension et l'agent MCP.
       const { data: row } = await persist<Board>({
         label: 'Créer la matrice',
-        write: () =>
-          supabase.from('boards').insert({ user_id: userId, name, position }).select('*').single(),
+        write: () => supabase.from('boards').insert({ user_id: userId, name }).select('*').single(),
         commit: (b) => setBoards((rs) => [...rs, b]),
       });
-      return row?.id ?? null;
+      if (!row) return null;
+      // Le placement posé par le trigger, relu tout de suite : sans lui, la
+      // matrice n'a pas de rang et `matrices` l'écarte — elle n'apparaîtrait
+      // qu'à l'arrivée de l'événement temps réel, avec un battement visible.
+      const { data: p } = await supabase
+        .from('board_placements')
+        .select('*')
+        .eq('board_id', row.id)
+        .single();
+      if (p) setPlacements((ps) => [...ps, p as BoardPlacement]);
+      return row.id;
     },
-    [boards, userId, persist],
+    [userId, persist],
   );
 
   const renameBoard = useCallback(
@@ -364,34 +451,42 @@ export function useStore(userId: string): Store {
   const moveBoard = useCallback(
     async (id: string, universeId: string | null, beforeId: string | null) => {
       if (id === beforeId) return;
-      const position = positionBefore(
-        // Le groupe cible, la matrice déplacée exclue : elle ne peut pas servir
-        // de repère à son propre déplacement.
-        boards.filter((b) => b.universe_id === universeId && b.id !== id),
-        beforeId,
-      );
-      let before: Pick<Board, 'universe_id' | 'position'> | null = null;
+      // ⚠️ L'écriture porte sur `board_placements`, jamais sur `boards` : ranger
+      // est un geste PERSONNEL depuis #53. Un invité qui classe une matrice
+      // partagée ne doit rien déplacer chez le propriétaire — et la policy de
+      // `boards` lui refuserait d'ailleurs l'UPDATE.
+      // `positionBefore` attend des éléments à `id` ; la clé d'un placement est
+      // `board_id`. La correspondance se fait ici, plutôt qu'en assouplissant un
+      // helper partagé par les tâches et les matrices depuis #17.
+      const groupe = placements
+        .filter((p) => p.universe_id === universeId && p.board_id !== id)
+        .sort(byPosition)
+        .map((p) => ({ id: p.board_id, position: p.position }));
+      const position = positionBefore(groupe, beforeId);
+      let before: Pick<BoardPlacement, 'universe_id' | 'position'> | null = null;
       await persist<null>({
         label: 'Déplacer la matrice',
         apply: () =>
-          setBoards((bs) =>
-            bs
-              .map((b) => {
-                if (b.id !== id) return b;
-                before = { universe_id: b.universe_id, position: b.position };
-                return { ...b, universe_id: universeId, position };
-              })
-              .sort(byPosition),
+          setPlacements((ps) =>
+            ps.map((p) => {
+              if (p.board_id !== id) return p;
+              before = { universe_id: p.universe_id, position: p.position };
+              return { ...p, universe_id: universeId, position };
+            }),
           ),
         revert: () => {
           const was = before;
-          if (was) setBoards((bs) => bs.map((b) => (b.id === id ? { ...b, ...was } : b)).sort(byPosition));
+          if (was) setPlacements((ps) => ps.map((p) => (p.board_id === id ? { ...p, ...was } : p)));
         },
         write: () =>
-          supabase.from('boards').update({ universe_id: universeId, position }).eq('id', id),
+          supabase
+            .from('board_placements')
+            .update({ universe_id: universeId, position })
+            .eq('board_id', id)
+            .eq('user_id', userId),
       });
     },
-    [boards, persist],
+    [placements, userId, persist],
   );
 
   // ── Univers ────────────────────────────────────────────────────────────────
@@ -470,24 +565,26 @@ export function useStore(userId: string): Store {
       // arriveraient avec des positions qui COLLISIONNENT avec celles déjà sans
       // univers, et s'intercalleraient dans un ordre arbitraire.
       // On les renumérote donc explicitement à la suite, avant de supprimer.
+      //
+      // ⚠️ Depuis #53 la renumérotation porte sur `board_placements`. Un univers
+      // est personnel, ses matrices peuvent être partagées : écrire sur `boards`
+      // déplacerait le rangement de tout le monde.
       const doomed = universes.find((u) => u.id === id);
       if (!doomed) return;
-      const freed = boards.filter((b) => b.universe_id === id).sort(byPosition);
-      const loose = boards.filter((b) => b.universe_id === null);
-      let next = loose.length ? Math.max(...loose.map((b) => b.position)) + 1 : 0;
-      const moved = freed.map((b) => ({ id: b.id, position: next++ }));
+      const freed = placements.filter((p) => p.universe_id === id).sort(byPosition);
+      const loose = placements.filter((p) => p.universe_id === null);
+      let next = loose.length ? Math.max(...loose.map((p) => p.position)) + 1 : 0;
+      const moved = freed.map((p) => ({ board_id: p.board_id, position: next++ }));
 
       await persist<null>({
         label: "Supprimer l'univers",
         apply: () => {
           setUniverses((us) => us.filter((u) => u.id !== id));
-          setBoards((bs) =>
-            bs
-              .map((b) => {
-                const m = moved.find((x) => x.id === b.id);
-                return m ? { ...b, universe_id: null, position: m.position } : b;
-              })
-              .sort(byPosition),
+          setPlacements((ps) =>
+            ps.map((p) => {
+              const m = moved.find((x) => x.board_id === p.board_id);
+              return m ? { ...p, universe_id: null, position: m.position } : p;
+            }),
           );
         },
         // Ici le retour arrière se lit depuis `freed`, pas depuis `apply` : les
@@ -495,13 +592,11 @@ export function useStore(userId: string): Store {
         // la renumérotation.
         revert: () => {
           setUniverses((us) => (us.some((u) => u.id === id) ? us : [...us, doomed].sort(byPosition)));
-          setBoards((bs) =>
-            bs
-              .map((b) => {
-                const f = freed.find((x) => x.id === b.id);
-                return f ? { ...b, universe_id: f.universe_id, position: f.position } : b;
-              })
-              .sort(byPosition),
+          setPlacements((ps) =>
+            ps.map((p) => {
+              const f = freed.find((x) => x.board_id === p.board_id);
+              return f ? { ...p, universe_id: f.universe_id, position: f.position } : p;
+            }),
           );
         },
         // Une séquence, un seul `persist` : le premier échec arrête tout et
@@ -509,16 +604,17 @@ export function useStore(userId: string): Store {
         write: async (): Promise<WriteResult<null>> => {
           for (const m of moved) {
             const res = await supabase
-              .from('boards')
+              .from('board_placements')
               .update({ universe_id: null, position: m.position })
-              .eq('id', m.id);
+              .eq('board_id', m.board_id)
+              .eq('user_id', userId);
             if (res.error) return res;
           }
           return await supabase.from('universes').delete().eq('id', id);
         },
       });
     },
-    [boards, universes, persist],
+    [placements, universes, userId, persist],
   );
 
   const deleteBoard = useCallback(
@@ -542,7 +638,9 @@ export function useStore(userId: string): Store {
         // réapparaître vide, ce qui est pire qu'un échec visible.
         revert: () => {
           const { board, tasks: gone } = removed;
-          if (board) setBoards((bs) => (bs.some((b) => b.id === id) ? bs : [...bs, board].sort(byPosition)));
+          // Pas de tri ici : `boards` ne porte plus de position. L'ordre est
+          // rétabli par `matrices`, qui le lit dans les placements.
+          if (board) setBoards((bs) => (bs.some((b) => b.id === id) ? bs : [...bs, board]));
           if (gone.length) setTasks((ts) => [...ts, ...gone].sort(byPosition));
         },
         write: () => supabase.from('boards').delete().eq('id', id),
@@ -559,7 +657,7 @@ export function useStore(userId: string): Store {
           supabase
             .from('tasks')
             .insert({
-          user_id: userId,
+          author_id: userId,
           board_id: boardId,
           title,
           quadrant,
@@ -724,7 +822,9 @@ export function useStore(userId: string): Store {
             .from('task_attachments')
             .insert({
               task_id: taskId,
-              user_id: userId,
+              author_id: userId,
+              // `board_id` n'est PAS écrit ici : le trigger le pose depuis la
+              // tâche, et le tient même quand celle-ci change de matrice (#53).
               url: propre,
               label: label?.trim() || null,
               position,
@@ -736,6 +836,137 @@ export function useStore(userId: string): Store {
       return ok;
     },
     [attachments, userId, persist],
+  );
+
+
+  // ── Partage (#53) ──────────────────────────────────────────────────────────
+  //
+  // Ces cinq fonctions ne tiennent AUCUN état : elles interrogent à l'ouverture
+  // de la modale et rendent le résultat. C'est délibéré — le partage se consulte
+  // rarement, et garder en mémoire des listes qu'on regarde une fois par mois
+  // obligerait à les rafraîchir sur des événements dont personne n'a besoin.
+  //
+  // Les deux exceptions sont `revoquer` et `quitter`, qui touchent `members` :
+  // celui-là compose `matrices`, et l'écran doit refléter le retrait tout de
+  // suite. Le temps réel corrigerait de toute façon derrière, mais après un
+  // aller-retour visible.
+
+  /** Qui a accès, avec les adresses. Par RPC : `auth.users` est fermé au client. */
+  const membres = useCallback(async (boardId: string): Promise<Membre[]> => {
+    const { data } = await supabase.rpc('membres_matrice', { p_board: boardId });
+    return (data as Membre[] | null) ?? [];
+  }, []);
+
+  /** Les invitations en attente. Le propriétaire seul peut les lire. */
+  const invitations = useCallback(async (boardId: string): Promise<Invitation[]> => {
+    const { data } = await supabase
+      .from('board_invitations')
+      .select('id, board_id, email, role, created_at, expires_at, accepted_at')
+      .eq('board_id', boardId)
+      .is('accepted_at', null)
+      .order('created_at', { ascending: false });
+    return (data as Invitation[] | null) ?? [];
+  }, []);
+
+  /**
+   * Crée un lien et rend le JETON CLAIR — la seule fois où il existe côté client.
+   *
+   * ⚠️ À ne jamais journaliser ni conserver : la base n'en garde que le hachage,
+   * précisément pour qu'une fuite ne rende aucun lien rejouable. Le stocker ici
+   * annulerait cette propriété.
+   */
+  const inviter = useCallback(
+    async (boardId: string, role: BoardRole, email?: string): Promise<string | null> => {
+      const { data } = await persist<string>({
+        label: "Créer le lien d'invitation",
+        write: async () => {
+          const res = await supabase.rpc('creer_invitation', {
+            p_board: boardId,
+            p_role: role,
+            p_email: email?.trim() || null,
+          });
+          return res as WriteResult<string>;
+        },
+        commit: () => {},
+      });
+      return data ?? null;
+    },
+    [persist],
+  );
+
+  /** Annule un lien avant qu'il n'ait servi. Un lien consommé, lui, ne vaut déjà plus rien. */
+  const annulerInvitation = useCallback(
+    async (id: string) => {
+      await persist<null>({
+        label: "Annuler l'invitation",
+        write: () => supabase.from('board_invitations').delete().eq('id', id),
+      });
+    },
+    [persist],
+  );
+
+  const changerRole = useCallback(
+    async (boardId: string, memberId: string, role: BoardRole) => {
+      let avant: BoardRole | null = null;
+      await persist<null>({
+        label: 'Changer le rôle',
+        apply: () =>
+          setMembers((ms) =>
+            ms.map((m) => {
+              if (m.board_id !== boardId || m.user_id !== memberId) return m;
+              avant = m.role;
+              return { ...m, role };
+            }),
+          ),
+        revert: () => {
+          const was = avant;
+          if (was)
+            setMembers((ms) =>
+              ms.map((m) =>
+                m.board_id === boardId && m.user_id === memberId ? { ...m, role: was } : m,
+              ),
+            );
+        },
+        write: () =>
+          supabase
+            .from('board_members')
+            .update({ role })
+            .eq('board_id', boardId)
+            .eq('user_id', memberId),
+      });
+    },
+    [persist],
+  );
+
+  /**
+   * Retirer quelqu'un, ou partir soi-même : la MÊME écriture.
+   *
+   * Une seule policy les couvre (`est_proprietaire(board_id) or user_id = auth.uid()`),
+   * et en faire deux fonctions côté client aurait dédoublé un geste que la base
+   * traite comme un seul.
+   */
+  const retirer = useCallback(
+    async (boardId: string, memberId: string) => {
+      let parti: BoardMember | undefined;
+      await persist<null>({
+        label: memberId === userId ? 'Quitter le partage' : "Retirer l'accès",
+        apply: () =>
+          setMembers((ms) => {
+            parti = ms.find((m) => m.board_id === boardId && m.user_id === memberId);
+            return ms.filter((m) => !(m.board_id === boardId && m.user_id === memberId));
+          }),
+        revert: () => {
+          const m = parti;
+          if (m) setMembers((ms) => (ms.some((x) => x.board_id === m.board_id && x.user_id === m.user_id) ? ms : [...ms, m]));
+        },
+        write: () =>
+          supabase.from('board_members').delete().eq('board_id', boardId).eq('user_id', memberId),
+      });
+      // Quitter emporte SON placement (trigger) : la matrice doit disparaître de
+      // l'accueil sans attendre l'événement temps réel.
+      if (memberId === userId) setPlacements((ps) => ps.filter((p) => p.board_id !== boardId));
+    },
+    [userId, persist],
   );
 
   const removeAttachment = useCallback(
@@ -851,18 +1082,23 @@ export function useStore(userId: string): Store {
   // Deux onglets divergeaient en silence, et la dernière écriture écrasait
   // l'autre (#39). Les setters sont stables ; `admits` et `reload` passent par
   // une ref à l'intérieur du hook.
-  useRealtime(userId, {
+  useRealtime(userId, boardIds, {
     setTasks,
     setBoards,
     setUniverses,
     setAttachments,
+    // ⚠️ C'est cette collection qui porte l'arrivée et le départ des matrices
+    // partagées (#53) : son filtre serveur (`user_id=eq.<moi>`) ne périme
+    // jamais, et un changement y recalcule `boardIds`, ce qui réabonne les
+    // tables scopées et déclenche un rechargement complet derrière.
+    setPlacements,
     admits: inWorkingSet,
     reload: load,
   });
 
   return {
     ready,
-    boards,
+    boards: matrices,
     tasks,
     universes,
     addBoard,
@@ -889,6 +1125,12 @@ export function useStore(userId: string): Store {
     addAttachment,
     removeAttachment,
     countBin,
+    membres,
+    invitations,
+    inviter,
+    annulerInvitation,
+    changerRole,
+    retirer,
     reload: load,
   };
 }

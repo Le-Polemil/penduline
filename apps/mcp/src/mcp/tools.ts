@@ -1,5 +1,7 @@
 import {
   type Board,
+  type BoardPlacement,
+  type BoardRange,
   type QuadrantKey,
   type Task,
   type TaskWrite,
@@ -35,7 +37,7 @@ export class ToolError extends Error {}
 
 /** Colonnes lues sur une tâche. `origin` comprise, que l'agent pose lui-même. */
 const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, quadrant_changed_at, completed_at';
+  'id, author_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, quadrant_changed_at, completed_at, completed_by';
 
 async function toutesLesTaches(ctx: Contexte, boardIds: string[]): Promise<Task[]> {
   const par = await Promise.all(
@@ -73,12 +75,35 @@ export async function listUniverses(ctx: Contexte): Promise<Universe[]> {
     .selectAll<Universe>('universes', { select: '*', order: 'position.asc' });
 }
 
-export async function listBoards(ctx: Contexte, args: { universe_id?: string }): Promise<Board[]> {
-  return ctx.db.asUser(ctx.userId).selectAll<Board>('boards', {
-    select: '*',
-    order: 'position.asc',
-    ...(args.universe_id ? { universe_id: `eq.${args.universe_id}` } : {}),
-  });
+export async function listBoards(
+  ctx: Contexte,
+  args: { universe_id?: string },
+): Promise<BoardRange[]> {
+  // ⚠️ Deux tables depuis #53 : la matrice ne porte plus son rangement, qui est
+  // PERSONNEL (`board_placements`). L'agent voit donc aussi les matrices
+  // partagées avec lui — la RLS décide, et c'est cohérent : ce sont des matrices
+  // qu'il peut lire.
+  //
+  // Le filtre par univers se fait sur le PLACEMENT, pas sur la matrice : c'est
+  // lui qui sait dans quel univers CETTE personne l'a rangée.
+  const [matrices, placements] = await Promise.all([
+    ctx.db.asUser(ctx.userId).selectAll<Board>('boards', { select: '*' }),
+    ctx.db.asUser(ctx.userId).selectAll<BoardPlacement>('board_placements', {
+      select: '*',
+      order: 'position.asc',
+      ...(args.universe_id ? { universe_id: `eq.${args.universe_id}` } : {}),
+    }),
+  ]);
+  const parBoard = new Map(placements.map((p) => [p.board_id, p]));
+  return matrices
+    .flatMap((b) => {
+      const p = parBoard.get(b.id);
+      // Pas de placement = hors périmètre (filtré par univers, ou révoquée).
+      return p
+        ? [{ ...b, universe_id: p.universe_id, position: p.position, role: null, partagee: false }]
+        : [];
+    })
+    .sort((a, b) => a.position - b.position);
 }
 
 export interface ListTasksArgs {
@@ -116,18 +141,36 @@ export async function createUniverse(ctx: Contexte, args: { name: string }): Pro
 export async function createBoard(
   ctx: Contexte,
   args: { name: string; universe_id?: string },
-): Promise<Board> {
-  const existantes = await listBoards(ctx, {});
+): Promise<BoardRange> {
   const [creee] = await ctx.db.asUser(ctx.userId).insert<Board>('boards', [
     {
       user_id: ctx.userId,
       name: args.name,
-      universe_id: args.universe_id ?? null,
-      position: endPosition(existantes),
       origin: 'agent',
     },
   ]);
-  return creee;
+  // Le placement est posé par le trigger `boards_placement_proprietaire`, hors
+  // univers et en fin de liste. Si l'agent a demandé un univers, on ne fait que
+  // le RANGER — on ne recalcule pas la position, que la base vient de donner.
+  if (args.universe_id) {
+    await ctx.db
+      .asUser(ctx.userId)
+      .update<BoardPlacement>(
+        'board_placements',
+        { board_id: `eq.${creee.id}`, user_id: `eq.${ctx.userId}` },
+        { universe_id: args.universe_id },
+      );
+  }
+  const [range] = await ctx.db
+    .asUser(ctx.userId)
+    .select<BoardPlacement>('board_placements', { board_id: `eq.${creee.id}`, select: '*' });
+  return {
+    ...creee,
+    universe_id: range?.universe_id ?? null,
+    position: range?.position ?? 0,
+    role: null,
+    partagee: false,
+  };
 }
 
 export interface CreateTaskArgs {
@@ -167,7 +210,7 @@ export async function createTask(ctx: Contexte, args: CreateTaskArgs): Promise<T
 
   const [creee] = await ctx.db.asUser(ctx.userId).insert<Task>('tasks', [
     {
-      user_id: ctx.userId,
+      author_id: ctx.userId,
       board_id: args.board_id,
       title: args.title,
       quadrant,

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import type { Board, Universe } from '@penduline/shared';
+import type { BoardRange, Universe } from '@penduline/shared';
 import { IconPenLine, IconTrash } from './Icons';
 
 /**
@@ -25,9 +25,9 @@ export function BoardMenu({
   onDelete,
   onClose,
 }: {
-  board: Board;
+  board: BoardRange;
   /** Les matrices du MÊME groupe : c'est parmi elles que l'ordre se joue. */
-  boards: Board[];
+  boards: BoardRange[];
   universes: Universe[];
   /** Sans aucun univers, la section « ranger » n'a rien à proposer. */
   grouped: boolean;

@@ -18,10 +18,10 @@ status: "In Progress"
 | 4. Migration D — invitations (`board_invitations`, `accepter_invitation`) | Terminé | 2026-09-22 |
 | 5. ~~Migration E — canal de révocation~~ — abandonnée, redondante avec `board_placements` | Abandonnée | 2026-09-22 |
 | 6. Suite de tests RLS à deux comptes (`partage.live.test.ts`) — avant le client | Terminé | 2026-09-22 |
-| 7. Temps réel conforme à l'accès (`packages/shared/src/realtime.ts` + tests unitaires) | En attente | |
+| 7. Temps réel conforme à l'accès (`packages/shared/src/realtime.ts` + tests unitaires) | Terminé | 2026-09-22 |
 | 8. Web — store, types, modale de partage, menu matrice, écran d'invitation | En attente | |
 | 9. Attribution visible sur la carte de tâche | En attente | |
-| 10. Extension et serveur MCP — colonnes et filtres alignés | En attente | |
+| 10. Extension et serveur MCP — colonnes et filtres alignés | Terminé | 2026-09-22 |
 | 11. Portes de qualité (lint, typecheck, tests) | En attente | |
 
 ## Journal
@@ -282,3 +282,61 @@ ailleurs que sur cette base locale.
 
 **Portes de qualité** : 385 tests verts (239 shared + 105 mcp + 41 web), 31 ignorés (les
 deux suites live, opt-in).
+
+### 2026-09-22 : Temps réel conforme à l'accès, types, et les trois clients
+
+**Statut** : Terminé (actions 7 et 10, plus toute la plomberie de l'action 8)
+
+**Le renommage a fait exactement ce qu'on attendait de lui : 94 erreurs de typage.**
+Chacune est un site dont le sens avait changé. Aucun n'a été trouvé « à la relecture ».
+
+**Actions réalisées** :
+
+*Types partagés* — `Board` perd `universe_id`/`position` ; `BoardRange` (la matrice
+assemblée, avec son rangement et le rôle) devient le type que **tous les écrans**
+manipulent ; `BoardMember`, `BoardPlacement`, `Invitation`, `InvitationLue`, `Membre`,
+`BoardRole` ; `Task.author_id` + `completed_by` ; `Attachment.author_id` + `board_id`.
+
+*`realtime.ts`* — filtres conformes à l'accès, **découpés en tranches de 100**,
+`setPlacements` dans le sink, `rechargerDesLAbonnement`, `memeJeu`,
+`fusionnerPlacement`/`retirerPlacement` (clé composée, pas d'`id`). L'avertissement de
+tête est mis à jour, pas supprimé : il reste vrai, il a changé de levier.
+**+8 tests unitaires** (plafond, jeu vide, insensibilité à l'ordre, placements).
+
+*Web* — store : `placements` et `members` en état, `matrices` assemblé en `useMemo`,
+`moveBoard` écrit sur le placement, `deleteUniverse` renumérote des placements,
+`addBoard` laisse le trigger poser le rangement ; **six méthodes de partage**
+(`membres`, `invitations`, `inviter`, `annulerInvitation`, `changerRole`, `retirer`).
+
+*Extension* — mêmes colonnes, même filtre, `setPlacements` dans son sink (une matrice
+révoquée doit disparaître du panneau aussi), et **format d'instantané v2 → v3** : un
+cache v2 peint tel quel donnerait un panneau vide, puisque sans placement rien ne
+s'affiche. Le fichier documentait déjà cette obligation ; elle s'applique ici.
+
+*MCP* — `listBoards` joint les placements, `createBoard` laisse le trigger faire et ne
+fait que **ranger** si un univers est demandé.
+
+**Migration supplémentaire : `20260922170000_partage_membres.sql`.** Le plan n'avait pas
+vu que tout ce que le partage doit afficher est fait de NOMS — « alice@exemple.fr —
+écriture », « coché par Bob » — et que ces adresses vivent dans `auth.users`, fermé à
+l'application. D'où `membres_matrice(board)`, `security definer` mais bornée par
+`peut_lire` : sans accès à la matrice, elle ne rend rien. Une table `profiles` aurait
+dupliqué la donnée, demandé un trigger de synchronisation et posé la question des comptes
+antérieurs — beaucoup de machinerie pour ce qu'on a déjà.
+
+**⚠️ Deux tests ont dû changer d'affirmation, et c'est le bon sens de la correction :**
+
+- `tools.test.ts` affirmait que la matrice créée porte `universe_id` et `position`. Elle
+  ne les porte plus — c'est le sujet. Le test affirme désormais leur ABSENCE, et qu'un
+  univers demandé s'écrit sur le placement. Il a fallu pour cela apprendre **un** trigger
+  à la doublure de base (`boards` → `board_placements`) : sans lui `createBoard` n'était
+  pas testable du tout, puisqu'il relit le placement dans la foulée.
+- `realtime.live.test.ts` prenait « la première matrice venue » du seed. Depuis que
+  `partage.live.test.ts` existe, les deux suites tournent **en parallèle** contre la même
+  base, et l'autre crée puis détruit des matrices : la première venue disparaissait au
+  milieu d'un test. Symptôme : une non-délivrance parfaitement logique, dans le fichier
+  dont tout l'objet est de distinguer le silence légitime du silence fautif. Il crée
+  désormais sa propre matrice.
+
+**Portes de qualité** : `typecheck` propre, **397 tests** (250 shared + 106 mcp + 41 web),
+`build` vert, et les **31 tests live** passent, deux fois de suite, sans résidu en base.

@@ -1,5 +1,5 @@
 import { isOpenRow } from './layout';
-import type { Board, Task } from './types';
+import type { BoardRange, Task } from './types';
 
 /**
  * La revue périodique : cinq lectures de ce que l'usage quotidien masque (#47).
@@ -88,7 +88,7 @@ export interface TaskSignal extends SignalBase {
 
 export interface BoardSignal extends SignalBase {
   kind: 'boards';
-  boards: Board[];
+  boards: BoardRange[];
 }
 
 export type ReviewSignal = TaskSignal | BoardSignal;
@@ -132,7 +132,7 @@ export function reviewSignals({
   now = Date.now(),
 }: {
   tasks: Task[];
-  boards: Board[];
+  boards: BoardRange[];
   stats: BoardStat[];
   thresholds?: ReviewThresholds;
   now?: number;
