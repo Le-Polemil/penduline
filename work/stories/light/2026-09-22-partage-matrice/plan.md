@@ -29,7 +29,7 @@ matrice qui ne lui a pas été ouverte.
 | Question | Décision |
 |---|---|
 | Atteindre une adresse sans compte | **Lien d'invitation à jeton**, partagé par l'inviteur lui-même. Aucune infra e-mail nouvelle. |
-| Révocation sur un socket ouvert | **Canal de diffusion dédié** : le retrait pousse un ordre de réabonnement + rechargement. |
+| Révocation sur un socket ouvert | Décidée comme un **canal de diffusion dédié**, puis **abandonnée à l'action 2** : `board_placements` porte déjà le signal, avec un filtre stable. Voir l'action 5. |
 | Édition simultanée | **Dernier écrit gagne, mais visible.** Le temps réel supprime l'écrasement *silencieux*, qui est la perte que le ticket redoute. |
 | Rangement chez l'invité | **Rangeable dans SES univers** → `universe_id` et `position` quittent `boards` pour une table de placement par personne. |
 
@@ -141,21 +141,27 @@ mono-utilisateur.
   sinon un nom de matrice rassurant au-dessus du partage de quelqu'un d'autre.
 - Policies : propriétaire seul en select / insert / delete.
 
-### 5. Migration E — canal de révocation
+### 5. ~~Migration E — canal de révocation~~ — **abandonnée**
 
-Trigger sur `board_members` (et `board_placements`) : `realtime.send()` vers le topic
-`penduline:user:<user_id>`, avec la raison (`acces_accorde` | `acces_retire`).
+Le canal de diffusion dédié s'est révélé **redondant** une fois `board_placements` en
+place (constat de l'action 2). Cette table se filtre en `user_id=eq.<moi>` — un filtre
+stable, jamais réabonné — et porte déjà le signal complet :
 
-⚠️ **Et une policy sur `realtime.messages`**, sans quoi rien n'arrive. Le spike l'a
-mesuré : la RLS y est activée avec **zéro policy** — un canal privé se connecte et reste
-muet, sans erreur. La policy borne chacun à son propre canal :
-`for select to authenticated using (realtime.topic() = 'penduline:user:' || auth.uid())`.
-Canal **privé**, pas public : un topic public serait écoutable par qui connaît l'UUID.
+```
+  partage accordé  → INSERT du placement → délivré à l'invité, tout de suite
+  partage révoqué  → DELETE du placement → délivré à l'invité, tout de suite
+```
 
-C'est ce qui ferme les deux trous que le filtre `in.(…)` ouvre : un invité tout juste
-ajouté ne verrait rien arriver (son filtre ne couvre pas la nouvelle matrice), et un
-révoqué continuerait de recevoir les `{id}` de suppressions jusqu'à son prochain
-réabonnement.
+Le DELETE arrive parce que le filtre est évalué sur la ligne entière avant caviardage, et
+que Realtime n'évalue aucune policy pour les DELETE (vérifié dans le source au spike).
+
+Deux mécanismes qui font la même chose finissent par diverger : on n'en garde qu'un.
+La policy sur `realtime.messages` tombe avec.
+
+Renoncement assumé : la charge utile d'un DELETE est caviardée à la clé primaire, donc on
+sait *quelle* matrice part, pas *pourquoi*. On ne distingue pas « vous êtes parti » de
+« on vous a retiré ». Le message à l'écran nomme la matrice — elle est encore en mémoire
+au moment où son placement disparaît — sans nommer de motif.
 
 ### 6. Suite de tests RLS à deux comptes — **avant le client**
 
@@ -174,7 +180,7 @@ Deux comptes réels, et au minimum :
   ne compte que ce que l'appelant a coché
 - Temps réel : B reçoit les INSERT/UPDATE/**DELETE** de la matrice partagée, et **rien**
   d'une matrice tierce
-- Après révocation : B ne lit plus rien, et son canal reçoit l'ordre de réabonnement
+- Après révocation : B ne lit plus rien, et reçoit le DELETE de son placement
 - `accepter_invitation` : jeton valide → adhésion ; jeton expiré, déjà consommé, ou
   inventé → refus
 - `lire_invitation` : ne rend rien sur un jeton inventé, et jamais autre chose que le nom
@@ -196,8 +202,10 @@ Deux comptes réels, et au minimum :
   rejoue rien, chaque réabonnement ouvre une fenêtre d'événements perdus. Le mécanisme
   existe déjà pour la reconnexion (`dejaAbonne`) — on le réemploie, on n'en invente pas
   un second.
-- Abonnement au canal de diffusion `penduline:user:<id>` : à réception, recalcul du jeu,
-  réabonnement, rechargement.
+- **Le déclencheur du réabonnement est `board_placements`** : un INSERT ou un DELETE sur
+  cette table signifie exactement « le jeu de matrices accessibles vient de changer ».
+  À réception : recalcul du jeu, réabonnement des tables filtrées par `in.(…)`,
+  rechargement complet.
 - L'avertissement en tête de fichier est **mis à jour**, pas supprimé : il reste vrai, il
   change seulement de levier.
 

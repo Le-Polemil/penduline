@@ -14,9 +14,9 @@ status: "In Progress"
 | 0. Spike temps réel — `realtime.send()` depuis un trigger, filtre `in.(…)` sur DELETE, longueur d'URL | Terminé | 2026-09-22 |
 | 1. Migration A — appartenance (`board_members`, `peut_lire`/`peut_ecrire`, réécriture RLS, `task_attachments.board_id`) | Terminé | 2026-09-22 |
 | 2. Migration B — rangement par personne (`board_placements`, backfill, retrait de `boards.universe_id`/`position`) | Terminé | 2026-09-22 |
-| 3. Migration C — attribution (`author_id`, `completed_by`, correctif `completion_stats`, revue des RPC) | En attente | |
+| 3. Migration C — attribution (`author_id`, `completed_by`, correctif `completion_stats`, revue des RPC) | Terminé | 2026-09-22 |
 | 4. Migration D — invitations (`board_invitations`, `accepter_invitation`) | En attente | |
-| 5. Migration E — canal de révocation (trigger `realtime.send()`) | En attente | |
+| 5. ~~Migration E — canal de révocation~~ — abandonnée, redondante avec `board_placements` | Abandonnée | 2026-09-22 |
 | 6. Suite de tests RLS à deux comptes (`partage.live.test.ts`) — avant le client | En attente | |
 | 7. Temps réel conforme à l'accès (`packages/shared/src/realtime.ts` + tests unitaires) | En attente | |
 | 8. Web — store, types, modale de partage, menu matrice, écran d'invitation | En attente | |
@@ -149,4 +149,51 @@ réabonné. Or l'octroi d'un partage y fait un INSERT et la révocation un DELET
 deux délivrés immédiatement à l'intéressé : le DELETE parce que le filtre est évalué sur
 la ligne entière avant caviardage, et que Realtime n'évalue aucune policy pour les DELETE.
 Cette table porte donc déjà le signal « une matrice est arrivée / repartie », qui est
-exactement ce que la migration E devait construire. À trancher avant de l'écrire.
+exactement ce que la migration E devait construire.
+
+**Tranché : la migration E est abandonnée.** Deux mécanismes qui font la même chose
+finissent par diverger. La policy sur `realtime.messages` tombe avec. Renoncement assumé :
+un DELETE caviardé à la clé primaire dit *quelle* matrice part, pas *pourquoi* — on ne
+distingue pas « vous êtes parti » de « on vous a retiré ».
+
+### 2026-09-22 : Migration C — attribution
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `tasks.user_id → author_id` et `task_attachments.user_id → author_id`, index renommés.
+  Le renommage a bien emporté les expressions de policy écrites en migration A : la
+  policy d'insertion dit désormais `peut_ecrire(board_id) AND author_id = auth.uid()`
+  sans qu'on l'ait retouchée.
+- `tasks.completed_by`, posé et effacé par le trigger `tasks_completed_at` **étendu**
+  (pas doublé — les deux colonnes répondent à la même transition).
+- Rattrapage `completed_by = author_id` pour les tâches déjà cochées, `tasks_updated_at`
+  désactivé le temps du passage (même désamorçage qu'à la migration `completed_at`).
+- **Correctif `completion_stats` : `and t.completed_by = auth.uid()`.**
+- `search_tasks` et `review_boards` relus et commentés : leur élargissement aux matrices
+  partagées est voulu, pas subi.
+
+**Fichiers modifiés** :
+- `apps/supabase/migrations/20260922150000_partage_attribution.sql` (nouveau)
+
+**Validation à deux comptes** (transaction annulée) : l'intrus en écriture coche une
+tâche de la matrice partagée → `completed_by` = intrus, `completed_at` posée ; l'intrus
+compte 1 dans ses statistiques, **le propriétaire compte `[]`**. C'est exactement la
+fuite silencieuse que la colonne existe pour empêcher.
+
+**Notes** :
+
+**Un effet que le plan n'avait pas vu : quatre index partiels démarraient par `user_id`.**
+Ce n'était pas un choix de requête, c'était l'ancienne policy `user_id = auth.uid()` que
+le planificateur poussait dans le parcours. Cette égalité a disparu — les policies
+appellent `peut_lire(board_id)`, qui ne s'indexe pas. Laissés tels quels, ces index
+auraient continué d'être maintenus à chaque écriture sans plus rien servir : une
+régression qu'on ne découvre qu'au premier compte volumineux. Reconstruits sur ce que les
+requêtes contraignent vraiment — `board_id` pour la revue et les échéances,
+`completed_by` pour les statistiques.
+
+`tasks_focus_idx` garde l'auteur, délibérément : « Aujourd'hui » est une intention
+personnelle. ⚠️ Et c'est en le décidant qu'on voit le résidu : `focus_day` est une
+colonne de `tasks`, donc **une seule valeur pour tout le monde**. Sur une matrice
+partagée, deux personnes qui mettent la même tâche dans leur journée s'écrasent. Hors
+périmètre de #53, noté ici parce que c'est ici qu'on s'en aperçoit.
