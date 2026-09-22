@@ -35,6 +35,8 @@ export function makeTask(partial: Partial<Task> = {}): Task {
     // Aligné sur `created_at` par défaut : une tâche fraîchement créée n'a jamais
     // changé de case. Un test de revue qui veut le contraire le dit (#47).
     quadrant_changed_at: '2026-01-01T00:00:00.000Z',
+    /** Pas cochée par défaut, donc pas de date. Un test de corbeille la pose. */
+    completed_at: null,
     // `'user'` par défaut : c'est l'origine de tout ce que l'application crée.
     // Un test de la pastille « agent » le dit (#23).
     origin: 'user',

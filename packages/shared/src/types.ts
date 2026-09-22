@@ -105,6 +105,25 @@ export interface Task {
    * faux positif, quand ceci n'est qu'une absence.
    */
   quadrant_changed_at: string;
+  /**
+   * L'instant du cochage. `null` = pas cochée, y compris après restauration.
+   *
+   * ⚠️ Ne pas confondre avec ses deux voisines, elles répondent à trois
+   * questions différentes :
+   *
+   *   updated_at           dernière modification, QUELLE QU'ELLE SOIT
+   *   quadrant_changed_at  dernier changement de CASE (#47)
+   *   completed_at         moment où la tâche a quitté la grille
+   *
+   * `updated_at` ne pouvait pas jouer ce rôle — c'est le même raisonnement
+   * qu'en #47 : son trigger l'écrase à chaque update, donc renommer une tâche
+   * déjà rangée la ferait remonter en tête d'une corbeille qui prétend classer
+   * par date de cochage.
+   *
+   * Tenue par trigger, jamais écrite par un client : elle est donc absente de
+   * `TaskPatch`. Décocher la remet à `null` toute seule.
+   */
+  completed_at: string | null;
   origin: Origin;
 }
 

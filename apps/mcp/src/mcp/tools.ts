@@ -35,7 +35,7 @@ export class ToolError extends Error {}
 
 /** Colonnes lues sur une tâche. `origin` comprise, que l'agent pose lui-même. */
 const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, quadrant_changed_at';
+  'id, user_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, quadrant_changed_at, completed_at';
 
 async function toutesLesTaches(ctx: Contexte, boardIds: string[]): Promise<Task[]> {
   const par = await Promise.all(

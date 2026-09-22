@@ -1,5 +1,6 @@
 import { useState, type CSSProperties, type DragEvent } from 'react';
 import {
+  binOrder,
   ALL,
   deleteLabel,
   endPosition,
@@ -130,8 +131,9 @@ export function GlobalScreen({
     withVT(() => apply('Restaurée', planRestore(tasks, t)));
   }
 
-  const doneList = scopedTasks.filter((t) => t.done && !t.deleted && !t.parent_id);
-  const delList = scopedTasks.filter((t) => t.deleted && !t.parent_id);
+  // Même tri que l'écran matrice, depuis la même fonction (`layout.ts`).
+  const doneList = binOrder(scopedTasks.filter((t) => t.done && !t.deleted && !t.parent_id));
+  const delList = binOrder(scopedTasks.filter((t) => t.deleted && !t.parent_id));
 
   /**
    * Applique des écritures préparées par `packages/shared`, en UN geste annulable.

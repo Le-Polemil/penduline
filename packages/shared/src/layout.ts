@@ -88,6 +88,44 @@ export function countOpen(tasks: Task[], boardId: string, quad: QuadrantKey): nu
   ).length;
 }
 
+/**
+ * Quand la tâche a quitté la grille — la clé de tri de la corbeille.
+ *
+ * Deux sections, deux réponses, et c'est volontaire :
+ *
+ *   supprimée   `updated_at` : la suppression est sa dernière écriture (la
+ *               corbeille n'offre que restaurer et purger, rien qui modifie).
+ *               Une tâche cochée PUIS supprimée est entrée dans « Supprimées »
+ *               à sa suppression, pas à son cochage — c'est cette date-là qui
+ *               la situe dans la liste où on la voit.
+ *   cochée      `completed_at`, posé par trigger au cochage et à lui seul.
+ *
+ * Le repli sur `updated_at` couvre les lignes d'avant la migration qui n'ont pas
+ * été rattrapées, et ne devrait jamais servir autrement.
+ */
+export function leftGridAt(t: Task): string {
+  if (t.deleted) return t.updated_at;
+  return t.completed_at ?? t.updated_at;
+}
+
+/**
+ * La corbeille, la plus récente d'abord.
+ *
+ * Elle vit ICI et non dans les écrans parce que la matrice et la vue globale
+ * l'affichent toutes les deux : la poser deux fois est exactement le défaut qui
+ * a déjà mordu ce dépôt entre le web et le popup, corrigé d'un côté et oublié de
+ * l'autre. Il n'y avait d'ailleurs AUCUN tri nulle part — l'ordre affiché était
+ * celui du chargement, c'est-à-dire `position`, qui ressemble à l'ordre de
+ * création et n'a rien à voir avec ce qu'on cherche dans une corbeille.
+ *
+ * Comparaison de chaînes et non de dates : les horodatages ISO 8601 en UTC
+ * s'ordonnent lexicographiquement, et `new Date()` sur chaque élément à chaque
+ * comparaison coûterait sans rien apporter.
+ */
+export function binOrder(tasks: Task[]): Task[] {
+  return [...tasks].sort((a, b) => leftGridAt(b).localeCompare(leftGridAt(a)));
+}
+
 /** Les étapes d'une tâche, dans l'ordre, les supprimées écartées. */
 export function subtasksOf(tasks: Task[], parentId: string): Task[] {
   return tasks
