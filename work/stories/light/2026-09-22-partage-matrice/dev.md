@@ -17,7 +17,7 @@ status: "In Progress"
 | 3. Migration C — attribution (`author_id`, `completed_by`, correctif `completion_stats`, revue des RPC) | Terminé | 2026-09-22 |
 | 4. Migration D — invitations (`board_invitations`, `accepter_invitation`) | Terminé | 2026-09-22 |
 | 5. ~~Migration E — canal de révocation~~ — abandonnée, redondante avec `board_placements` | Abandonnée | 2026-09-22 |
-| 6. Suite de tests RLS à deux comptes (`partage.live.test.ts`) — avant le client | En attente | |
+| 6. Suite de tests RLS à deux comptes (`partage.live.test.ts`) — avant le client | Terminé | 2026-09-22 |
 | 7. Temps réel conforme à l'accès (`packages/shared/src/realtime.ts` + tests unitaires) | En attente | |
 | 8. Web — store, types, modale de partage, menu matrice, écran d'invitation | En attente | |
 | 9. Attribution visible sur la carte de tâche | En attente | |
@@ -233,3 +233,52 @@ périmètre de #53, noté ici parce que c'est ici qu'on s'en aperçoit.
 Les distinguer ferait de la fonction un oracle permettant de tester des jetons au hasard.
 
 Le côté base est complet : quatre migrations, la cinquième abandonnée.
+
+### 2026-09-22 : Suite de tests RLS à deux comptes
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- `packages/shared/src/partage.live.test.ts` — **26 tests**, tous verts, sur le harnais
+  déjà posé par `realtime.live.test.ts` (opt-in `PENDULINE_LIVE`, deux comptes du seed).
+- Six blocs : sans partage / en lecture / en écriture / les trois RPC / invitations /
+  la fin d'un partage.
+- `realtime.live.test.ts` aligné sur `author_id` (3 occurrences).
+
+**Fichiers modifiés** :
+- `packages/shared/src/partage.live.test.ts` (nouveau)
+- `packages/shared/src/realtime.live.test.ts`
+- `apps/supabase/migrations/20260922130000_partage_appartenance.sql` (correctif, ci-dessous)
+
+**⚠️ Le test a trouvé un vrai bug, et pas un petit.**
+
+`insert into boards … returning id` échouait par `new row violates row-level security
+policy`. L'insertion seule passait : c'est le **RETURNING** qui soumet la ligne à la
+policy de LECTURE. Or celle-ci était écrite `peut_lire(id)`, et `peut_lire` commence par
+relire `boards` à la recherche de cette même ligne — que l'instruction est justement en
+train d'insérer, et qu'aucune sous-requête de cette instruction ne peut voir.
+
+**Une policy `select` qui doit relire sa propre table ne peut jamais passer sur un
+`insert … returning`.** Hypothèse d'abord posée sur le `stable` de la fonction, puis
+réfutée en la passant `volatile` : même échec. Ce n'est pas une affaire d'instantané.
+
+Correctif : `est_membre(uuid)` est extraite de `peut_lire`, et la policy de lecture de
+`boards` s'écrit `user_id = auth.uid() or est_membre(id)` — le cas du propriétaire est
+tranché **sur la ligne elle-même**, sans aucune lecture. Accessoirement c'est aussi le cas
+le plus fréquent, et il ne coûte plus un appel de fonction. La migration A a été corrigée
+à la source plutôt que rattrapée par une migration de plus : elle n'a jamais tourné
+ailleurs que sur cette base locale.
+
+**Deux autres enseignements du run :**
+
+- Le refus d'un **transfert** de tâche vers une matrice non partagée **lève**, là où les
+  autres refus se contentent de ne toucher aucune ligne. La différence dit lequel des deux
+  prédicats a tranché : `using` filtre en silence, `with check` refuse bruyamment. C'est
+  donc bien la ligne d'ARRIVÉE qui est rejetée — la garantie la plus forte des deux, et
+  l'assertion a été corrigée dans ce sens.
+- Le nettoyage écrit **après** une assertion ne s'exécute jamais si elle échoue : le
+  premier passage a laissé deux matrices en base. Les créations jetables sont désormais
+  enregistrées à la création et détruites dans l'`afterAll`.
+
+**Portes de qualité** : 385 tests verts (239 shared + 105 mcp + 41 web), 31 ignorés (les
+deux suites live, opt-in).

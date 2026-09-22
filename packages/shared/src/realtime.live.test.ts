@@ -119,7 +119,7 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     const { data, error } = await ecrivain
       .from('tasks')
       .insert({
-        user_id: userId,
+        author_id: userId,
         board_id: boardId,
         title: 'sonde-insert',
         quadrant: 'faire',
@@ -144,7 +144,7 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     const { data } = await ecrivain
       .from('tasks')
       .insert({
-        user_id: userId,
+        author_id: userId,
         board_id: boardId,
         title: 'sonde-cochee',
         quadrant: 'faire',
@@ -208,7 +208,7 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     const { data } = await ecrivain
       .from('tasks')
       .insert({
-        user_id: userId,
+        author_id: userId,
         board_id: boardId,
         title: 'sonde-cloisonnement',
         quadrant: 'faire',

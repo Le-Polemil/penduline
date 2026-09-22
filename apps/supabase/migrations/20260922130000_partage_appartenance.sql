@@ -98,7 +98,9 @@ as $$
   );
 $$;
 
-create or replace function public.peut_lire(board uuid)
+-- Séparée de `peut_lire` pour une raison très concrète, voir la policy `select`
+-- de `boards` plus bas : elle seule permet de répondre SANS relire `boards`.
+create or replace function public.est_membre(board uuid)
 returns boolean
 language sql
 stable
@@ -106,12 +108,19 @@ security definer
 set search_path = public
 as $$
   select exists (
-    select 1 from public.boards b
-     where b.id = board and b.user_id = auth.uid()
-  ) or exists (
     select 1 from public.board_members m
      where m.board_id = board and m.user_id = auth.uid()
   );
+$$;
+
+create or replace function public.peut_lire(board uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.est_proprietaire(board) or public.est_membre(board);
 $$;
 
 create or replace function public.peut_ecrire(board uuid)
@@ -207,10 +216,27 @@ create trigger tasks_propager_board_id
 -- écriture. Ce n'est pas une timidité : « écriture » porte sur le CONTENU. Un
 -- invité qui supprimerait la matrice détruirait le travail de tous les autres,
 -- sans qu'aucun d'eux ait consenti à lui donner ce pouvoir.
+--
+-- ⚠️ ET LA POLICY DE LECTURE NE PEUT PAS S'ÉCRIRE `peut_lire(id)`.
+--
+-- Mesuré, pas supposé : `insert into boards … returning id` échouait alors par
+-- `new row violates row-level security policy`. La cause n'est pas le `with
+-- check` — l'insertion seule passe — mais le RETURNING, qui soumet la ligne à la
+-- policy de LECTURE. Or `peut_lire(id)` commence par relire `boards` à la
+-- recherche de cette même ligne… que l'instruction est justement en train
+-- d'insérer, et qu'aucune sous-requête de cette instruction ne peut voir.
+--
+-- Une policy `select` qui doit RELIRE SA PROPRE TABLE ne peut donc jamais passer
+-- sur un `insert … returning`. (Vérifié aussi en rendant la fonction
+-- `volatile` : même échec — ce n'est pas une affaire d'instantané.)
+--
+-- D'où la forme ci-dessous : le cas du propriétaire est tranché SUR LA LIGNE
+-- elle-même, sans aucune lecture. Accessoirement, c'est aussi le cas le plus
+-- fréquent, et il ne coûte désormais plus un seul appel de fonction.
 drop policy "boards: owner" on boards;
 
 create policy "boards: lire si accès" on boards
-  for select using (peut_lire(id));
+  for select using (user_id = auth.uid() or est_membre(id));
 create policy "boards: créer pour soi" on boards
   for insert with check (user_id = auth.uid());
 create policy "boards: modifier si propriétaire" on boards
