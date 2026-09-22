@@ -13,7 +13,7 @@ status: "In Progress"
 |-------|--------|------|
 | 0. Spike temps réel — `realtime.send()` depuis un trigger, filtre `in.(…)` sur DELETE, longueur d'URL | Terminé | 2026-09-22 |
 | 1. Migration A — appartenance (`board_members`, `peut_lire`/`peut_ecrire`, réécriture RLS, `task_attachments.board_id`) | Terminé | 2026-09-22 |
-| 2. Migration B — rangement par personne (`board_placements`, backfill, retrait de `boards.universe_id`/`position`) | En attente | |
+| 2. Migration B — rangement par personne (`board_placements`, backfill, retrait de `boards.universe_id`/`position`) | Terminé | 2026-09-22 |
 | 3. Migration C — attribution (`author_id`, `completed_by`, correctif `completion_stats`, revue des RPC) | En attente | |
 | 4. Migration D — invitations (`board_invitations`, `accepter_invitation`) | En attente | |
 | 5. Migration E — canal de révocation (trigger `realtime.send()`) | En attente | |
@@ -119,3 +119,34 @@ AUTRE projet (`supabase_db_pcb-fidfe`). Le Postgres de Penduline écoute sur **5
 elle aurait sinon appliqué cette migration à la base d'un autre projet. Les migrations
 sont donc appliquées via `docker exec -i supabase_db_penduline psql`, et la ligne de
 `supabase_migrations.schema_migrations` posée à la main.
+
+### 2026-09-22 : Migration B — le rangement devient personnel
+
+**Statut** : Terminé
+
+**Actions réalisées** :
+- Table `board_placements (board_id, user_id, universe_id, position)`, index sur le
+  parcours de l'accueil `(user_id, universe_id, position)`.
+- Reprise des 4 matrices existantes en placements du propriétaire, puis
+  `drop column boards.universe_id` et `boards.position`.
+- Trois triggers : le placement naît avec la matrice (propriétaire), naît avec l'adhésion
+  (invité, hors univers, en fin de liste), et meurt avec elle.
+- Policy `for all (user_id = auth.uid())` — et cette fois la `for all` est juste : la
+  table est mono-utilisateur par construction.
+- Publication temps réel + `replica identity full`.
+
+**Fichiers modifiés** :
+- `apps/supabase/migrations/20260922140000_partage_rangement.sql` (nouveau)
+
+**Validation** (transaction annulée) : 0 placement avant partage → 1 après, `universe_id`
+nul et position en fin → 0 après révocation, les 4 placements du propriétaire intacts.
+
+**Notes** :
+
+**Découverte : le canal de diffusion dédié est peut-être redondant.** `board_placements`
+se filtre en `user_id=eq.<moi>` — un filtre stable, qui n'a jamais besoin d'être
+réabonné. Or l'octroi d'un partage y fait un INSERT et la révocation un DELETE, tous
+deux délivrés immédiatement à l'intéressé : le DELETE parce que le filtre est évalué sur
+la ligne entière avant caviardage, et que Realtime n'évalue aucune policy pour les DELETE.
+Cette table porte donc déjà le signal « une matrice est arrivée / repartie », qui est
+exactement ce que la migration E devait construire. À trancher avant de l'écrire.
