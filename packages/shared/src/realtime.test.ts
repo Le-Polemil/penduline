@@ -2,14 +2,16 @@ import { describe, expect, it } from 'vitest';
 import {
   MAX_FILTRE_IN,
   fusionner,
+  fusionnerMembre,
   fusionnerPlacement,
   identiques,
   memeJeu,
   retirer,
+  retirerMembre,
   retirerPlacement,
   tranches,
 } from './realtime';
-import type { BoardPlacement } from './types';
+import type { BoardMember, BoardPlacement } from './types';
 
 /**
  * Ce que ces tests protègent, c'est **l'identité de référence** — pas le contenu
@@ -192,5 +194,40 @@ describe('placements — la clé est composée, il n’y a pas d’`id`', () => 
     const avant = [p('a'), p('b')];
     expect(retirerPlacement(avant, 'a')).toEqual([p('b')]);
     expect(retirerPlacement(avant, 'inconnu')).toBe(avant);
+  });
+});
+
+describe('adhésions — voir son rôle changer sans recharger', () => {
+  const m = (board_id: string, role: 'lecture' | 'ecriture' = 'lecture'): BoardMember => ({
+    board_id,
+    user_id: 'moi',
+    role,
+    invited_by: 'elle',
+    created_at: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('promeut en place, sans toucher aux voisines', () => {
+    // ⚠️ Le test qui compte. Sans cette propagation, un invité promu en écriture
+    // continuerait de lire « Vous avez accès en lecture » sur des champs que la
+    // base, elle, accepterait : un refus motivé mais FAUX.
+    const avant = [m('a'), m('b')];
+    const apres = fusionnerMembre(avant, m('a', 'ecriture'));
+    expect(apres).not.toBe(avant);
+    expect(apres[0].role).toBe('ecriture');
+    expect(apres[1]).toBe(avant[1]);
+  });
+
+  it('rend LA MÊME référence quand rien ne change', () => {
+    const avant = [m('a')];
+    expect(fusionnerMembre(avant, m('a'))).toBe(avant);
+  });
+
+  it('retire sur les DEUX composantes de la clé', () => {
+    // Une adhésion s'identifie par `(board_id, user_id)` : retirer sur la seule
+    // matrice effacerait aussi celle d'un homonyme sur une autre ligne.
+    const autre: BoardMember = { ...m('a'), user_id: 'elle' };
+    const avant = [m('a'), autre];
+    expect(retirerMembre(avant, 'a', 'moi')).toEqual([autre]);
+    expect(retirerMembre(avant, 'a', 'inconnu')).toBe(avant);
   });
 });

@@ -1101,6 +1101,10 @@ export function useStore(userId: string): Store {
     // jamais, et un changement y recalcule `boardIds`, ce qui réabonne les
     // tables scopées et déclenche un rechargement complet derrière.
     setPlacements,
+    // Voir son rôle changer sans recharger : sans ça, un invité promu en
+    // écriture lirait encore « Vous avez accès en lecture » sur des champs que
+    // la base, elle, accepterait.
+    setMembers,
     admits: inWorkingSet,
     reload: load,
   });

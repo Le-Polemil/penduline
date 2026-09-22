@@ -22,7 +22,7 @@ status: "In Progress"
 | 8. Web — store, types, modale de partage, menu matrice, écran d'invitation | Terminé | 2026-09-22 |
 | 9. Attribution visible sur la carte de tâche | Terminé | 2026-09-22 |
 | 10. Extension et serveur MCP — colonnes et filtres alignés | Terminé | 2026-09-22 |
-| 11. Portes de qualité (lint, typecheck, tests) | En attente | |
+| 11. Portes de qualité + validation dans un vrai navigateur, à deux comptes | Terminé | 2026-09-22 |
 
 ## Journal
 
@@ -384,3 +384,49 @@ confirmation d'adresse ramenait l'invité sur un accueil vide, sans aucun moyen 
 qu'il lui manquait un clic.
 
 **Portes de qualité** : `typecheck` propre, **397 tests**, `build` vert, **31 tests live**.
+
+### 2026-09-22 : Validation à deux comptes dans un vrai navigateur
+
+**Statut** : Terminé
+
+Deux contextes de navigateur isolés, deux comptes réels, sur le Supabase local.
+Aucune erreur ni avertissement en console sur l'une ou l'autre page.
+
+| Vérifié | Résultat |
+|---|---|
+| L'accueil charge avec le nouveau schéma (rangement issu des placements) | univers et ordre intacts |
+| « Partager… » dans le menu `⋯` | présent, après le rangement |
+| La modale liste le propriétaire avec son adresse | `membres_matrice` OK de bout en bout |
+| Création d'un lien | jeton clair affiché **une fois**, expiration à J+7, entrée « en attente » |
+| Le lien ouvert **déconnecté** | « Une matrice vous attend… » sur l'écran de connexion |
+| L'écran d'acceptation | nom, inviteur et rôle **rendus par le serveur** |
+| Après « Rejoindre » | l'accueil de l'invité ne montre QUE la matrice partagée, pastille « lecture » |
+| Lecture seule | chaque champ d'ajout porte « Vous avez accès en lecture », cases désactivées |
+| Attribution | « par demo@penduline.test » sur chaque carte |
+| **Temps réel entre comptes** | une tâche insérée côté propriétaire apparaît chez l'invité **sans rechargement** |
+| **Révocation pendant la consultation** | retour à l'accueil + toast « L'accès à « Cuisine » vous a été retiré. » |
+
+**⚠️ Une lacune trouvée par cette validation, et corrigée.**
+
+Un changement de rôle ne se propageait pas : `board_members` n'était publiée nulle part,
+et les adhésions n'étaient chargées qu'une fois. Un invité promu en écriture continuait
+donc de lire « Vous avez accès en lecture » sur des champs désactivés, alors que la base
+acceptait ses écritures.
+
+C'est le défaut que tout le reste du ticket s'attache à éviter, **retourné** : un refus
+motivé mais FAUX est pire qu'un refus muet — il explique avec assurance quelque chose qui
+n'est plus vrai. Aucun test ne pouvait l'attraper : la RLS est correcte, les tests live
+passent, et seule une mise en situation le montre.
+
+Correctif — `20260922180000_partage_roles_temps_reel.sql` : `board_members` publiée,
+`replica identity full`, filtre `user_id=eq.<moi>`. Ce filtre est **plus étroit que la
+policy**, délibérément : la policy laisse voir ses co-membres (« coché par Bob » en a
+besoin), mais personne n'a à être réveillé parce que le rôle d'un TIERS a changé.
+`fusionnerMembre`/`retirerMembre` + 3 tests unitaires.
+
+Revérifié dans le navigateur : la pastille passe de « lecture » à « partagée » en direct,
+les cases redeviennent « Terminer » et les champs d'ajout s'activent, sans rechargement.
+
+**Portes de qualité finales** : `typecheck` **0 erreur** · **400 tests** (253 shared +
+106 mcp + 41 web) · `build` vert (web + extension) · **31 tests live** · base rendue à son
+état de seed (4 matrices, 10 tâches, 0 adhésion).

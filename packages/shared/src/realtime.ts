@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
-import type { Attachment, Board, BoardPlacement, Task, Universe } from './types';
+import type { Attachment, Board, BoardMember, BoardPlacement, Task, Universe } from './types';
 
 /**
  * Ce que l'hôte confie au temps réel : de quoi fusionner, et de quoi repartir.
@@ -28,6 +28,16 @@ export interface RealtimeSink {
    * d'arriver ou de partir.
    */
   setPlacements?: (fn: (ps: BoardPlacement[]) => BoardPlacement[]) => void;
+  /**
+   * Les adhésions — les SIENNES (#53). Même convention : absent = non abonné.
+   *
+   * ⚠️ Sert à une seule chose, et elle compte : voir son rôle changer sans
+   * recharger. Sans ça, un invité promu en écriture continuerait de lire
+   * « Vous avez accès en lecture » sur des champs désactivés, alors que la base
+   * accepterait ses écritures. Un refus motivé mais FAUX est pire qu'un refus
+   * muet — il explique avec assurance quelque chose qui n'est plus vrai.
+   */
+  setMembers?: (fn: (ms: BoardMember[]) => BoardMember[]) => void;
   /**
    * Une tâche a-t-elle sa place en mémoire ? Même règle que le chargement (#40).
    *
@@ -154,6 +164,25 @@ export function fusionnerPlacement(
 export function retirerPlacement(liste: BoardPlacement[], boardId: string): BoardPlacement[] {
   const i = liste.findIndex((x) => x.board_id === boardId);
   return i === -1 ? liste : liste.filter((x) => x.board_id !== boardId);
+}
+
+/** Même travail, pour les adhésions — clé `(board_id, user_id)`, pas d'`id`. */
+export function fusionnerMembre(liste: BoardMember[], recu: BoardMember): BoardMember[] {
+  const i = liste.findIndex((x) => x.board_id === recu.board_id && x.user_id === recu.user_id);
+  if (i === -1) return [...liste, recu];
+  if (identiques(liste[i], recu)) return liste;
+  const copie = [...liste];
+  copie[i] = recu;
+  return copie;
+}
+
+export function retirerMembre(
+  liste: BoardMember[],
+  boardId: string,
+  userId: string,
+): BoardMember[] {
+  const i = liste.findIndex((x) => x.board_id === boardId && x.user_id === userId);
+  return i === -1 ? liste : liste.filter((_, j) => j !== i);
 }
 
 /**
@@ -363,6 +392,25 @@ export function subscribeRealtime(
           return void (boardId && set((ps) => retirerPlacement(ps, boardId)));
         }
         set((ps) => fusionnerPlacement(ps, msg.new as BoardPlacement));
+      },
+    );
+  }
+
+  // Son rôle sur une matrice partagée. Filtre `user_id=eq.<moi>` — plus ÉTROIT
+  // que la policy, qui laisse voir ses co-membres : personne n'a besoin d'être
+  // réveillé parce que le rôle d'un tiers a changé.
+  if (getSink().setMembers) {
+    canal.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'board_members', filter: mien },
+      (msg) => {
+        const set = getSink().setMembers;
+        if (!set) return;
+        if (msg.eventType === 'DELETE') {
+          const o = msg.old as Partial<BoardMember>;
+          return void (o.board_id && o.user_id && set((ms) => retirerMembre(ms, o.board_id!, o.user_id!)));
+        }
+        set((ms) => fusionnerMembre(ms, msg.new as BoardMember));
       },
     );
   }
