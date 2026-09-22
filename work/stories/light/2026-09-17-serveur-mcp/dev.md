@@ -2,7 +2,7 @@
 story: "Serveur MCP Penduline"
 story_code: "serveur-mcp"
 created: 2026-09-17
-status: "In Progress"
+status: "Done"
 ---
 
 # Journal de développement
@@ -28,7 +28,7 @@ status: "In Progress"
 | 15 — Monorepo : Dockerfile MCP, manifeste copié dans le Dockerfile web, image GHCR en CI | Terminé | 2026-09-17 |
 | 16 — Documentation : README MCP, `work/coolify-deploy.md`, README racine, `.env.example` | Terminé | 2026-09-17 |
 | 17 — Contrôles qualité : typecheck, tests, build | Terminé | 2026-09-17 |
-| 18 — Validation manuelle | En attente | |
+| 18 — Validation manuelle | Partielle | 2026-09-22 |
 
 ## Journal
 
@@ -439,3 +439,29 @@ la validation manuelle.
 - Le message d'échec ne dit plus seulement *ce qui* manque mais *où* le
   déclarer : la réponse n'était pas devinable — c'est le `.env` de la **racine**,
   partagé, et non un fichier propre à `apps/mcp`.
+
+### 2026-09-22 : Validation manuelle — partielle, et ce qui reste
+
+**Statut** : Partielle
+
+**Validé en conditions réelles** (par l'utilisateur, avec Claude Code comme
+client, contre le Supabase local — état relu en base) :
+
+| Point | Preuve |
+|---|---|
+| Enregistrement dynamique | ligne `Claude Code (penduline-local)` dans `oauth_clients` |
+| Consentement + échange de code | `oauth_grants` active, `refresh_token_hash` posé |
+| Appels d'outils | `last_used_at` au 20/09 22:54 UTC |
+| `create_board` | matrice **Perso**, `origin = 'agent'` |
+| `create_task` | **« Aller à la piscine ce soir »**, `origin = 'agent'`, case *Faire* |
+
+**Reste à regarder** (visuel, non bloquant pour la revue) : la pastille « agent »
+sur la carte de matrice, sur la carte de tâche et en en-tête d'univers ; la modale
+« Applications connectées » et sa révocation ; la pastille dans le popup de
+l'extension après `npm run build:ext`.
+
+**Notes** :
+- Deux incidents traversés pendant la recette, tous deux de **configuration**, aucun de code :
+  1. `apps/mcp` ne lisait pas le `.env` racine → corrigé (voir l'entrée dédiée).
+  2. `SUPABASE_URL` pointait sur `:54321`, qui sert un **autre projet** Supabase sur cette machine (Penduline est sur `:55321`). PostgREST répondait `Could not find the table 'public.oauth_clients'` avec un indice parlant de `public.ingredients`. Rien n'a été écrit dans l'autre base : l'insertion échouait avant.
+- Le second incident n'appelle aucun correctif de code — mais il plaide pour la ligne de `apps/mcp/README.md` qui rappelle que `SUPABASE_URL` désigne Kong, pas Postgres.

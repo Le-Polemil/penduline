@@ -2,7 +2,7 @@
 story: "Serveur MCP Penduline"
 story_code: "serveur-mcp"
 created: 2026-09-17
-status: "In Progress"
+status: "Done"
 ---
 
 # #23 — Serveur MCP Penduline
