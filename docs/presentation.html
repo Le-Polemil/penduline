@@ -732,10 +732,10 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
 <!-- 08 — Les chiffres -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Où en est le projet</p>
-  <h2 class="s-heading reveal" style="--i:1">Deux mois de développement</h2>
+  <h2 class="s-heading reveal" style="--i:1">Trois mois de développement</h2>
   <div class="kpis reveal" style="--i:2; margin-top: clamp(14px, 2.4vh, 28px);">
-    <div class="kpi"><div class="kpi__val">53</div><div class="kpi__label">PR fusionnées</div></div>
-    <div class="kpi kpi--sage"><div class="kpi__val">41</div><div class="kpi__label">Tickets fermés</div></div>
+    <div class="kpi"><div class="kpi__val">60</div><div class="kpi__label">PR fusionnées</div></div>
+    <div class="kpi kpi--sage"><div class="kpi__val">46</div><div class="kpi__label">Tickets fermés</div></div>
     <div class="kpi"><div class="kpi__val">13</div><div class="kpi__label">Migrations SQL</div></div>
     <div class="kpi kpi--sage"><div class="kpi__val">214</div><div class="kpi__label">Tests unitaires</div></div>
     <div class="kpi kpi--ink"><div class="kpi__val">16 k</div><div class="kpi__label">Lignes TS / TSX</div></div>
@@ -756,8 +756,8 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
         <tr><td class="k">Vague 1 — Quick wins</td><td>Renommer, déplacer, réordonner, capture, appairage</td><td><span class="chip chip--done">9 / 9</span></td></tr>
         <tr><td class="k">Vague 2 — Structure</td><td>Univers, vue globale, recherche, temps réel, Ctrl+Z, étapes, liens</td><td><span class="chip chip--done">14 / 14</span></td></tr>
         <tr><td class="k">Vague 3 — Le temps</td><td>Échéances, revue périodique, statistiques, mode « aujourd'hui »</td><td><span class="chip chip--open">6 / 16</span></td></tr>
-        <tr><td class="k">Vague 4 — Ouverture</td><td>Serveur MCP, point d'entrée HTTP, i18n, import, iCal</td><td><span class="chip chip--open">0 / 9</span></td></tr>
-        <tr><td class="k">Vague 5 — Lourd</td><td>Hors-ligne, partage d'une matrice, nouvel onglet</td><td><span class="chip chip--open">0 / 7</span></td></tr>
+        <tr><td class="k">Vague 4 — Ouverture</td><td>Serveur MCP <em>(en revue)</em>, point d'entrée HTTP, i18n, import, iCal</td><td><span class="chip chip--open">0 / 13</span></td></tr>
+        <tr><td class="k">Vague 5 — Lourd</td><td>Hors-ligne, partage d'une matrice <em>(en revue)</em>, nouvel onglet</td><td><span class="chip chip--open">0 / 7</span></td></tr>
         <tr><td class="k">Vague 6 — La capture</td><td>Partage mobile, langage naturel, dictée, dépôt d'URL</td><td><span class="chip chip--open">0 / 6</span></td></tr>
       </tbody>
     </table>
@@ -995,11 +995,60 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
     <div class="card reveal" style="--i:2"><div class="card__kicker">#41 · #93</div><p class="card__title">Manifeste PWA</p><p class="card__body">L'app est installable. Icônes jusqu'à 1024 px, le WebAPK n'ayant que 512 px à agrandir.</p></div>
     <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);"><div class="card__kicker">#38</div><p class="card__title">Alternative clavier</p><p class="card__body">Le glisser-déposer n'en avait aucune. Focus visible, contraste AA.</p></div>
     <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);"><div class="card__kicker">#37</div><p class="card__title">Polices auto-hébergées</p><p class="card__body">Le CDN Google transmettait l'IP de chaque visiteur à un tiers avant tout consentement.</p></div>
-    <div class="card reveal" style="--i:5; border-top-color: var(--q-eliminer);"><div class="card__kicker">#36 · #35 — ouverts</div><p class="card__title">Reste à faire</p><p class="card__body">Suppression de compte et export RGPD ; suivi des erreurs et mesure d'usage.</p></div>
+    <div class="card reveal" style="--i:5; border-top-color: var(--q-faire);"><div class="card__kicker">#89 · #90 · #91 · #92</div><p class="card__title">Audit mobile et desktop</p><p class="card__body">Lisible et atteignable au doigt, survol réservé au pointeur qui peut se promener, et « Réduire les animations » honoré partout.</p></div>
+    <div class="card reveal" style="--i:6; border-top-color: var(--q-eliminer);"><div class="card__kicker">#36 · #35 — ouverts</div><p class="card__title">Reste à faire</p><p class="card__body">Suppression de compte et export RGPD ; suivi des erreurs et mesure d'usage.</p></div>
   </div>
 </section>
 
-<!-- 22 — La grille des intérêts -->
+<!-- 22 — Le serveur MCP -->
+<section class="slide slide--split">
+  <div class="panels">
+    <div class="panel panel--a">
+      <p class="s-label reveal" style="--i:0">#23 — en revue</p>
+      <h2 class="s-heading reveal" style="--i:1">Les matrices, ouvertes aux agents</h2>
+      <ul class="bullets" style="margin-top: clamp(6px, 1.2vh, 14px);">
+        <li class="reveal" style="--i:2"><strong>Neuf outils</strong> : lire les univers, les matrices et les tâches ; créer une matrice ; créer, modifier, déplacer et cocher une tâche.</li>
+        <li class="reveal" style="--i:3"><strong>OAuth 2.1 complet</strong> — écran de consentement dans l'app web. Aucun jeton copié à la main nulle part.</li>
+        <li class="reveal" style="--i:4">Aucune règle métier réécrite : positions et appairage passent par le <code>layout.ts</code> déjà partagé.</li>
+      </ul>
+    </div>
+    <div class="panel panel--ink">
+      <p class="s-label reveal" style="--i:3">On donne une URL, le client fait le reste</p>
+      <div class="codeblock reveal" style="--i:4; background: transparent; padding: 0;">
+        <pre><code>claude mcp add --transport http \
+  penduline \
+  <span class="a">https://mcp.penduline.polemil.dev/mcp</span></code></pre>
+      </div>
+      <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px);">Ce qu'un agent crée porte une pastille <strong style="color:var(--code-text)">agent</strong> dans l'app et dans l'extension. Le bouton « Applications » liste les accès et les révoque, avec effet immédiat.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 23 — Partager une matrice -->
+<section class="slide">
+  <p class="s-label reveal" style="--i:0">#53 — en revue</p>
+  <h2 class="s-heading reveal" style="--i:1">Partager une matrice</h2>
+  <div class="cards cards--3" style="margin-top: clamp(14px, 2.4vh, 28px);">
+    <div class="card reveal" style="--i:2">
+      <div class="card__kicker">Inviter</div>
+      <p class="card__title">Un lien à jeton, transmis à la main</p>
+      <p class="card__body">Aucune infrastructure e-mail : le même chemin sert un compte existant et une adresse inconnue.</p>
+    </div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);">
+      <div class="card__kicker">Deux rôles</div>
+      <p class="card__title">Lecture ou écriture, attribution visible</p>
+      <p class="card__body">Quitter et révoquer, des deux côtés. Un invité range la matrice dans <em>ses</em> univers.</p>
+    </div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-eliminer);">
+      <div class="card__kicker">Ce que ça a coûté</div>
+      <p class="card__title">Le modèle de sécurité réécrit</p>
+      <p class="card__body">Il reposait sur « une ligne appartient à une personne », recopié à huit endroits. Le partage l'invalide à la racine.</p>
+    </div>
+  </div>
+  <p class="s-body reveal" style="--i:5; margin-top: clamp(14px, 2.4vh, 26px);">Depuis le temps réel, la RLS est le levier <strong>unique</strong> de la délivrance : une erreur n'expose plus une lecture, elle pousse un flux. D'où 26 assertions à deux comptes réels, écrites comme livrable de sécurité.</p>
+</section>
+
+<!-- 24 — La grille des intérêts -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">Synthèse</p>
   <h2 class="s-heading reveal" style="--i:1">Ce que chaque ajout cherche à produire</h2>
@@ -1017,19 +1066,19 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   </div>
 </section>
 
-<!-- 23 — Ce qui vient -->
+<!-- 25 — Ce qui vient -->
 <section class="slide">
   <p class="s-label reveal" style="--i:0">45 tickets ouverts</p>
   <h2 class="s-heading reveal" style="--i:1">Ce qui vient</h2>
   <div class="cards cards--4" style="margin-top: clamp(14px, 2.4vh, 28px);">
     <div class="card reveal" style="--i:2"><div class="card__kicker">Vague 6</div><p class="card__title">La capture</p><p class="card__body">Partage mobile Android / iOS, langage naturel à la saisie, dictée, dépôt d'une URL sur une case, omnibox.</p></div>
-    <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);"><div class="card__kicker">Vague 4</div><p class="card__title">Ouverture</p><p class="card__body">Serveur MCP, point d'entrée HTTP, flux iCal, import, internationalisation, palette de commandes.</p></div>
-    <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);"><div class="card__kicker">Vague 5</div><p class="card__title">Lourd</p><p class="card__body">Mode hors-ligne en trois temps, partage d'une matrice, page « nouvel onglet ».</p></div>
+    <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);"><div class="card__kicker">Vague 4</div><p class="card__title">Ouverture</p><p class="card__body">Point d'entrée HTTP, flux iCal, import, internationalisation, palette de commandes.</p></div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);"><div class="card__kicker">Vague 5</div><p class="card__title">Lourd</p><p class="card__body">Mode hors-ligne en trois temps, page « nouvel onglet ».</p></div>
     <div class="card reveal" style="--i:5; border-top-color: var(--q-eliminer);"><div class="card__kicker">En réflexion</div><p class="card__title">Gamification</p><p class="card__body">Quatre maquettes explorées : le nid comme jauge de santé du tableau, des badges. Rien n'est tranché.</p></div>
   </div>
 </section>
 
-<!-- 24 — Clôture -->
+<!-- 26 — Clôture -->
 <section class="slide slide--title">
   <svg class="nest reveal" style="--i:0" viewBox="11.75 5.5 88.5 88.5" aria-hidden="true">
     <path d="M48 10 C48 4 64 4 64 10 L62 24 C60 30 52 30 50 24 Z" fill="#c67139"/>
