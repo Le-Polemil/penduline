@@ -17,7 +17,7 @@ import {
   quadrant,
   subtasksOf,
   visibleTasks,
-  type Board,
+  type BoardRange,
   type Quadrant,
   type QuadrantKey,
   type Task,
@@ -82,7 +82,7 @@ export function GlobalScreen({
   const [binOpen, setBinOpen] = useState(false);
   const [drag, setDrag] = useState<string | null>(null);
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
-  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
+  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: BoardRange } | null>(null);
   /** Suppression d'une tâche à étapes, en attente de confirmation. */
   const [delAsk, setDelAsk] = useState<Task | null>(null);
   /** La tâche dont le champ « attacher un lien » est ouvert. Une seule à la fois. */
@@ -172,13 +172,13 @@ export function GlobalScreen({
     setMenuTask(null);
   }
 
-  function moveToBoard(task: Task, target: Board) {
+  function moveToBoard(task: Task, target: BoardRange) {
     const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
     withVT(() => apply(`Déplacée vers « ${target.name} »`, planPairMove(tasks, task, { board_id: target.id }, pos)));
   }
 
   /** Même règle que l'écran matrice : on n'annonce que le départ d'une PAIRE. */
-  function askMoveToBoard(task: Task, target: Board) {
+  function askMoveToBoard(task: Task, target: BoardRange) {
     setMenuTask(null);
     const mate = partnerOf(tasks, task);
     if (mate) setMoveAsk({ task, mate, target });

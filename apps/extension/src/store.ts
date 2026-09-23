@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   classifyWriteFailure,
   isSafeUrl,
@@ -6,20 +6,20 @@ import {
   subscribeRealtime,
   type RealtimeSink,
 } from '@penduline/shared';
-import type { QuadrantKey, Board, Task, TaskPatch, Universe } from '@penduline/shared';
+import type { QuadrantKey, Board, BoardPlacement, BoardRange, Task, TaskPatch, Universe } from '@penduline/shared';
 import type { PostgrestError } from '@supabase/supabase-js';
 import { readSnapshot, writeSnapshot } from './snapshot';
 import { supabase } from './supabase';
 import { useToast } from './toast';
 
 const TASK_COLS =
-  'id, user_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, completed_at';
+  'id, author_id, board_id, title, quadrant, done, archived, deleted, position, pair_id, parent_id, due_at, focus_day, origin, created_at, updated_at, completed_at, completed_by';
 
 export interface ExtStore {
   ready: boolean;
   /** Lecture seule : créer et ranger des univers reste l'affaire du web. */
   universes: Universe[];
-  boards: Board[];
+  boards: BoardRange[];
   tasks: Task[];
   /** Le nom vient toujours de l'utilisateur : pas de défaut, pas de seed. */
   addBoard: (name: string) => Promise<string | null>;
@@ -138,6 +138,9 @@ export function useExtStore(userId: string): ExtStore {
   const [ready, setReady] = useState(false);
   const [universes, setUniverses] = useState<Universe[]>([]);
   const [boards, setBoards] = useState<Board[]>([]);
+  /** Le rangement personnel (#53) : il porte l'univers et l'ordre, et le jeu de
+   *  matrices accessibles dont le filtre temps réel a besoin. */
+  const [placements, setPlacements] = useState<BoardPlacement[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [live, setLive] = useState(false);
   const persistBrut = usePersist();
@@ -182,9 +185,11 @@ export function useExtStore(userId: string): ExtStore {
    */
   const charger = useCallback(async (silencieux: boolean, vivant: () => boolean) => {
     const genAvant = ecritures.current.gen;
-    const [universesRes, boardsRes, tasksRes] = await Promise.all([
+    const [universesRes, boardsRes, placementsRes, tasksRes] = await Promise.all([
       supabase.from('universes').select('*').order('position'),
-      supabase.from('boards').select('*').order('position'),
+      // Plus d'`order('position')` : la matrice ne porte plus son rang (#53).
+      supabase.from('boards').select('*'),
+      supabase.from('board_placements').select('*').order('position'),
       // `parent_id is null` : une étape n'est pas une ligne de liste (#50).
       // Le panneau n'a pas de corbeille : il filtre déjà `!t.done && !t.deleted`
       // à l'affichage. Ne charger que ça est donc sans conséquence ici — et
@@ -202,10 +207,11 @@ export function useExtStore(userId: string): ExtStore {
     // Une erreur réseau ne doit pas VIDER l'écran. `?? []` était acceptable
     // quand un échec ne coûtait qu'un panneau vide ; avec l'instantané il
     // effacerait des données qu'on vient de peindre.
-    if (universesRes.error || boardsRes.error || tasksRes.error) return false;
+    if (universesRes.error || boardsRes.error || placementsRes.error || tasksRes.error) return false;
     if (silencieux && (ecritures.current.gen !== genAvant || ecritures.current.enVol > 0)) return false;
     setUniverses(universesRes.data ?? []);
     setBoards(boardsRes.data ?? []);
+    setPlacements((placementsRes.data as BoardPlacement[] | null) ?? []);
     setTasks((tasksRes.data as Task[] | null) ?? []);
     return true;
   }, []);
@@ -230,6 +236,7 @@ export function useExtStore(userId: string): ExtStore {
       if (!alive || reseauServi || !snap) return;
       setUniverses(snap.universes);
       setBoards(snap.boards);
+      setPlacements(snap.placements);
       setTasks(snap.tasks);
       setReady(true);
     });
@@ -262,10 +269,10 @@ export function useExtStore(userId: string): ExtStore {
   useEffect(() => {
     if (!ready) return;
     const t = window.setTimeout(() => {
-      void writeSnapshot(userId, { universes, boards, tasks });
+      void writeSnapshot(userId, { universes, boards, placements, tasks });
     }, 400);
     return () => window.clearTimeout(t);
-  }, [ready, userId, universes, boards, tasks]);
+  }, [ready, userId, universes, boards, placements, tasks]);
 
   /**
    * Un seul rafraîchissement à la fois : les déclencheurs sont plusieurs (une
@@ -312,33 +319,76 @@ export function useExtStore(userId: string): ExtStore {
     setTasks,
     setBoards,
     setUniverses,
+    // ⚠️ Le panneau doit suivre les placements, LUI AUSSI (#53) — pas pour le
+    // rangement, qu'il n'offre pas, mais parce que c'est cette table qui dit
+    // qu'une matrice partagée vient d'arriver ou de partir. Sans elle, le
+    // panneau garderait une matrice révoquée à l'écran jusqu'au rechargement.
+    setPlacements,
     admits: admisAuPanneau,
     reload: async () => refresh(),
   };
   const sink = useRef(courant);
   sink.current = courant;
 
-  useEffect(
+  /**
+   * Le jeu de matrices accessibles, TRIÉ — il pilote le filtre serveur (#53).
+   *
+   * Trié parce qu'un simple changement d'ordre ne doit pas rouvrir le WebSocket :
+   * même raisonnement que dans `useRealtime` côté web.
+   */
+  const cleMatrices = useMemo(
+    () => placements.map((p) => p.board_id).sort().join(','),
+    [placements],
+  );
+  const premierAbonnement = useRef(true);
+
+  useEffect(() => {
     // `subscribeRealtime` prend un GETTER : il relit le sink à chaque événement,
     // donc `reload` n'est jamais figé sur un rendu passé.
-    () => subscribeRealtime(supabase, userId, () => sink.current, { onLive: setLive }),
-    [userId],
-  );
+    const ids = cleMatrices ? cleMatrices.split(',') : [];
+    const rechargerDesLAbonnement = !premierAbonnement.current;
+    premierAbonnement.current = false;
+    return subscribeRealtime(supabase, userId, ids, () => sink.current, {
+      onLive: setLive,
+      rechargerDesLAbonnement,
+    });
+  }, [userId, cleMatrices]);
+
+  /** La matrice telle que le panneau la voit : la matrice ET son rangement. */
+  const matrices = useMemo<BoardRange[]>(() => {
+    const parBoard = new Map(placements.map((p) => [p.board_id, p]));
+    return boards
+      .flatMap((b) => {
+        const p = parBoard.get(b.id);
+        return p
+          ? [{ ...b, universe_id: p.universe_id, position: p.position, role: null, partagee: false }]
+          : [];
+      })
+      .sort((a, b) => a.position - b.position);
+  }, [boards, placements]);
 
   // Miroir de `addBoard` côté web (apps/web/src/data/store.ts) : même calcul de
   // position, même retour d'identifiant pour que l'appelant puisse enchaîner.
   const addBoard = useCallback(
     async (name: string) => {
-      const position = Math.max(0, ...boards.map((b) => b.position)) + 1;
+      // Plus de calcul de position ici : le trigger
+      // `boards_placement_proprietaire` pose le rangement en fin de liste (#53).
+      // C'était justement la duplication que le commentaire ci-dessus signalait.
       const { data: row } = await persist<Board>({
         label: 'Créer la matrice',
-        write: () =>
-          supabase.from('boards').insert({ user_id: userId, name, position }).select('*').single(),
+        write: () => supabase.from('boards').insert({ user_id: userId, name }).select('*').single(),
         commit: (b) => setBoards((bs) => [...bs, b]),
       });
-      return row?.id ?? null;
+      if (!row) return null;
+      const { data: p } = await supabase
+        .from('board_placements')
+        .select('*')
+        .eq('board_id', row.id)
+        .single();
+      if (p) setPlacements((ps) => [...ps, p as BoardPlacement]);
+      return row.id;
     },
-    [boards, userId, persist],
+    [userId, persist],
   );
 
   const addTask = useCallback(
@@ -348,7 +398,7 @@ export function useExtStore(userId: string): ExtStore {
         write: () =>
           supabase
             .from('tasks')
-            .insert({ user_id: userId, board_id: boardId, title, quadrant, position })
+            .insert({ author_id: userId, board_id: boardId, title, quadrant, position })
             .select(TASK_COLS)
             .single(),
         commit: (t) => setTasks((ts) => [...ts, t]),
@@ -366,7 +416,7 @@ export function useExtStore(userId: string): ExtStore {
             .from('tasks')
             // Ce qui arrive par un canal automatique n'a par définition pas été
             // classé — et « À trier » existe exactement pour ça.
-            .insert({ user_id: userId, board_id: boardId, title, quadrant: 'parking', position })
+            .insert({ author_id: userId, board_id: boardId, title, quadrant: 'parking', position })
             .select(TASK_COLS)
             .single(),
         commit: (t) => setTasks((ts) => [...ts, t]),
@@ -379,7 +429,7 @@ export function useExtStore(userId: string): ExtStore {
         // tâche, ni rendre `false` — la capture, elle, a bien eu lieu.
         const { error } = await supabase
           .from('task_attachments')
-          .insert({ task_id: data.id, user_id: userId, url: propre, position: 0 });
+          .insert({ task_id: data.id, author_id: userId, url: propre, position: 0 });
         if (error) console.error('[penduline] pièce jointe', error.message);
       }
       return true;
@@ -421,5 +471,5 @@ export function useExtStore(userId: string): ExtStore {
     [persist],
   );
 
-  return { ready, live, universes, boards, tasks, addBoard, addTask, captureTask, patchTask, refresh };
+  return { ready, live, universes, boards: matrices, tasks, addBoard, addTask, captureTask, patchTask, refresh };
 }

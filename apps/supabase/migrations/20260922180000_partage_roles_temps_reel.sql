@@ -1,0 +1,26 @@
+-- Penduline — un changement de rôle doit se voir tout de suite (#53).
+--
+-- ── LA LACUNE, TROUVÉE EN VALIDANT DANS UN VRAI NAVIGATEUR ───────────────────
+--
+-- Les policies font leur travail : passer quelqu'un de `lecture` à `ecriture`
+-- lui ouvre l'écriture à l'instant même, côté base. Mais l'INTERFACE ne le
+-- savait pas : les adhésions sont chargées une fois, et `board_members` n'était
+-- publiée nulle part. L'invité promu continuait donc de lire « Vous avez accès
+-- en lecture » sur des champs désactivés, jusqu'à ce qu'il rafraîchisse.
+--
+-- C'est le défaut exact que le reste du ticket s'attache à éviter, retourné :
+-- un refus MOTIVÉ mais FAUX est pire qu'un refus muet — il explique avec
+-- assurance quelque chose qui n'est plus vrai.
+--
+-- ── POURQUOI LE FILTRE SUFFIT ICI ────────────────────────────────────────────
+--
+-- `board_members` porte `user_id`. Le filtre `user_id=eq.<moi>`, celui des
+-- tables mono-utilisateur, cadre donc exactement : chacun reçoit les
+-- changements de SON adhésion, et rien des autres.
+--
+-- ⚠️ Ce n'est PAS le cas d'une lecture : la policy `board_members: lire si accès`
+-- laisse voir ses co-membres, ce qui est voulu (« coché par Bob » a besoin de la
+-- liste). Le filtre temps réel est plus étroit que la policy, délibérément — un
+-- invité n'a aucun besoin d'être réveillé parce que le rôle d'un TIERS a changé.
+alter table public.board_members replica identity full;
+alter publication supabase_realtime add table public.board_members;

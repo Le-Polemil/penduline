@@ -90,9 +90,24 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
       if (error) throw new Error(`connexion impossible (seed.sql appliqué ?) : ${error.message}`);
     }
     userId = (await abonne.auth.getUser()).data.user!.id;
-    const { data } = await ecrivain.from('boards').select('id').limit(1);
-    if (!data?.length) throw new Error('aucune matrice — seed.sql non appliqué ?');
-    boardId = data[0].id as string;
+    /**
+     * ⚠️ Une matrice À SOI, créée ici et détruite à la fin.
+     *
+     * Ce fichier prenait « la première matrice venue » du seed. Depuis que
+     * `partage.live.test.ts` existe, les deux suites tournent EN PARALLÈLE
+     * contre la même base, et l'autre crée puis détruit des matrices : la
+     * « première venue » pouvait donc disparaître au milieu d'un test, qui
+     * échouait alors sur une absence de délivrance parfaitement logique — le
+     * symptôme le plus trompeur possible dans un fichier dont tout l'objet est
+     * de distinguer le silence légitime du silence fautif.
+     */
+    const { data, error: eb } = await ecrivain
+      .from('boards')
+      .insert({ user_id: userId, name: 'sonde-temps-reel' })
+      .select('id')
+      .single();
+    if (eb) throw new Error(`création de la matrice d’essai : ${eb.message}`);
+    boardId = data!.id as string;
 
     // ⚠️ Attendre le VRAI `onLive`, jamais une temporisation devinée : Realtime
     // ne rejoue pas les événements, donc une écriture partie avant que la
@@ -100,8 +115,8 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     // raison étrangère au code testé. La première version de ce fichier
     // patientait 2,5 s en dur, et l'INSERT était bel et bien manqué.
     let live = false;
-    stop = subscribeRealtime(abonne, userId, () => sink, {
-      onLive: (l) => {
+    stop = subscribeRealtime(abonne, userId, [boardId], () => sink, {
+      onLive: (l: boolean) => {
         live = l;
       },
     });
@@ -113,13 +128,15 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
   afterAll(async () => {
     stop?.();
     if (cree.length) await ecrivain.from('tasks').delete().in('id', cree);
+    // La cascade emporte ce qui resterait attaché à la matrice d'essai.
+    if (boardId) await ecrivain.from('boards').delete().eq('id', boardId);
   });
 
   it('délivre un INSERT distant', async () => {
     const { data, error } = await ecrivain
       .from('tasks')
       .insert({
-        user_id: userId,
+        author_id: userId,
         board_id: boardId,
         title: 'sonde-insert',
         quadrant: 'faire',
@@ -144,7 +161,7 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     const { data } = await ecrivain
       .from('tasks')
       .insert({
-        user_id: userId,
+        author_id: userId,
         board_id: boardId,
         title: 'sonde-cochee',
         quadrant: 'faire',
@@ -194,6 +211,11 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     const arret = subscribeRealtime(
       tiers,
       tiersId,
+      // ⚠️ Le jeu du TIERS, et non celui de l'hôte : c'est tout l'objet du test.
+      // Depuis #53 le filtre porte les matrices accessibles ; un tiers qui n'a
+      // accès à rien s'abonne donc sans aucune table scopée, et ne doit rien
+      // recevoir — pas même l'identifiant d'une suppression.
+      [],
       () => ({
         setTasks: compteur,
         setBoards: compteur,
@@ -201,14 +223,14 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
         admits: () => true,
         reload: async () => {},
       }),
-      { onLive: (l) => { live = l; } },
+      { onLive: (l: boolean) => { live = l; } },
     );
     if (!(await attendre(() => live, 15000))) throw new Error('tiers non abonné');
 
     const { data } = await ecrivain
       .from('tasks')
       .insert({
-        user_id: userId,
+        author_id: userId,
         board_id: boardId,
         title: 'sonde-cloisonnement',
         quadrant: 'faire',

@@ -54,6 +54,31 @@ export function fausseDb(tables: Record<string, object[]> = {}) {
         ...l,
       }));
       lignes(table).push(...creees);
+      /**
+       * ⚠️ LE SEUL TRIGGER QUE CETTE DOUBLURE SIMULE, et il n'est pas un
+       * caprice : depuis #53, créer une matrice ne suffit plus à la faire
+       * exister pour son propriétaire — il lui faut un `board_placement`, que
+       * `boards_placement_proprietaire` pose côté base.
+       *
+       * Sans cette ligne, `createBoard` ne serait pas testable du tout : il
+       * relit le placement juste après l'insertion, et la doublure lui rendrait
+       * éternellement rien. Une matrice sans rangement ne s'affiche nulle part.
+       *
+       * On ne simule que celui-là. Les autres triggers (`completed_at`,
+       * `quadrant_changed_at`, `board_id` des liens) n'ont aucun effet sur ce
+       * que le serveur MCP relit dans la foulée.
+       */
+      if (table === 'boards') {
+        const placements = lignes('board_placements');
+        for (const b of creees) {
+          placements.push({
+            board_id: b.id,
+            user_id: (b as Ligne).user_id,
+            universe_id: null,
+            position: placements.length,
+          });
+        }
+      }
       return creees as T[];
     },
     async update<T>(table: string, filtres: Filtres, patch: unknown) {

@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from './lib/supabase';
-import { useStore } from './data/store';
+import { useStore, type Store } from './data/store';
 import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
@@ -9,14 +9,16 @@ import { GlobalScreen, type Scope } from './screens/Global';
 import { FocusScreen } from './screens/Focus';
 import { ReviewScreen } from './screens/Review';
 import { StatsScreen } from './screens/Stats';
-import { AnnounceProvider } from './a11y/announce';
-import { ToastProvider } from './components/Toast';
+import { AnnounceProvider, useAnnounce } from './a11y/announce';
+import { ToastProvider, useToast } from './components/Toast';
 import { Search, type SearchHit } from './components/Search';
 import { useUndoShortcut } from './data/useUndoShortcut';
 import { clearSessionNotice, readSessionNotice } from './lib/session-notice';
 import { shareSession, shareSignOut } from './lib/extension-bridge';
 import { readAuthorizeRequest } from './lib/mcp';
 import { AuthorizeScreen } from './screens/Authorize';
+import { readInvitation } from './lib/partage';
+import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
 
 /**
@@ -66,6 +68,8 @@ export function App() {
   const [hash] = useState(readAuthHash);
   // Même motif, et pour la même raison : pure, lue une fois, avant tout effet.
   const [demandeMcp] = useState(() => readAuthorizeRequest());
+  // Troisième entrée par l'URL, troisième fois le même motif (#53).
+  const [invitation] = useState(() => readInvitation());
   const [session, setSession] = useState<Session | null>(null);
   const [ready, setReady] = useState(false);
   const [recovering, setRecovering] = useState(hash.recovery);
@@ -113,11 +117,15 @@ export function App() {
   if (!ready) return <Loader />;
   // Prime délibérément sur `session` : c'est tout l'objet du drapeau.
   if (recovering) return <NewPassword onDone={() => setRecovering(false)} />;
-  if (!session) return <SignIn linkError={hash.linkError} />;
+  if (!session) return <SignIn linkError={hash.linkError} invitation={!!invitation} />;
   // APRÈS `!session`, délibérément : un visiteur déconnecté se connecte d'abord
   // et retombe sur cet écran, l'URL n'ayant pas bougé. L'inverse lui demanderait
   // d'autoriser une application au nom d'une session qui n'existe pas.
   if (demandeMcp) return <AuthorizeScreen demande={demandeMcp} jeton={session.access_token} />;
+  // APRÈS `!session`, comme l'écran de consentement : un visiteur sans compte
+  // s'inscrit d'abord et retombe ici, l'URL n'ayant pas bougé. C'est ce qui fait
+  // tenir « invitation d'une adresse sans compte » sans un chemin de plus.
+  if (invitation) return <InvitationScreen jeton={invitation} />;
   return <AppRoot userId={session.user.id} />;
 }
 
@@ -190,6 +198,45 @@ function readView(): View {
  * consomme `useToast` : c'est le store qui signale les échecs d'écriture, il
  * doit donc se rendre à l'intérieur de l'hôte de toasts, pas à côté.
  */
+/**
+ * La matrice regardée vient de DISPARAÎTRE : le dire (#53).
+ *
+ * `AppRoot` retombait déjà sur l'accueil quand la vue pointait dans le vide —
+ * mais EN SILENCE, ce qui convenait tant que le seul cas était « je l'ai
+ * supprimée depuis un autre appareil ». Le partage en ajoute un second, subi :
+ * on vous a retiré l'accès, ou vous venez de quitter. Un retrait non expliqué
+ * se lit comme une perte de données.
+ *
+ * ⚠️ L'annonce `aria-live` compte autant que le toast : un changement poussé
+ * par le temps réel est, par construction, un changement que personne n'a
+ * déclenché. Sans elle, il n'existe pas pour qui ne voit pas l'écran.
+ *
+ * Le nom est tenu dans une ref, PAS lu au moment de la disparition : à cet
+ * instant la matrice n'est plus dans `store.boards`, et il n'y aurait plus rien
+ * à nommer.
+ */
+function useMatriceDisparue(store: Store, view: View, setView: (v: View) => void) {
+  const toast = useToast();
+  const announce = useAnnounce();
+  const dernierNom = useRef<{ id: string; name: string } | null>(null);
+
+  const id = view.kind === 'board' ? view.id : null;
+  const presente = id ? store.boards.find((b) => b.id === id) : undefined;
+  if (presente) dernierNom.current = { id: presente.id, name: presente.name };
+
+  const disparue = !!id && store.ready && !presente;
+  useEffect(() => {
+    if (!disparue) return;
+    const nom = dernierNom.current?.id === id ? dernierNom.current.name : null;
+    const message = nom
+      ? `L’accès à « ${nom} » vous a été retiré.`
+      : 'Cette matrice n’est plus accessible.';
+    toast.show({ message, tone: 'error', durationMs: 8000, key: 'matrice-disparue' });
+    announce(message);
+    setView(HOME);
+  }, [disparue, id, toast, announce, setView]);
+}
+
 function AppRoot({ userId }: { userId: string }) {
   return (
     // Une seule région d'annonce pour toute l'application : plusieurs zones
@@ -208,6 +255,7 @@ function Workspace({ userId }: { userId: string }) {
   const [searching, setSearching] = useState(false);
   const [apps, setApps] = useState(false);
   useUndoShortcut(store);
+  useMatriceDisparue(store, view, setView);
 
   // Changer d'écran change le contexte : une entrée d'annulation viserait des
   // états qu'on ne voit plus. Vider est plus sûr que deviner (#46).
@@ -324,7 +372,21 @@ const SUBMITS: Record<Mode, string> = {
   forgot: 'Envoyer le lien',
 };
 
-function SignIn({ linkError }: { linkError: string | null }) {
+function SignIn({
+  linkError,
+  invitation = false,
+}: {
+  linkError: string | null;
+  /**
+   * Une invitation attend derrière cet écran (#53).
+   *
+   * ⚠️ Change le `redirectTo` de l'inscription. Sans ça, la confirmation
+   * d'adresse ramène sur l'accueil — vide — et l'invité n'a AUCUN moyen de
+   * savoir qu'il lui manque un clic. C'est l'échec le plus coûteux du parcours
+   * d'invitation, précisément parce qu'il est silencieux.
+   */
+  invitation?: boolean;
+}) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<Mode>('signin');
@@ -376,13 +438,25 @@ function SignIn({ linkError }: { linkError: string | null }) {
     }
 
     if (mode === 'signup') {
-      const { data, error } = await supabase.auth.signUp({ email, password });
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        // L'URL COURANTE quand une invitation attend : c'est elle qui porte le
+        // jeton, et `window.location.origin` la perdrait.
+        options: invitation
+          ? { emailRedirectTo: window.location.href }
+          : undefined,
+      });
       if (error) setError(error.message);
       // Quand la confirmation d'adresse est active, `signUp` réussit SANS
       // ouvrir de session. Sans ce message l'écran resterait muet et le
       // parcours deviendrait un cul-de-sac.
       else if (!data.session)
-        setNotice('Compte créé. Vérifiez votre boîte mail pour confirmer votre adresse.');
+        setNotice(
+          invitation
+            ? 'Compte créé. Confirmez votre adresse par le lien reçu : il vous ramènera directement à l’invitation.'
+            : 'Compte créé. Vérifiez votre boîte mail pour confirmer votre adresse.',
+        );
       setBusy(false);
       return;
     }
@@ -397,6 +471,11 @@ function SignIn({ linkError }: { linkError: string | null }) {
       <form className="auth-card" onSubmit={submit}>
         <h1>Penduline</h1>
         <p className="muted">{TITLES[mode]}</p>
+        {invitation && (
+          <p className="muted">
+            Une matrice vous attend. Connectez-vous ou créez un compte, et vous y serez ramené.
+          </p>
+        )}
         <label>
           Email
           <input

@@ -1,5 +1,5 @@
 import { ALL, QUADS, type QuadrantKey } from './quadrants';
-import type { Board } from './types';
+import type { BoardRange } from './types';
 
 /**
  * Les statistiques rétrospectives : ce que la matrice promet de révéler (#48).
@@ -212,7 +212,7 @@ export function statsReadings({
   boards,
 }: {
   stats: CompletionStats;
-  boards: Board[];
+  boards: BoardRange[];
 }): StatsReadings {
   const total = stats.by_quadrant.reduce((n, q) => n + q.completed, 0);
   const ageTotal = stats.by_quadrant.reduce((n, q) => n + q.age_seconds_total, 0);

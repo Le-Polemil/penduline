@@ -1,4 +1,4 @@
-import type { Origin } from '@penduline/shared';
+import type { BoardRole, Origin } from '@penduline/shared';
 
 /**
  * « agent » — cette ligne a été créée par une application connectée (#23).
@@ -15,6 +15,30 @@ export function OriginBadge({ origin }: { origin: Origin }) {
   return (
     <span className="agent-badge" title="Créé par une application connectée">
       agent
+    </span>
+  );
+}
+
+/**
+ * « partagée » — cette matrice ne vous appartient pas, on vous y a donné accès (#53).
+ *
+ * Exactement le même patron qu'`OriginBadge` ci-dessus, et pour les deux mêmes
+ * raisons : la pastille PORTE SON TEXTE (la couleur seule n'informe pas un
+ * daltonien), et rien ne s'affiche dans le cas ordinaire — décorer 99 % des
+ * lignes pour signaler le 1 % restant est l'erreur qu'on a déjà refusée une fois.
+ */
+export function SharedBadge({ role }: { role: BoardRole | null }) {
+  if (role === null) return null;
+  return (
+    <span
+      className="agent-badge"
+      title={
+        role === 'ecriture'
+          ? 'Partagée avec vous — vous pouvez y écrire'
+          : 'Partagée avec vous — en lecture seule'
+      }
+    >
+      {role === 'ecriture' ? 'partagée' : 'lecture'}
     </span>
   );
 }

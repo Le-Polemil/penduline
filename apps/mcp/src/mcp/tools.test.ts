@@ -95,17 +95,28 @@ describe('créations', () => {
     });
   });
 
-  it('une matrice aussi, et accepte de n’être rangée nulle part', async () => {
-    const { ctx, contenu } = contexte([], { boards: [{ id: 'b1', position: 0 }] });
+  it('une matrice aussi — et son rangement ne s’écrit PLUS sur elle', async () => {
+    const { ctx, contenu } = contexte([], { boards: [{ id: 'b1' }] });
 
     await createBoard(ctx, { name: 'Cuisine' });
 
-    expect(contenu.boards.at(-1)).toMatchObject({
-      name: 'Cuisine',
-      origin: 'agent',
-      universe_id: null,
-      position: 1,
-    });
+    const creee = contenu.boards.at(-1)!;
+    expect(creee).toMatchObject({ name: 'Cuisine', origin: 'agent' });
+    // ⚠️ Depuis #53, `universe_id` et `position` vivent dans
+    // `board_placements`, posé par un trigger de la base. Les écrire ici les
+    // dédoublerait — et il faudrait tenir ce calcul d'accord avec la version SQL
+    // qui sert aussi l'app web et le panneau d'extension.
+    expect(creee).not.toHaveProperty('universe_id');
+    expect(creee).not.toHaveProperty('position');
+  });
+
+  it('ranger dans un univers écrit sur le PLACEMENT, pas sur la matrice', async () => {
+    const { ctx, contenu } = contexte([], { boards: [] });
+
+    await createBoard(ctx, { name: 'Cuisine', universe_id: 'u1' });
+
+    expect(contenu.boards.at(-1)).not.toHaveProperty('universe_id');
+    expect(contenu.board_placements?.at(-1)).toMatchObject({ universe_id: 'u1' });
   });
 
   it('une tâche sans case va au parking « à trier »', async () => {

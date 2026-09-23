@@ -1,8 +1,8 @@
 import type { QuadrantKey } from './quadrants';
-import type { Attachment, Board, Task, TaskPatch, Universe } from './types';
+import type { Attachment, BoardRange, Task, TaskPatch, Universe } from './types';
 
 /**
- * Tout ce qui s'ordonne par position fractionnaire. `Task` et `Board` la
+ * Tout ce qui s'ordonne par position fractionnaire. `Task` et `BoardRange` la
  * satisfont : les helpers de position ci-dessous ne lisent que ces deux champs,
  * et les typer plus étroitement obligerait à dupliquer la logique pour les
  * matrices (cf. le réordonnancement de l'accueil).
@@ -211,7 +211,7 @@ export function partnerOf(tasks: Task[], task: Task): Task | null {
 export interface UniverseGroup {
   /** `null` = les matrices non rangées. Ce groupe est toujours le dernier. */
   universe: Universe | null;
-  boards: Board[];
+  boards: BoardRange[];
 }
 
 /**
@@ -229,7 +229,7 @@ export interface UniverseGroup {
  * aussi : une donnée incohérente ne doit jamais faire disparaître une matrice de
  * l'écran.
  */
-export function groupByUniverse(universes: Universe[], boards: Board[]): UniverseGroup[] {
+export function groupByUniverse(universes: Universe[], boards: BoardRange[]): UniverseGroup[] {
   const byPosition = <T extends Positioned>(a: T, b: T) => a.position - b.position;
   const ordered = [...universes].sort(byPosition);
   const known = new Set(ordered.map((u) => u.id));
@@ -254,7 +254,7 @@ export function groupByUniverse(universes: Universe[], boards: Board[]): Univers
  * l'utilisateur reconnaît — celui qu'il a lui-même posé — plutôt que dans
  * l'ordre de chargement.
  */
-export function orderedBoards(universes: Universe[], boards: Board[]): Board[] {
+export function orderedBoards(universes: Universe[], boards: BoardRange[]): BoardRange[] {
   return groupByUniverse(universes, boards).flatMap((g) => g.boards);
 }
 
@@ -279,7 +279,7 @@ export interface UniverseSummary {
  * Prend les matrices du groupe plutôt qu'un `universeId`, pour rester utilisable
  * sur le groupe « Sans univers », qui n'a pas d'identifiant.
  */
-export function summarizeUniverse(boards: Board[], tasks: Task[]): UniverseSummary {
+export function summarizeUniverse(boards: BoardRange[], tasks: Task[]): UniverseSummary {
   const ids = new Set(boards.map((b) => b.id));
   return {
     boards: boards.length,
@@ -289,7 +289,7 @@ export function summarizeUniverse(boards: Board[], tasks: Task[]): UniverseSumma
 
 /** Les tâches d'une case appartenant à une même matrice, en lignes prêtes à rendre. */
 export interface BoardGroup {
-  board: Board;
+  board: BoardRange;
   /** Lignes en retard (#19), à rendre en tête du groupe. */
   overdue: Task[][];
   rows: Task[][];
@@ -320,7 +320,7 @@ export interface BoardGroup {
  */
 export function groupTasksByBoard(
   tasks: Task[],
-  boards: Board[],
+  boards: BoardRange[],
   quad: QuadrantKey,
   pending?: string | null,
   now: number = Date.now(),
@@ -533,7 +533,7 @@ export interface BoardReorderPlan {
  * sait qu'insérer AVANT une cible, jamais après. Passer `group[to]` ferait
  * revenir la matrice exactement où elle était.
  */
-export function planBoardReorder(boards: Board[], board: Board, dir: -1 | 1): BoardReorderPlan | null {
+export function planBoardReorder(boards: BoardRange[], board: BoardRange, dir: -1 | 1): BoardReorderPlan | null {
   const group = boards
     .filter((b) => b.universe_id === board.universe_id)
     .sort((a, b) => a.position - b.position);

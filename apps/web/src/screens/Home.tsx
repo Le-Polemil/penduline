@@ -23,7 +23,8 @@ import { Confirm } from '../components/Confirm';
 import { dropTarget, gapIndexAt } from '../dnd/gap';
 import { ordinal, useAnnounce } from '../a11y/announce';
 import type { Scope } from './Global';
-import { OriginBadge } from '../components/OriginBadge';
+import { OriginBadge, SharedBadge } from '../components/OriginBadge';
+import { ShareModal } from '../components/ShareModal';
 
 /** Durée d'un appui long, alignée sur la convention des OS mobiles. */
 const LONG_PRESS_MS = 500;
@@ -128,6 +129,8 @@ export function Home({
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
   const [editingUni, setEditingUni] = useState<{ id: string; name: string } | null>(null);
   const [toDelete, setToDelete] = useState<string | null>(null);
+  /** La matrice dont le partage est ouvert (#53) — propriétaire ou invité. */
+  const [toShare, setToShare] = useState<string | null>(null);
   const [uniToDelete, setUniToDelete] = useState<string | null>(null);
   // Menu d'actions ouvert à l'appui long (tactile) : les actions au survol sont
   // inatteignables au doigt.
@@ -788,6 +791,7 @@ export function Home({
                               <span className="board-card__name">{board.name}</span>
                               <span className="board-card__meta">{meta}</span>
                               <span className="board-card__pills">
+                                <SharedBadge role={board.role} />
                                 <OriginBadge origin={board.origin} />
                                 {pills.map((p, i) => (
                                   <span key={i} className="pill" style={{ background: p.ink }}>
@@ -834,6 +838,14 @@ export function Home({
                                 }}
                                 onDelete={() => {
                                   setToDelete(board.id);
+                                  setMenuBoard(null);
+                                }}
+                                onShare={() => {
+                                  setToShare(board.id);
+                                  setMenuBoard(null);
+                                }}
+                                onLeave={() => {
+                                  setToShare(board.id);
                                   setMenuBoard(null);
                                 }}
                                 onClose={() => setMenuBoard(null)}
@@ -1004,6 +1016,18 @@ export function Home({
             </div>
           </div>
         );
+      })()}
+
+      {(() => {
+        const partagee = store.boards.find((b) => b.id === toShare);
+        return partagee ? (
+          <ShareModal
+            board={partagee}
+            store={store}
+            userId={store.userId}
+            onClose={() => setToShare(null)}
+          />
+        ) : null;
       })()}
 
       {doomed && (

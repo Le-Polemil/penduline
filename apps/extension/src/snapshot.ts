@@ -1,4 +1,4 @@
-import type { Board, Task, Universe } from '@penduline/shared';
+import type { Board, BoardPlacement, Task, Universe } from '@penduline/shared';
 
 /**
  * Le dernier état connu du compte, gardé sur le poste.
@@ -25,7 +25,13 @@ const KEY = 'penduline-snapshot';
  * par exemple des tâches sans échéance le temps d'un rafraîchissement, ce qui se
  * lit comme une perte de données.
  */
-const V = 2;
+const V = 3;
+//
+// v3 (#53) : `boards` perd `universe_id` et `position`, qui passent dans
+// `placements`, et `tasks` gagne `completed_by` tandis que `user_id` devient
+// `author_id`. Un instantané v2 peint tel quel afficherait des matrices SANS
+// AUCUN RANGEMENT — donc, avec la règle « pas de placement, pas d'affichage »,
+// un panneau vide. Exactement la perte de données que cette version prévient.
 
 /**
  * Au-delà d'une semaine, on préfère l'écran de chargement.
@@ -39,6 +45,8 @@ const TTL = 7 * 24 * 60 * 60 * 1000;
 export interface Snapshot {
   universes: Universe[];
   boards: Board[];
+  /** Le rangement personnel (#53) : sans lui, aucune matrice ne s'affiche. */
+  placements: BoardPlacement[];
   tasks: Task[];
 }
 
@@ -55,7 +63,7 @@ export async function readSnapshot(userId: string): Promise<Snapshot | null> {
     const e = res[KEY] as Enveloppe | undefined;
     if (!e || e.v !== V || e.userId !== userId) return null;
     if (Date.now() - e.at > TTL) return null;
-    return { universes: e.universes, boards: e.boards, tasks: e.tasks };
+    return { universes: e.universes, boards: e.boards, placements: e.placements, tasks: e.tasks };
   } catch {
     /* pas de chrome.storage (ex. aperçu web) */
   }

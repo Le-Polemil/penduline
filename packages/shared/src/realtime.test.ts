@@ -1,5 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { fusionner, identiques, retirer } from './realtime';
+import {
+  MAX_FILTRE_IN,
+  fusionner,
+  fusionnerMembre,
+  fusionnerPlacement,
+  identiques,
+  memeJeu,
+  retirer,
+  retirerMembre,
+  retirerPlacement,
+  tranches,
+} from './realtime';
+import type { BoardMember, BoardPlacement } from './types';
 
 /**
  * Ce que ces tests protègent, c'est **l'identité de référence** — pas le contenu
@@ -100,5 +112,122 @@ describe('retirer', () => {
   it('supporte une liste vide', () => {
     const vide: Ligne[] = [];
     expect(retirer(vide, 'a')).toBe(vide);
+  });
+});
+
+
+describe('tranches — le plafond de 100 du filtre `in`', () => {
+  it('rend une seule tranche en dessous du plafond', () => {
+    expect(tranches(['a', 'b', 'c'])).toEqual([['a', 'b', 'c']]);
+  });
+
+  it('découpe EXACTEMENT au plafond, et pas un de plus', () => {
+    // ⚠️ Le test qui compte. Au-delà de 100 valeurs,
+    // `realtime.subscription_check_filters` LÈVE et l'abonnement échoue en
+    // ENTIER — plus aucun temps réel, pas seulement les matrices en trop.
+    const ids = Array.from({ length: MAX_FILTRE_IN + 1 }, (_, i) => `b${i}`);
+    const lots = tranches(ids);
+    expect(lots).toHaveLength(2);
+    expect(lots[0]).toHaveLength(MAX_FILTRE_IN);
+    expect(lots[1]).toHaveLength(1);
+    expect(lots.every((l) => l.length <= MAX_FILTRE_IN)).toBe(true);
+  });
+
+  it('rend une liste vide pour un jeu vide — aucun filtre `in.()` ne sera produit', () => {
+    // `in.()` n'est pas un filtre valable. Le cas existe vraiment : un compte
+    // neuf, une seconde avant son premier chargement.
+    expect(tranches([])).toEqual([]);
+  });
+});
+
+describe('memeJeu — ce qui justifie un réabonnement, et ce qui n’en justifie pas', () => {
+  it('ignore l’ORDRE', () => {
+    // `load` trie par position : déplacer une matrice dans un univers change
+    // l'ordre sans rien changer à l'accès. Sans cette insensibilité, chaque
+    // glisser-déposer rouvrirait un WebSocket ET déclencherait le rechargement
+    // complet qui suit un réabonnement.
+    expect(memeJeu(['a', 'b', 'c'], ['c', 'a', 'b'])).toBe(true);
+  });
+
+  it('détecte une matrice qui ARRIVE', () => {
+    expect(memeJeu(['a', 'b'], ['a', 'b', 'c'])).toBe(false);
+  });
+
+  it('détecte une matrice qui PART', () => {
+    expect(memeJeu(['a', 'b', 'c'], ['a', 'b'])).toBe(false);
+  });
+
+  it('deux jeux vides sont le même jeu', () => {
+    expect(memeJeu([], [])).toBe(true);
+  });
+});
+
+describe('placements — la clé est composée, il n’y a pas d’`id`', () => {
+  const p = (board_id: string, position = 0): BoardPlacement => ({
+    board_id,
+    user_id: 'moi',
+    universe_id: null,
+    position,
+  });
+
+  it('ajoute un placement inconnu — une matrice vient d’être partagée', () => {
+    const avant = [p('a')];
+    const apres = fusionnerPlacement(avant, p('b'));
+    expect(apres).toHaveLength(2);
+    expect(apres).not.toBe(avant);
+  });
+
+  it('rend LA MÊME référence quand rien ne change', () => {
+    const avant = [p('a'), p('b')];
+    expect(fusionnerPlacement(avant, p('a'))).toBe(avant);
+  });
+
+  it('remplace le placement modifié — la matrice a changé d’univers', () => {
+    const avant = [p('a'), p('b')];
+    const apres = fusionnerPlacement(avant, { ...p('a'), universe_id: 'u1' });
+    expect(apres).not.toBe(avant);
+    expect(apres[0].universe_id).toBe('u1');
+    expect(apres[1]).toBe(avant[1]);
+  });
+
+  it('retire par `board_id` — un accès vient d’être révoqué', () => {
+    const avant = [p('a'), p('b')];
+    expect(retirerPlacement(avant, 'a')).toEqual([p('b')]);
+    expect(retirerPlacement(avant, 'inconnu')).toBe(avant);
+  });
+});
+
+describe('adhésions — voir son rôle changer sans recharger', () => {
+  const m = (board_id: string, role: 'lecture' | 'ecriture' = 'lecture'): BoardMember => ({
+    board_id,
+    user_id: 'moi',
+    role,
+    invited_by: 'elle',
+    created_at: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('promeut en place, sans toucher aux voisines', () => {
+    // ⚠️ Le test qui compte. Sans cette propagation, un invité promu en écriture
+    // continuerait de lire « Vous avez accès en lecture » sur des champs que la
+    // base, elle, accepterait : un refus motivé mais FAUX.
+    const avant = [m('a'), m('b')];
+    const apres = fusionnerMembre(avant, m('a', 'ecriture'));
+    expect(apres).not.toBe(avant);
+    expect(apres[0].role).toBe('ecriture');
+    expect(apres[1]).toBe(avant[1]);
+  });
+
+  it('rend LA MÊME référence quand rien ne change', () => {
+    const avant = [m('a')];
+    expect(fusionnerMembre(avant, m('a'))).toBe(avant);
+  });
+
+  it('retire sur les DEUX composantes de la clé', () => {
+    // Une adhésion s'identifie par `(board_id, user_id)` : retirer sur la seule
+    // matrice effacerait aussi celle d'un homonyme sur une autre ligne.
+    const autre: BoardMember = { ...m('a'), user_id: 'elle' };
+    const avant = [m('a'), autre];
+    expect(retirerMembre(avant, 'a', 'moi')).toEqual([autre]);
+    expect(retirerMembre(avant, 'a', 'inconnu')).toBe(avant);
   });
 });

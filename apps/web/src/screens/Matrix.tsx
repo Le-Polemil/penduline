@@ -21,7 +21,7 @@ import {
   subtasksOf,
   visibleTasks,
   type QuadrantKey,
-  type Board,
+  type BoardRange,
   type Quadrant,
   type Task,
   type TaskWrite,
@@ -34,6 +34,7 @@ import { BinModal } from '../components/BinModal';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
 import { useBinCount } from '../data/useBinCount';
+import { useMembres } from '../data/useMembres';
 import { useNow } from '../data/useNow';
 import { ordinal, useAnnounce } from '../a11y/announce';
 import type { Scope } from './Global';
@@ -59,7 +60,7 @@ export function MatrixScreen({
   openBin,
 }: {
   store: Store;
-  board: Board;
+  board: BoardRange;
   onHome: () => void;
   onSwitch: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
@@ -111,7 +112,7 @@ export function MatrixScreen({
   /** Renommage en place : `{ id, titre en cours de saisie }`. */
   const [renamingTask, setRenamingTask] = useState<{ id: string; title: string } | null>(null);
   /** Déplacement d'une paire vers une autre matrice, en attente de confirmation. */
-  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: Board } | null>(null);
+  const [moveAsk, setMoveAsk] = useState<{ task: Task; mate: Task; target: BoardRange } | null>(null);
   /** Suppression d'une tâche à étapes, en attente de confirmation. */
   const [delAsk, setDelAsk] = useState<Task | null>(null);
   /** La tâche dont le champ « attacher un lien » est ouvert. Une seule à la fois. */
@@ -129,6 +130,16 @@ export function MatrixScreen({
   const focusDay = localDay();
   const focusLimit = readFocusLimit();
   const binCount = useBinCount(store, [board.id]);
+
+  /**
+   * Qui est qui sur cette matrice (#53). Vide sur une matrice personnelle.
+   *
+   * ⚠️ `lectureSeule` porte le MOTIF, pas un booléen : un contrôle désactivé
+   * sans explication se lit comme un bug. La RLS refuserait de toute façon —
+   * l'interface rend seulement ce refus prévisible avant le geste.
+   */
+  const { nom } = useMembres(store, board);
+  const lectureSeule = board.role === 'lecture' ? 'Vous avez accès en lecture' : null;
 
   /**
    * Arrivée depuis la recherche : on amène la tâche sous les yeux.
@@ -206,7 +217,7 @@ export function MatrixScreen({
    * l'ordre est scopé à `(board_id, quadrant)`, la conserver produirait un
    * classement incohérent dans la matrice d'arrivée.
    */
-  function moveToBoard(task: Task, target: Board) {
+  function moveToBoard(task: Task, target: BoardRange) {
     const pos = endPosition(visibleTasks(tasks, target.id, task.quadrant));
     withVT(() => apply(`Déplacée vers « ${target.name} »`, planPairMove(tasks, task, { board_id: target.id }, pos)));
   }
@@ -217,7 +228,7 @@ export function MatrixScreen({
    * une seule mérite d'être annoncé : d'où la confirmation, **uniquement** dans
    * ce cas. La demander à chaque déplacement lasserait pour rien.
    */
-  function askMoveToBoard(task: Task, target: Board) {
+  function askMoveToBoard(task: Task, target: BoardRange) {
     setMenuTask(null);
     const mate = partnerOf(tasks, task);
     if (mate) setMoveAsk({ task, mate, target });
@@ -423,6 +434,13 @@ export function MatrixScreen({
           commit: commitTaskRename,
         }}
         onCheck={() => onCheck(t)}
+        lectureSeule={lectureSeule}
+        // Absent sur une matrice personnelle : l'auteur y est toujours soi.
+        attribution={
+          board.partagee
+            ? { auteur: nom(t.author_id), coche: nom(t.completed_by) }
+            : undefined
+        }
         onMoveQuad={(key) => menuMove(t.id, key)}
         onMoveBoard={(b) => askMoveToBoard(t, b)}
         onUnpair={() => unpair(t)}
@@ -692,6 +710,12 @@ export function MatrixScreen({
                 <input
                   className="add-input"
                   value={draft}
+                  // ⚠️ Désactivé EN PORTANT SON MOTIF (#53). Le champ reste
+                  // visible : le retirer laisserait croire que la matrice n'a
+                  // pas d'ajout, alors qu'elle en a un — pour d'autres.
+                  disabled={!!lectureSeule}
+                  placeholder={lectureSeule ?? undefined}
+                  title={lectureSeule ?? undefined}
                   onChange={(e) => setDrafts((d) => ({ ...d, [q.key]: e.target.value }))}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') addTask(q.key);
