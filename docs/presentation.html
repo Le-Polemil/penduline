@@ -113,6 +113,12 @@ html, body {
 }
 .slide.visible { opacity: 1; transform: none; }
 
+/* Le premier écran est visible au repos. Sans cette règle, une vignette, un
+   aperçu ou un rendu sans JS tombent sur une page blanche : l'observateur
+   d'intersection n'a pas encore tourné. */
+.slide:first-child,
+.slide:first-child .reveal { opacity: 1; transform: none; }
+
 /* Fond : halo chaud très discret, direction alternée. Pas de dégradé voyant —
    l'app s'interdit le blur et le gradient, le deck s'aligne. */
 .slide:nth-child(odd)  { background-image: radial-gradient(ellipse 70% 60% at 12% 88%, var(--accent-dim) 0%, transparent 62%); }
