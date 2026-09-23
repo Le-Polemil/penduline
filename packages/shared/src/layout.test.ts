@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  binOrder,
   buildRows,
   countOpen,
   endPosition,
@@ -36,6 +37,7 @@ import {
   summarizeUniverse,
   visibleTasks,
 } from './layout';
+import type { Task } from './types';
 import { makeAttachment, makeBoard, makeList, makeTask, makeUniverse } from './test-fixtures';
 
 /** Une liste est-elle strictement ordonnée ? Deux positions égales = ordre perdu. */
@@ -1074,5 +1076,92 @@ describe('échéances (#19)', () => {
     expect(Date.parse(utc)).toBe(Date.parse(paris));
     expect(deadlineStatus(utc, t0)).toBe(deadlineStatus(paris, t0));
     expect(toLocalInput(utc)).toBe(toLocalInput(paris));
+  });
+});
+
+describe('binOrder — le tri de la corbeille', () => {
+  const t = (over: Partial<Task> & { id: string }) => makeTask(over);
+
+  it('range la plus récemment cochée en TÊTE', () => {
+    const vieille = t({ id: 'vieille', done: true, completed_at: '2026-09-01T10:00:00.000Z' });
+    const recente = t({ id: 'recente', done: true, completed_at: '2026-09-22T08:14:00.000Z' });
+
+    expect(binOrder([vieille, recente]).map((x) => x.id)).toEqual(['recente', 'vieille']);
+  });
+
+  it("ignore l'ordre de création et de position — c'était tout le défaut", () => {
+    // Créée et positionnée en premier, mais cochée en dernier : elle doit
+    // remonter. Avant le correctif, la corbeille n'avait AUCUN tri et affichait
+    // l'ordre de chargement, c'est-à-dire `position`.
+    const premiere = t({
+      id: 'creee-avant',
+      position: 0,
+      created_at: '2026-01-01T00:00:00.000Z',
+      done: true,
+      completed_at: '2026-09-22T09:00:00.000Z',
+    });
+    const seconde = t({
+      id: 'creee-apres',
+      position: 9,
+      created_at: '2026-09-20T00:00:00.000Z',
+      done: true,
+      completed_at: '2026-09-21T09:00:00.000Z',
+    });
+
+    expect(binOrder([premiere, seconde]).map((x) => x.id)).toEqual(['creee-avant', 'creee-apres']);
+  });
+
+  it("ne bouge pas quand la tâche est retouchée APRÈS son cochage", () => {
+    // Le cas qui justifie la colonne : renommer une tâche déjà rangée écrit
+    // `updated_at`, et la ferait remonter si on triait dessus.
+    const renommee = t({
+      id: 'renommee',
+      done: true,
+      completed_at: '2026-09-01T10:00:00.000Z',
+      updated_at: '2026-09-22T23:00:00.000Z',
+    });
+    const autre = t({
+      id: 'autre',
+      done: true,
+      completed_at: '2026-09-15T10:00:00.000Z',
+      updated_at: '2026-09-15T10:00:00.000Z',
+    });
+
+    expect(binOrder([renommee, autre]).map((x) => x.id)).toEqual(['autre', 'renommee']);
+  });
+
+  it("classe une SUPPRIMÉE à sa suppression, pas à son cochage", () => {
+    // Elle est entrée dans « Supprimées » à sa suppression : c'est cette date
+    // qui la situe dans la liste où on la voit.
+    const supprimee = t({
+      id: 'supprimee',
+      done: true,
+      deleted: true,
+      completed_at: '2026-09-01T10:00:00.000Z',
+      updated_at: '2026-09-22T10:00:00.000Z',
+    });
+    const cochee = t({
+      id: 'cochee',
+      done: true,
+      completed_at: '2026-09-10T10:00:00.000Z',
+    });
+
+    expect(binOrder([supprimee, cochee]).map((x) => x.id)).toEqual(['supprimee', 'cochee']);
+  });
+
+  it("retombe sur `updated_at` pour une ligne sans date de cochage", () => {
+    const ancienne = t({ id: 'ancienne', done: true, completed_at: null, updated_at: '2026-09-05T10:00:00.000Z' });
+    const datee = t({ id: 'datee', done: true, completed_at: '2026-09-04T10:00:00.000Z' });
+
+    expect(binOrder([ancienne, datee]).map((x) => x.id)).toEqual(['ancienne', 'datee']);
+  });
+
+  it("ne modifie pas le tableau qu'on lui passe", () => {
+    const liste = [
+      t({ id: 'a', done: true, completed_at: '2026-09-01T10:00:00.000Z' }),
+      t({ id: 'b', done: true, completed_at: '2026-09-02T10:00:00.000Z' }),
+    ];
+    binOrder(liste);
+    expect(liste.map((x) => x.id)).toEqual(['a', 'b']);
   });
 });

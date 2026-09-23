@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties, type DragEvent } from 'react';
 import {
+  binOrder,
   ALL,
   buildRows,
   countOpen,
@@ -345,8 +346,11 @@ export function MatrixScreen({
   // ici : invisible ET irrécupérable. « Rétablir » la normalise au passage.
   // La corbeille liste des TÂCHES. Une étape n'y figure pas seule : hors de son
   // parent elle n'a plus de sens, et elle revient avec lui (`planRestore`).
-  const doneList = boardTasks.filter((t) => t.done && !t.deleted && !t.parent_id);
-  const delList = boardTasks.filter((t) => t.deleted && !t.parent_id);
+  // La plus récente d'abord : une corbeille se lit par le haut, pour rattraper
+  // ce qu'on vient de faire. Le tri vit dans `layout.ts` — la vue globale affiche
+  // la même liste et ne doit pas en tenir une seconde copie.
+  const doneList = binOrder(boardTasks.filter((t) => t.done && !t.deleted && !t.parent_id));
+  const delList = binOrder(boardTasks.filter((t) => t.deleted && !t.parent_id));
 
   /**
    * Une carte, câblée sur l'état local de l'écran.
