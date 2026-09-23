@@ -10,6 +10,13 @@ interface ImportMetaEnv {
    * par défaut qui aurait du sens.
    */
   readonly VITE_EXTENSION_ID?: string;
+  /**
+   * URL publique du serveur MCP (#23), vers laquelle l'écran de consentement
+   * poste la décision. Optionnelle : sans elle, l'écran le dit franchement
+   * plutôt que d'échouer en silence — une installation sans serveur MCP reste
+   * parfaitement utilisable.
+   */
+  readonly VITE_MCP_URL?: string;
 }
 interface ImportMeta {
   readonly env: ImportMetaEnv;

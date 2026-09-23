@@ -567,3 +567,82 @@ sur le Store, et le front alors servi (0.0.27) ne lisait déjà plus `pinned`. C
 exactement l'ordre que le garde-fou posé dans la migration réclamait — l'inverse
 de celui du workflow. Le front est passé en 0.0.30 juste après, avec
 `migrations=ignorer`.
+
+## La ressource MCP (#23, 2026-09-17)
+
+Une **nouvelle ressource**, plus un enregistrement DNS, plus un build arg sur la
+ressource web. Rien d'autre : le serveur MCP est un process, une image, un
+domaine — `edge-functions` reste retiré du compose, et les tables
+`oauth_clients` / `oauth_grants` arrivent par migration comme les autres.
+
+### Type de ressource : « Docker Image », et cette fois c'est gratuit
+
+La bascule n'a jamais été faite pour l'app web parce qu'elle imposait de
+recréer la ressource et de lui transférer le domaine. La ressource MCP, elle,
+n'existe pas encore : le bon choix ne coûte rien.
+
+L'argument est le même que pour le web, en plus fort — la machine s'est
+effondrée **deux fois** pendant un build, et une ressource en source git
+recompile sur l'hôte. L'image est déjà produite par la CI depuis `main`, sans
+aucun build arg :
+
+```
+ghcr.io/le-polemil/penduline-mcp:latest
+```
+
+### Le domaine, avec son port
+
+`mcp.penduline.polemil.dev`, écrit en syntaxe Coolify `fqdn:port` —
+`https://mcp.penduline.polemil.dev:8787` — sinon Traefik ne sait pas vers quel
+port du conteneur router. Même piège que Kong et son `:8000`.
+
+⚠️ **Enregistrement DNS dédié obligatoire.** Le wildcard `*.polemil.dev` ne
+matche qu'**un seul** label : il ne couvre pas `mcp.penduline.polemil.dev`, pas
+plus qu'il ne couvrait `api.penduline.polemil.dev`.
+
+### Les variables, toutes runtime
+
+C'est la différence avec la ressource web, et elle est structurelle : rien n'est
+inliné dans un bundle ici. Changer une variable est un **redémarrage**, pas un
+rebuild.
+
+| Variable | Valeur |
+|---|---|
+| `SUPABASE_URL` | `https://api.penduline.polemil.dev:8000` |
+| `SUPABASE_ANON_KEY` | la clé anon (Kong exige l'en-tête `apikey`) |
+| `SUPABASE_JWT_SECRET` | 🔒 celui de l'instance Supabase |
+| `MCP_TOKEN_SECRET` | 🔒 **à générer, DISTINCT du précédent** |
+| `MCP_PUBLIC_URL` | `https://mcp.penduline.polemil.dev` |
+| `WEB_APP_URL` | `https://penduline.polemil.dev` |
+| `PORT` | `8787` (celui repris dans le domaine) |
+| `MCP_QUOTA_CALLS_PER_MINUTE` | facultatif, 60 par défaut |
+| `MCP_QUOTA_WRITES_PER_DAY` | facultatif, 500 par défaut |
+
+**Les deux secrets DOIVENT différer**, et le serveur refuse de démarrer sinon.
+Ce n'est pas une précaution de style : un jeton d'accès MCP signé avec le secret
+de Supabase serait accepté par PostgREST, et n'importe quel client pourrait alors
+court-circuiter le serveur — donc les outils, le quota et la révocation.
+
+Une configuration incomplète ne démarre pas non plus : le process sort en
+listant d'un coup tout ce qui manque. Vérifié en conteneur.
+
+### Sur la ressource WEB : un build arg de plus
+
+```
+VITE_MCP_URL=https://mcp.penduline.polemil.dev
+```
+
+⚠️ **Build arg, donc rebuild.** Un restart n'aura aucun effet — Vite l'inline.
+Et le `ARG` doit exister dans le Dockerfile, sinon la poser dans Coolify ne sert
+strictement à rien : c'est exactement ce qui s'est passé avec `VITE_EXTENSION_ID`
+à la livraison de #107.
+
+Son absence ne casse rien : l'application reste entière, seul l'écran de
+consentement dit qu'il ne peut pas travailler. Ce qui la rend, elle aussi, facile
+à oublier.
+
+### Mémoire
+
+Un process Node, ~80 à 150 Mo. La marge existe depuis le dégraissage de Supabase
+(~1,5 Go disponibles), et la ressource ne compile rien sur l'hôte si elle est en
+« Docker Image ». C'est le deuxième argument pour ce type de ressource.

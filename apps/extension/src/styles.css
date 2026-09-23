@@ -304,6 +304,15 @@ input::placeholder { color: inherit; opacity: 0.55; }
 }
 .due--soon { background: var(--color-accent-100); color: var(--color-accent-800); }
 .due--overdue { background: #f7e4e0; color: #a63d2a; }
+
+/* « agent » (#23) — mêmes valeurs que le web. Les deux feuilles sont distinctes
+   par construction (le popup n'hérite pas de celle du web) : les garder alignées
+   à la main est le prix déjà payé pour `.due`. */
+.agent-badge {
+  flex: none; font: 600 9.5px/1 var(--font-body); white-space: nowrap;
+  padding: 3px 7px; border-radius: 999px;
+  background: #ece7f5; color: #5b4a86;
+}
 .task--overdue { border-color: #a63d2a; }
 
 .due-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 0 0 23px; }
