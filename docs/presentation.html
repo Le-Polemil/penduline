@@ -740,14 +740,14 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   <p class="s-label reveal" style="--i:0">Où en est le projet</p>
   <h2 class="s-heading reveal" style="--i:1">Trois mois de développement</h2>
   <div class="kpis reveal" style="--i:2; margin-top: clamp(14px, 2.4vh, 28px);">
-    <div class="kpi"><div class="kpi__val">60</div><div class="kpi__label">PR fusionnées</div></div>
-    <div class="kpi kpi--sage"><div class="kpi__val">46</div><div class="kpi__label">Tickets fermés</div></div>
-    <div class="kpi"><div class="kpi__val">13</div><div class="kpi__label">Migrations SQL</div></div>
-    <div class="kpi kpi--sage"><div class="kpi__val">214</div><div class="kpi__label">Tests unitaires</div></div>
-    <div class="kpi kpi--ink"><div class="kpi__val">16 k</div><div class="kpi__label">Lignes TS / TSX</div></div>
-    <div class="kpi kpi--ink"><div class="kpi__val">45</div><div class="kpi__label">Tickets ouverts</div></div>
+    <div class="kpi"><div class="kpi__val">63</div><div class="kpi__label">PR fusionnées</div></div>
+    <div class="kpi kpi--sage"><div class="kpi__val">47</div><div class="kpi__label">Tickets fermés</div></div>
+    <div class="kpi"><div class="kpi__val">21</div><div class="kpi__label">Migrations SQL</div></div>
+    <div class="kpi kpi--sage"><div class="kpi__val">406</div><div class="kpi__label">Tests unitaires</div></div>
+    <div class="kpi kpi--ink"><div class="kpi__val">23 k</div><div class="kpi__label">Lignes TS / TSX</div></div>
+    <div class="kpi kpi--ink"><div class="kpi__val">48</div><div class="kpi__label">Tickets ouverts</div></div>
   </div>
-  <p class="s-body reveal" style="--i:3; margin-top: clamp(14px, 2.4vh, 26px);">Les tests couvrent <code>packages/shared</code>, où vit la logique pure — ordre fractionnaire, paires, seuils. Le rendu se vérifie à l'œil : ni test de composant, ni E2E, délibérément.</p>
+  <p class="s-body reveal" style="--i:3; margin-top: clamp(14px, 2.4vh, 26px);">Les tests couvrent la logique pure — ordre fractionnaire, paires, seuils — et, depuis le serveur MCP, son parcours OAuth. Le rendu se vérifie à l'œil : ni test de composant, ni E2E, délibérément.</p>
 </section>
 
 <!-- 09 — Les six vagues -->
@@ -762,8 +762,8 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
         <tr><td class="k">Vague 1 — Quick wins</td><td>Renommer, déplacer, réordonner, capture, appairage</td><td><span class="chip chip--done">9 / 9</span></td></tr>
         <tr><td class="k">Vague 2 — Structure</td><td>Univers, vue globale, recherche, temps réel, Ctrl+Z, étapes, liens</td><td><span class="chip chip--done">14 / 14</span></td></tr>
         <tr><td class="k">Vague 3 — Le temps</td><td>Échéances, revue périodique, statistiques, mode « aujourd'hui »</td><td><span class="chip chip--open">6 / 16</span></td></tr>
-        <tr><td class="k">Vague 4 — Ouverture</td><td>Serveur MCP <em>(en revue)</em>, point d'entrée HTTP, i18n, import, iCal</td><td><span class="chip chip--open">0 / 13</span></td></tr>
-        <tr><td class="k">Vague 5 — Lourd</td><td>Hors-ligne, partage d'une matrice <em>(en revue)</em>, nouvel onglet</td><td><span class="chip chip--open">0 / 7</span></td></tr>
+        <tr><td class="k">Vague 4 — Ouverture</td><td>Serveur MCP <em>(livré)</em>, point d'entrée HTTP, i18n, import, iCal</td><td><span class="chip chip--open">0 / 13</span></td></tr>
+        <tr><td class="k">Vague 5 — Lourd</td><td>Hors-ligne, partage d'une matrice <em>(livré)</em>, relier deux tâches, nouvel onglet</td><td><span class="chip chip--open">1 / 11</span></td></tr>
         <tr><td class="k">Vague 6 — La capture</td><td>Partage mobile, langage naturel, dictée, dépôt d'URL</td><td><span class="chip chip--open">0 / 6</span></td></tr>
       </tbody>
     </table>
@@ -1010,7 +1010,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
 <section class="slide slide--split">
   <div class="panels">
     <div class="panel panel--a">
-      <p class="s-label reveal" style="--i:0">#23 — en revue</p>
+      <p class="s-label reveal" style="--i:0">#23 — livré</p>
       <h2 class="s-heading reveal" style="--i:1">Les matrices, ouvertes aux agents</h2>
       <ul class="bullets" style="margin-top: clamp(6px, 1.2vh, 14px);">
         <li class="reveal" style="--i:2"><strong>Neuf outils</strong> : lire les univers, les matrices et les tâches ; créer une matrice ; créer, modifier, déplacer et cocher une tâche.</li>
@@ -1032,7 +1032,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
 
 <!-- 23 — Partager une matrice -->
 <section class="slide">
-  <p class="s-label reveal" style="--i:0">#53 — en revue</p>
+  <p class="s-label reveal" style="--i:0">#53 — livré</p>
   <h2 class="s-heading reveal" style="--i:1">Partager une matrice</h2>
   <div class="cards cards--3" style="margin-top: clamp(14px, 2.4vh, 28px);">
     <div class="card reveal" style="--i:2">
@@ -1079,7 +1079,7 @@ table.t td small { display: block; color: var(--text-faint); font-size: .84em; m
   <div class="cards cards--4" style="margin-top: clamp(14px, 2.4vh, 28px);">
     <div class="card reveal" style="--i:2"><div class="card__kicker">Vague 6</div><p class="card__title">La capture</p><p class="card__body">Partage mobile Android / iOS, langage naturel à la saisie, dictée, dépôt d'une URL sur une case, omnibox.</p></div>
     <div class="card reveal" style="--i:3; border-top-color: var(--q-planifier);"><div class="card__kicker">Vague 4</div><p class="card__title">Ouverture</p><p class="card__body">Point d'entrée HTTP, flux iCal, import, internationalisation, palette de commandes.</p></div>
-    <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);"><div class="card__kicker">Vague 5</div><p class="card__title">Lourd</p><p class="card__body">Mode hors-ligne en trois temps, page « nouvel onglet ».</p></div>
+    <div class="card reveal" style="--i:4; border-top-color: var(--q-deleguer);"><div class="card__kicker">Vague 5</div><p class="card__title">Lourd</p><p class="card__body">Relier deux tâches par un déclencheur, mode hors-ligne en trois temps, page « nouvel onglet ».</p></div>
     <div class="card reveal" style="--i:5; border-top-color: var(--q-eliminer);"><div class="card__kicker">En réflexion</div><p class="card__title">Gamification</p><p class="card__body">Quatre maquettes explorées : le nid comme jauge de santé du tableau, des badges. Rien n'est tranché.</p></div>
   </div>
 </section>
