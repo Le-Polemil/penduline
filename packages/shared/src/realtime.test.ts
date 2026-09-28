@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import type { SupabaseClient } from '@supabase/supabase-js';
+import { subscribeRealtime } from './realtime';
 import {
   MAX_FILTRE_IN,
   fusionner,
@@ -229,5 +231,88 @@ describe('adhésions — voir son rôle changer sans recharger', () => {
     const avant = [m('a'), autre];
     expect(retirerMembre(avant, 'a', 'moi')).toEqual([autre]);
     expect(retirerMembre(avant, 'a', 'inconnu')).toBe(avant);
+  });
+});
+
+/**
+ * Une doublure de client Supabase réduite à ce que `subscribeRealtime` touche :
+ * ouvrir un canal, y accrocher des écoutes, s'abonner. L'état du canal et celui
+ * du socket sont pilotés depuis le test — c'est tout l'objet.
+ */
+function fauxClient() {
+  const canal = {
+    state: 'closed' as string,
+    on() {
+      return canal;
+    },
+    subscribe(cb?: (statut: string) => void) {
+      canal.state = 'joined';
+      cb?.('SUBSCRIBED');
+      return canal;
+    },
+  };
+  const client = {
+    channel: () => canal,
+    removeChannel: () => Promise.resolve('ok'),
+    realtime: { connecte: true, isConnected: () => client.realtime.connecte },
+  };
+  return { client: client as unknown as SupabaseClient, canal, socket: client.realtime };
+}
+
+const sinkNul = () => ({
+  setTasks: () => {},
+  setBoards: () => {},
+  setUniverses: () => {},
+  admits: () => true,
+  reload: async () => {},
+});
+
+describe('vivant() — l’état RÉEL du flux, pas le dernier statut rapporté', () => {
+  it('dit vrai quand le canal est joint et le socket connecté', () => {
+    const { client } = fauxClient();
+    const h = subscribeRealtime(client, 'moi', ['b1'], sinkNul);
+    expect(h.vivant()).toBe(true);
+  });
+
+  it('⚠️ dit FAUX sur un socket mort, même après un SUBSCRIBED rapporté', () => {
+    // LE TEST DE RÉGRESSION DU 28 SEPTEMBRE.
+    //
+    // Le panneau gardait un drapeau nourri par `onLive`. Sur un poste au repos,
+    // le battement de cœur bridé cessait, le serveur fermait la connexion, et
+    // AUCUN statut n'était rapporté : le drapeau restait `true`, et tous les
+    // rattrapages — gardés par `if (live) return` — sortaient sans rien faire.
+    //
+    // On reproduit exactement ça : un `SUBSCRIBED` a bien été rapporté, puis le
+    // socket meurt en silence. `onLive` n'en saura jamais rien ; `vivant()`, si.
+    const { client, socket } = fauxClient();
+    let dernierStatut: boolean | null = null;
+    const h = subscribeRealtime(client, 'moi', ['b1'], sinkNul, {
+      onLive: (l) => {
+        dernierStatut = l;
+      },
+    });
+
+    socket.connecte = false; // le socket meurt, sans fermeture propre
+
+    expect(dernierStatut).toBe(true); // le drapeau ment, et c'est normal
+    expect(h.vivant()).toBe(false); // l'interrogation, elle, ne ment pas
+  });
+
+  it('dit faux quand le canal est tombé en erreur', () => {
+    const { client, canal } = fauxClient();
+    const h = subscribeRealtime(client, 'moi', ['b1'], sinkNul);
+    canal.state = 'errored';
+    expect(h.vivant()).toBe(false);
+  });
+
+  it('dit faux sur un jeu de matrices vide — aucune table scopée abonnée', () => {
+    // Un compte neuf, une seconde avant son premier chargement : le canal
+    // s'ouvre quand même (universes et placements y sont abonnés), donc il est
+    // vivant. Le test fixe le comportement plutôt que de le laisser au hasard.
+    const { client, canal } = fauxClient();
+    const h = subscribeRealtime(client, 'moi', [], sinkNul);
+    expect(h.vivant()).toBe(true);
+    canal.state = 'closed';
+    expect(h.vivant()).toBe(false);
   });
 });

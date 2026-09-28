@@ -239,9 +239,12 @@ function PanelApp({ userId }: { userId: string }) {
       premierRendu.current = false;
       return;
     }
-    if (store.live) return;
+    // ⚠️ `store.verifier()` et non `store.live` : le drapeau dit quel a été le
+    // dernier statut RAPPORTÉ, et sur un socket mort sans fermeture propre il
+    // n'en arrive aucun. Interroger relance l'abonnement si besoin.
+    if (store.verifier()) return;
     store.refresh();
-  }, [screen, boardId, store.ready, store.live, store.refresh]);
+  }, [screen, boardId, store.ready, store.verifier, store.refresh]);
 
   /**
    * Et au retour de visibilité — même repli, même condition.
@@ -250,22 +253,28 @@ function PanelApp({ userId }: { userId: string }) {
    * fenêtre sans se démonter : on peut le retrouver après une heure SANS changer
    * de vue, donc sans déclencher la relecture ci-dessus.
    *
-   * ⚠️ `store.live` est lu dans une REF et non capturé dans la fermeture :
-   * l'écouteur est posé une fois, et une fermeture le figerait sur l'état du
-   * canal au montage — c'est-à-dire `false`, puisque la souscription n'a pas
-   * encore abouti. Le repli s'exécuterait alors pour toujours, canal ou pas.
+   * ⚠️ **C'est ici que le bug du 28 septembre se logeait.** La condition était
+   * `if (liveRef.current) return` — un drapeau nourri par `onLive`, donc par le
+   * dernier statut rapporté par la bibliothèque. Or sur un poste au repos, le
+   * battement de cœur bridé cessait, le serveur fermait la connexion, et AUCUN
+   * statut n'était rapporté : le drapeau restait `true`, le repli sortait sans
+   * rien faire, et le panneau affichait un état figé jusqu'à ce qu'on le
+   * referme. Un filet de sécurité suspendu au seul signal que la panne empêche
+   * de mettre à jour.
+   *
+   * `verifier()` interroge l'état réel du canal et du socket, et relance
+   * l'abonnement s'il ne tient plus. Les deux fonctions passent par le store,
+   * qui les garde stables : plus de ref à tenir à jour ici.
    */
-  const liveRef = useRef(store.live);
-  liveRef.current = store.live;
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState !== 'visible') return;
-      if (liveRef.current) return;
+      if (store.verifier()) return;
       store.refresh();
     }
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
-  }, [store.refresh]);
+  }, [store.verifier, store.refresh]);
 
   // Le service worker a besoin de la liste des matrices pour construire son menu
   // contextuel, qui doit être enregistré AVANT tout clic droit. Plutôt que de le

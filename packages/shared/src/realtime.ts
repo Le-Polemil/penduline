@@ -50,6 +50,25 @@ export interface RealtimeSink {
   reload: () => Promise<void>;
 }
 
+/**
+ * Ce que rend `subscribeRealtime` : de quoi couper, et de quoi VÉRIFIER.
+ *
+ * Un objet plutôt qu'une simple fonction de désabonnement, parce que l'hôte a
+ * besoin des deux — et que le second manquait, ce qui a laissé passer un flux
+ * mort pendant des heures sans que rien ne le rattrape.
+ */
+export interface RealtimeHandle {
+  /** Coupe l'abonnement et ferme le canal. */
+  stop: () => void;
+  /**
+   * Le flux tient-il encore, MAINTENANT ? Interrogé, jamais mémorisé.
+   *
+   * C'est sur lui qu'un hôte décide de se réabonner et de recharger — pas sur
+   * le dernier `onLive` reçu, qui peut dater d'avant la mort du socket.
+   */
+  vivant: () => boolean;
+}
+
 /** Options de l'abonnement. Tout y est facultatif. */
 export interface RealtimeOptions {
   /**
@@ -255,7 +274,21 @@ export function retirerMembre(
  *   vide n'abonne aucune table scopée — `in.()` n'est pas un filtre valable, et
  *   ce cas existe vraiment : un compte neuf, une seconde avant son premier
  *   chargement.
- * @returns la fonction de désabonnement.
+ * ── POURQUOI CETTE FONCTION REND UN OBJET, ET PLUS UN `stop` ────────────────
+ *
+ * ⚠️ `onLive` dit ce qu'a été le DERNIER statut rapporté — pas si le flux est
+ * vivant maintenant. La nuance a coûté un vrai bug : un panneau laissé ouvert
+ * en arrière-plan voyait son socket mourir sans qu'aucun statut ne soit
+ * rapporté (le battement bridé était justement ce qui devait le détecter).
+ * `live` restait donc `true`, et les rattrapages de l'hôte — tous gardés par
+ * `if (live) return` — ne se déclenchaient jamais. Un filet de sécurité
+ * suspendu à un signal que seule la chose cassée peut mettre à jour.
+ *
+ * D'où `vivant()` : il INTERROGE l'état réel du canal et du socket au moment où
+ * on l'appelle, au lieu de rendre une valeur mémorisée. `onLive` reste utile
+ * pour réagir à une bascule ; `vivant()` est ce sur quoi on décide.
+ *
+ * @returns de quoi couper l'abonnement, et de quoi savoir s'il tient encore.
  */
 export function subscribeRealtime(
   client: SupabaseClient,
@@ -263,7 +296,7 @@ export function subscribeRealtime(
   boardIds: string[],
   getSink: () => RealtimeSink,
   options: RealtimeOptions = {},
-): () => void {
+): RealtimeHandle {
   /**
    * A-t-on déjà été abonné une fois ?
    *
@@ -426,7 +459,22 @@ export function subscribeRealtime(
     dejaAbonne = true;
   });
 
-  return () => {
-    void client.removeChannel(canal);
+  return {
+    stop: () => {
+      void client.removeChannel(canal);
+    },
+    /**
+     * Le canal délivre-t-il encore ? Mesuré, pas mémorisé.
+     *
+     * Les deux conditions comptent, et aucune ne suffit seule : un canal peut
+     * rester `joined` sur un socket fermé, et un socket peut être ouvert pendant
+     * qu'un canal est en erreur.
+     *
+     * ⚠️ Ce n'est pas une certitude absolue — un socket dont la connexion est
+     * morte sans fermeture propre reste `OPEN` jusqu'à ce que le navigateur s'en
+     * aperçoive. C'est le battement de cœur (`heartbeatWorkerUrl`) qui rend ce
+     * constat fiable ; `vivant()` sans lui rattrape moins de cas.
+     */
+    vivant: () => canal.state === 'joined' && client.realtime.isConnected(),
   };
 }

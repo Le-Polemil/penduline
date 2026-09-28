@@ -115,11 +115,12 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
     // raison étrangère au code testé. La première version de ce fichier
     // patientait 2,5 s en dur, et l'INSERT était bel et bien manqué.
     let live = false;
-    stop = subscribeRealtime(abonne, userId, [boardId], () => sink, {
+    const abonnement = subscribeRealtime(abonne, userId, [boardId], () => sink, {
       onLive: (l: boolean) => {
         live = l;
       },
     });
+    stop = abonnement.stop;
     if (!(await attendre(() => live, 15000))) {
       throw new Error('la souscription n’a jamais abouti — service Realtime éteint ?');
     }
@@ -208,7 +209,7 @@ describe.skipIf(!ACTIF)('temps réel, contre un Supabase réel', () => {
       appels += 1;
     };
     let live = false;
-    const arret = subscribeRealtime(
+    const { stop: arret, vivant } = subscribeRealtime(
       tiers,
       tiersId,
       // ⚠️ Le jeu du TIERS, et non celui de l'hôte : c'est tout l'objet du test.

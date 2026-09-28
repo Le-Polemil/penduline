@@ -4,6 +4,7 @@ import {
   isSafeUrl,
   normalizeUrl,
   subscribeRealtime,
+  type RealtimeHandle,
   type RealtimeSink,
 } from '@penduline/shared';
 import type { QuadrantKey, Board, BoardPlacement, BoardRange, Task, TaskPatch, Universe } from '@penduline/shared';
@@ -41,6 +42,14 @@ export interface ExtStore {
    * socket est down — hors ligne, ou WebSocket bloqué par un proxy.
    */
   live: boolean;
+  /**
+   * Le flux tient-il encore ? **Interrogé**, pas lu dans `live`.
+   *
+   * Rend `false` et relance l'abonnement s'il ne tient plus. C'est là-dessus
+   * qu'un écran décide de recharger — jamais sur `live`, qui peut dater d'avant
+   * la mort du socket.
+   */
+  verifier: () => boolean;
   /**
    * Relit univers, matrices et tâches SANS repasser par l'écran de chargement.
    *
@@ -341,6 +350,12 @@ export function useExtStore(userId: string): ExtStore {
     [placements],
   );
   const premierAbonnement = useRef(true);
+  /**
+   * Le tour de l'abonnement : l'incrémenter en reconstruit un neuf, et le
+   * réabonnement recharge derrière. Un seul levier de reprise, réemployé.
+   */
+  const [tour, setTour] = useState(0);
+  const abonnement = useRef<RealtimeHandle | null>(null);
 
   useEffect(() => {
     // `subscribeRealtime` prend un GETTER : il relit le sink à chaque événement,
@@ -348,11 +363,34 @@ export function useExtStore(userId: string): ExtStore {
     const ids = cleMatrices ? cleMatrices.split(',') : [];
     const rechargerDesLAbonnement = !premierAbonnement.current;
     premierAbonnement.current = false;
-    return subscribeRealtime(supabase, userId, ids, () => sink.current, {
+    const h = subscribeRealtime(supabase, userId, ids, () => sink.current, {
       onLive: setLive,
       rechargerDesLAbonnement,
     });
-  }, [userId, cleMatrices]);
+    abonnement.current = h;
+    return () => {
+      abonnement.current = null;
+      h.stop();
+    };
+  }, [userId, cleMatrices, tour]);
+
+  /**
+   * ⚠️ **Le flux tient-il ENCORE ?** Interrogé, jamais lu dans `live`.
+   *
+   * `live` dit quel a été le dernier statut rapporté. Sur un socket mort sans
+   * fermeture propre — minuteurs bridés, veille, réseau changé — aucun statut
+   * n'est rapporté : `live` reste `true` et tout rattrapage gardé par lui sort
+   * sans rien faire. C'est exactement ce qui a laissé le panneau afficher un
+   * état figé pendant des heures.
+   *
+   * Si le flux ne tient plus, on reconstruit l'abonnement : il rouvre le canal
+   * ET recharge, ce qui couvre les deux moitiés du problème d'un seul geste.
+   */
+  const verifier = useCallback(() => {
+    if (abonnement.current?.vivant()) return true;
+    setTour((n) => n + 1);
+    return false;
+  }, []);
 
   /** La matrice telle que le panneau la voit : la matrice ET son rangement. */
   const matrices = useMemo<BoardRange[]>(() => {
@@ -471,5 +509,5 @@ export function useExtStore(userId: string): ExtStore {
     [persist],
   );
 
-  return { ready, live, universes, boards: matrices, tasks, addBoard, addTask, captureTask, patchTask, refresh };
+  return { ready, live, verifier, universes, boards: matrices, tasks, addBoard, addTask, captureTask, patchTask, refresh };
 }
