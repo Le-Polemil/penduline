@@ -10,4 +10,13 @@ if (!url || !anonKey) {
 }
 
 // Web : persistance par défaut (localStorage), aucun adaptateur requis.
-export const supabase = createSupabase({ url, anonKey });
+//
+// ⚠️ Le battement de cœur passe par un Web Worker (`public/penduline-heartbeat.js`).
+// Sans lui, un onglet laissé en arrière-plan voit ses minuteurs bridés : le
+// battement cesse, le serveur ferme la connexion, et le client ne le détecte
+// pas — l'abonnement se croit établi et ne délivre plus rien.
+export const supabase = createSupabase({
+  url,
+  anonKey,
+  heartbeatWorkerUrl: '/penduline-heartbeat.js',
+});

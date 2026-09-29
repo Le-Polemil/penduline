@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useRef } from 'react';
-import { subscribeRealtime, type RealtimeSink } from '@penduline/shared';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { subscribeRealtime, type RealtimeHandle, type RealtimeSink } from '@penduline/shared';
 import { supabase } from '../lib/supabase';
 
 export type { RealtimeSink };
@@ -30,13 +30,22 @@ export function useRealtime(userId: string, boardIds: string[], sink: RealtimeSi
   /**
    * La clé qui décide d'un réabonnement — **triée**, donc insensible à l'ordre.
    *
-   * Le filtre serveur porte désormais le jeu de matrices accessibles (#53), et
-   * un jeu qui change impose de rouvrir le canal. Mais `boards` est trié par
-   * position : sans ce tri, ranger une matrice dans un univers rouvrirait un
-   * WebSocket **et** déclencherait le rechargement complet qui suit tout
-   * réabonnement — à chaque glisser-déposer.
+   * Le filtre serveur porte le jeu de matrices accessibles (#53), et un jeu qui
+   * change impose de rouvrir le canal. Mais `boards` est trié par position :
+   * sans ce tri, ranger une matrice dans un univers rouvrirait un WebSocket
+   * **et** déclencherait le rechargement complet qui suit tout réabonnement — à
+   * chaque glisser-déposer.
    */
   const cle = useMemo(() => [...boardIds].sort().join(','), [boardIds]);
+
+  /**
+   * Le tour de l'abonnement. L'incrémenter en reconstruit un neuf.
+   *
+   * C'est le seul levier de reprise dont l'hôte a besoin : un réabonnement
+   * rouvre le canal ET recharge derrière (`rechargerDesLAbonnement`). On
+   * réemploie ainsi la mécanique de #53 au lieu d'en inventer une seconde.
+   */
+  const [tour, setTour] = useState(0);
 
   /**
    * Le tout premier abonnement ne recharge pas : il doublerait le chargement
@@ -45,15 +54,51 @@ export function useRealtime(userId: string, boardIds: string[], sink: RealtimeSi
    * rejoue jamais.
    */
   const premier = useRef(true);
+  const abonnement = useRef<RealtimeHandle | null>(null);
 
-  // Seuls `userId` et le JEU provoquent une nouvelle connexion — `sink` passe
-  // par la ref, précisément pour ne pas figurer ici.
+  // Seuls `userId`, le JEU et le TOUR provoquent une nouvelle connexion — `sink`
+  // passe par la ref, précisément pour ne pas figurer ici.
   useEffect(() => {
     const ids = cle ? cle.split(',') : [];
     const rechargerDesLAbonnement = !premier.current;
     premier.current = false;
-    return subscribeRealtime(supabase, userId, ids, () => courant.current, {
+    const h = subscribeRealtime(supabase, userId, ids, () => courant.current, {
       rechargerDesLAbonnement,
     });
-  }, [userId, cle]);
+    abonnement.current = h;
+    return () => {
+      abonnement.current = null;
+      h.stop();
+    };
+  }, [userId, cle, tour]);
+
+  /**
+   * ⚠️ **LE FILET, ET POURQUOI IL NE PEUT PAS CROIRE UN DRAPEAU.**
+   *
+   * Un onglet laissé en arrière-plan voit ses minuteurs bridés. Le battement de
+   * cœur s'espace, le serveur ferme la connexion, et le client ne le détecte pas
+   * — c'est ce même minuteur qui devait le détecter. Aucun statut n'est donc
+   * rapporté : un drapeau nourri par `onLive` resterait `true` sur un flux mort.
+   *
+   * Le battement en Web Worker (`heartbeatWorkerUrl`) traite la cause. Ce filet
+   * traite le résidu : une mise en veille, un changement de réseau, un socket
+   * mort sans fermeture propre. Il INTERROGE l'état réel au retour sur l'onglet,
+   * et reconstruit l'abonnement si le flux ne tient plus.
+   *
+   * `visibilitychange` plutôt que `focus` : on veut le retour sur l'ONGLET, pas
+   * sur la fenêtre — même choix que `useNow`.
+   */
+  const verifier = useCallback(() => {
+    if (abonnement.current?.vivant()) return;
+    setTour((n) => n + 1);
+  }, []);
+
+  useEffect(() => {
+    function auRetour() {
+      if (document.visibilityState !== 'visible') return;
+      verifier();
+    }
+    document.addEventListener('visibilitychange', auRetour);
+    return () => document.removeEventListener('visibilitychange', auRetour);
+  }, [verifier]);
 }
