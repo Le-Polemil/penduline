@@ -23,6 +23,35 @@
 -- la migration `rooms_to_boards`. Les policies écrites en migration A avec
 -- `user_id = auth.uid()` deviennent donc `author_id = auth.uid()` toutes seules.
 
+-- ⚠️ NE PAS APPLIQUER AVANT QUE L'EXTENSION 1.6.0 SOIT DIFFUSÉE.
+--
+-- Cette migration RENOMME `tasks.user_id` en `author_id` (et de même sur
+-- `task_attachments`).
+--
+-- Le paquet **1.5.0**, actuellement en ligne sur le Chrome Web Store, nomme
+-- `user_id` dans sa liste de colonnes :
+--
+--   id, user_id, board_id, title, quadrant, done, archived, deleted, …
+--
+-- Donc TOUTE lecture de tâches tombe, pas seulement une fonctionnalité.
+--
+-- PostgREST ne dégrade pas, il refuse : une colonne absente d'une liste de
+-- `select` ou d'un `order` répond `400 / 42703`, et la requête entière tombe.
+-- Vérifié contre la production.
+--
+-- L'extension ne suit pas le rythme d'un déploiement : elle vit chez les
+-- utilisateurs, et une correction doit passer la revue du Store puis la
+-- diffusion par Chrome — des jours, pas des minutes. Et cette fois le front web
+-- n'offre pas d'échappatoire : 0.0.37 lit `board_placements`, donc il exige ce
+-- schéma. Front et migrations sont soudés.
+--
+-- Préalable : extension **1.6.0** publiée ET diffusée.
+-- Voir work/publication-extension.md, notes 1.6.0.
+--
+-- (La leçon venait de 20260906100000_retirer_epinglage.sql. Elle n'avait pas été
+-- rejouée ici — un garde-fou se pose en ÉCRIVANT la migration, pas en la
+-- déployant.)
+
 alter table tasks            rename column user_id to author_id;
 alter table task_attachments rename column user_id to author_id;
 

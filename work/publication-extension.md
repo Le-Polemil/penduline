@@ -1,9 +1,15 @@
 # Publier l'extension sur le Chrome Web Store
 
 Paquet produit par `npm run build:ext` puis un zip du contenu de
-`apps/extension/dist`. Version courante : **1.5.0** (voir les notes de publication
+`apps/extension/dist`. Version courante : **1.6.0** (voir les notes de publication
 plus bas) ; les versions antérieures restent décrites ici pour l'historique des
 arbitrages.
+
+> ⚠️ **La 1.6.0 bloque TOUTE la livraison, pas seulement une migration.** Deux
+> migrations de #53 cassent le paquet 1.5.0 en ligne, et le front 0.0.37 exige
+> leur schéma : rien ne peut partir avant que la 1.6.0 soit diffusée. Voir les
+> notes 1.6.0 — c'est la différence avec le cas `pinned`, où le front pouvait
+> partir seul.
 
 > **La version publiée sur le Store est la 1.5.0**, diffusée le 14 septembre 2026.
 > La 1.4.0 (envoyée le 7 septembre) emportait la 1.2.0 et la 1.3.0, jamais
@@ -594,6 +600,91 @@ normal.** C'est la constante par défaut de `gotrue-js`, écrasée par notre
 configuration explicite — elle est déjà dans le paquet 1.4.0 publié, et le hash du
 chunk n'a pas bougé. Ne pas la confondre avec la ligne `http://localhost/*`
 d'`externally_connectable`, qui elle ne doit JAMAIS partir au Store.
+
+## Version 1.6.0 — notes de publication
+
+Quatre commits d'écart avec le paquet 1.5.0 (#143, #155, #156, #157), mais un
+seul compte vraiment : le partage.
+
+### Les changements, par ordre d'importance pour l'utilisateur
+
+**1. Une matrice peut être partagée (#157).** C'est la nouveauté de la version.
+Le rangement d'une matrice — dans quel univers, à quelle place — devient
+personnel : il quitte `boards` pour `board_placements`, une ligne par personne.
+Un invité range la matrice chez lui sans toucher au rangement du propriétaire, et
+sans voir un univers qu'il n'a pas le droit de lire. Le temps réel suit l'accès :
+on reçoit les changements des matrices auxquelles on a accès, plus seulement des
+siennes.
+
+**2. Une pastille « agent » (#155).** Les tâches créées par une application
+connectée — le serveur MCP — sont marquées. Même colonne et même pastille que sur
+le web : la marque suit la donnée, elle n'est pas refabriquée d'un côté ni de
+l'autre.
+
+**3. La corbeille est enfin triée (#156).** Elle ne l'était par rien ; elle l'est
+désormais par date de complétion.
+
+**4. L'écran de chargement (#143).** Cosmétique.
+
+### L'instantané local passe en v3, et ce n'est pas un détail
+
+`snapshot.ts` porte `V = 3`. Peindre un instantané v2 tel quel afficherait des
+matrices **sans aucun rangement** — donc, avec la règle « pas de placement, pas
+d'affichage », un panneau vide. La montée de version force l'écran de chargement
+au lieu de peindre du faux. C'est exactement la perte de données que le
+versionnage du format existe pour prévenir : ne pas l'oublier au prochain
+changement de forme.
+
+### Rien de nouveau à déclarer sur la fiche
+
+Le manifeste ne change que sur le numéro de version — aucune permission nouvelle,
+rien à faire relire.
+
+### ⚠️ Ce qui attend cette publication — et cette fois, c'est TOUT
+
+Deux migrations de #53 cassent le paquet **1.5.0 actuellement en ligne**.
+
+**`20260922140000_partage_rangement.sql`** supprime `boards.universe_id` et
+`boards.position`. Le paquet 1.5.0 fait :
+
+```js
+from("boards").select("*").order("position")       → l'accueil ne charge plus
+from("boards").insert({user_id, name, position})   → créer une matrice échoue
+```
+
+**`20260922150000_partage_attribution.sql`** renomme `tasks.user_id` en
+`author_id`. Le paquet 1.5.0 nomme `user_id` dans sa liste de colonnes :
+
+```
+id, user_id, board_id, title, quadrant, done, archived, deleted, …
+```
+
+Donc **toute lecture de tâches** tombe, pas seulement l'accueil. Vérifié contre la
+production, un `order` comme un `select` sur une colonne absente répondent
+pareil :
+
+```
+GET /rest/v1/boards?select=*&order=colonne_absente
+→ HTTP 400  {"code":"42703","message":"column boards.colonne_absente does not exist"}
+```
+
+**La différence avec le cas `pinned` :** en septembre, le front web pouvait partir
+seul en `migrations=ignorer` pendant que la migration attendait. Plus ici — le
+front 0.0.37 lit `board_placements` (`apps/web/src/data/store.ts:310`), donc il
+EXIGE le schéma que ces migrations installent. Front et schéma sont soudés.
+
+L'ordre est donc :
+
+1. soumettre la 1.6.0 → revue du Store → **diffusion par Chrome** ;
+2. vérifier qu'elle est bien installée ;
+3. **alors seulement**, déployer en `migrations=auto` — front et huit migrations
+   d'un coup.
+
+> La leçon de `retirer_epinglage.sql` était écrite, et elle n'a pas été rejouée :
+> ni `partage_rangement.sql` ni `partage_attribution.sql` ne portaient de
+> garde-fou, alors qu'elles cassent plus largement. Le garde-fou y est désormais.
+> À poser SUR LA MIGRATION au moment de l'écrire, pas au moment de déployer —
+> c'est au déploiement qu'il est trop tard pour s'en apercevoir.
 
 ## Le point à peser avant de publier
 

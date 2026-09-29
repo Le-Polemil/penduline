@@ -21,6 +21,31 @@
 -- triviale, son filtre temps réel aussi : la scission CONTIENT la complexité du
 -- partage au lieu de la diffuser dans tout le schéma.
 
+-- ⚠️ NE PAS APPLIQUER AVANT QUE L'EXTENSION 1.6.0 SOIT DIFFUSÉE.
+--
+-- Cette migration SUPPRIME `boards.universe_id` et `boards.position`.
+--
+-- Le paquet **1.5.0**, actuellement en ligne sur le Chrome Web Store, fait
+-- `from("boards").select("*").order("position")` pour charger l'accueil,
+-- et `insert({user_id, name, position})` pour créer une matrice. Les deux tombent.
+--
+-- PostgREST ne dégrade pas, il refuse : une colonne absente d'une liste de
+-- `select` ou d'un `order` répond `400 / 42703`, et la requête entière tombe.
+-- Vérifié contre la production.
+--
+-- L'extension ne suit pas le rythme d'un déploiement : elle vit chez les
+-- utilisateurs, et une correction doit passer la revue du Store puis la
+-- diffusion par Chrome — des jours, pas des minutes. Et cette fois le front web
+-- n'offre pas d'échappatoire : 0.0.37 lit `board_placements`, donc il exige ce
+-- schéma. Front et migrations sont soudés.
+--
+-- Préalable : extension **1.6.0** publiée ET diffusée.
+-- Voir work/publication-extension.md, notes 1.6.0.
+--
+-- (La leçon venait de 20260906100000_retirer_epinglage.sql. Elle n'avait pas été
+-- rejouée ici — un garde-fou se pose en ÉCRIVANT la migration, pas en la
+-- déployant.)
+
 create table board_placements (
   board_id    uuid not null references boards (id) on delete cascade,
   user_id     uuid not null references auth.users (id) on delete cascade,
