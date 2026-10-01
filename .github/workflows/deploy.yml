@@ -34,7 +34,7 @@ permissions:
 
 env:
   DEPLOY_BRANCH: production
-  APP_URL: https://penduline.polemil.dev
+  APP_URL: https://penduline.zozios.app
 
 jobs:
   # ── Les migrations, AVANT le front ─────────────────────────────────────────
@@ -163,7 +163,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://penduline.polemil.dev
+      url: https://penduline.zozios.app
     steps:
       - uses: actions/checkout@v4
         with:

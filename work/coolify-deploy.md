@@ -1,7 +1,7 @@
 # Déploiement Coolify (coolify.polemil.dev)
 
-Objectif : `penduline.polemil.dev` (app web) + Supabase self-hosted sur
-`api.penduline.polemil.dev`, tous deux sur le serveur `localhost` de Coolify
+Objectif : `penduline.zozios.app` (app web) + Supabase self-hosted sur
+`api.penduline.zozios.app`, tous deux sur le serveur `localhost` de Coolify
 (82.165.0.213).
 
 ## Décisions
@@ -32,10 +32,11 @@ manifeste — même si l'extension ne sert pas au build web.
 
 ## Gotchas
 
-**Le wildcard DNS `*.polemil.dev` ne couvre pas `api.penduline.polemil.dev`.**
-Un wildcard DNS ne matche qu'**un seul** label. Un enregistrement dédié a été créé.
+**Le wildcard DNS `*.zozios.app` ne couvre pas `api.penduline.zozios.app`.**
+Un wildcard DNS ne matche qu'**un seul** label, et cet hôte en compte deux sous la
+zone. Un enregistrement dédié a été créé.
 
-**Le domaine Kong doit porter le port : `https://api.penduline.polemil.dev:8000`.**
+**Le domaine Kong doit porter le port : `https://api.penduline.zozios.app:8000`.**
 Coolify utilise la syntaxe `fqdn:port` pour savoir vers quel port conteneur router.
 Sans le `:8000`, le routage Traefik ne pointe pas sur Kong.
 
@@ -102,16 +103,16 @@ vérification, les envois partent en spam ou sont refusés.
 
 ```
 MAILER_SUBJECTS_RECOVERY=Réinitialiser votre mot de passe Penduline
-MAILER_TEMPLATES_RECOVERY=https://penduline.polemil.dev/emails/recovery.html
+MAILER_TEMPLATES_RECOVERY=https://penduline.zozios.app/emails/recovery.html
 MAILER_SUBJECTS_CONFIRMATION=Confirmez votre adresse — Penduline
-MAILER_TEMPLATES_CONFIRMATION=https://penduline.polemil.dev/emails/confirmation.html
+MAILER_TEMPLATES_CONFIRMATION=https://penduline.zozios.app/emails/confirmation.html
 ```
 
 ⚠️ Ces quatre variables **ne figurent pas dans le compose Supabase standard** :
 il faut les ajouter au passage d'environnement du service `auth`. C'est le seul
 point de #33 qui touche au compose, déjà modifié par le dégraissage.
 
-⚠️ `GOTRUE_URI_ALLOW_LIST` doit contenir `https://penduline.polemil.dev`, sinon
+⚠️ `GOTRUE_URI_ALLOW_LIST` doit contenir `https://penduline.zozios.app`, sinon
 GoTrue refuse le `redirectTo` envoyé par le client et le lien devient inerte.
 
 **Ordre d'exécution.** Configurer le SMTP **puis** vérifier le parcours de
@@ -225,7 +226,7 @@ la synchronisation multi-onglets et multi-appareils : sans lui, l'app web et le
 panneau d'extension se figent sur l'état du chargement, en silence.
 
 **Il tourne, et il est exposé.** Vérifié le 8 septembre 2026 depuis un client :
-un abonnement `postgres_changes` sur `api.penduline.polemil.dev` atteint
+un abonnement `postgres_changes` sur `api.penduline.zozios.app` atteint
 `SUBSCRIBED`.
 
 ⚠️ **`SUBSCRIBED` ne prouve pas que ça marche.** C'est le piège que #39 a payé :
@@ -244,7 +245,7 @@ plus récent établit celle du realtime.
 CLE=$(gh variable list --json name,value -q '.[]|select(.name=="VITE_SUPABASE_ANON_KEY").value')
 # `parent_id` vient de 20260829160000_subtasks.sql, POSTÉRIEURE au realtime
 curl -sS -o /dev/null -w '%{http_code}\n' -H "apikey: $CLE" \
-  "https://api.penduline.polemil.dev/rest/v1/tasks?select=parent_id&limit=1"
+  "https://api.penduline.zozios.app/rest/v1/tasks?select=parent_id&limit=1"
 # 200 ⇒ subtasks appliquée ⇒ realtime appliquée avant elle
 ```
 
@@ -273,7 +274,7 @@ localement (bundle correct, clés inlinées).
 **Bascule non faite, volontairement.** « Docker Image » n'est pas un build pack
 dans Coolify mais un *type de ressource*, choisi à la création : la ressource
 existante n'est pas convertible. Il faudrait en créer une nouvelle, lui
-transférer `penduline.polemil.dev` (après l'avoir retiré de l'actuelle, sinon
+transférer `penduline.zozios.app` (après l'avoir retiré de l'actuelle, sinon
 Traefik voit deux fois le même domaine), puis supprimer l'ancienne. À faire à
 froid. En attendant, l'image publiée sert de filet.
 
@@ -467,7 +468,7 @@ présence d'une colonne ou d'une table.
 ```bash
 CLE=$(gh variable list --json name,value -q '.[]|select(.name=="VITE_SUPABASE_ANON_KEY").value')
 curl -sS -o /dev/null -w '%{http_code}\n' -H "apikey: $CLE" -H "Authorization: Bearer $CLE" \
-  "https://api.penduline.polemil.dev/rest/v1/tasks?select=pinned&limit=1"
+  "https://api.penduline.zozios.app/rest/v1/tasks?select=pinned&limit=1"
 # 200 = la colonne est là · 400 = absente · 404 sur une table = absente
 ```
 
@@ -592,13 +593,13 @@ ghcr.io/le-polemil/penduline-mcp:latest
 
 ### Le domaine, avec son port
 
-`mcp.penduline.polemil.dev`, écrit en syntaxe Coolify `fqdn:port` —
-`https://mcp.penduline.polemil.dev:8787` — sinon Traefik ne sait pas vers quel
+`mcp.penduline.zozios.app`, écrit en syntaxe Coolify `fqdn:port` —
+`https://mcp.penduline.zozios.app:8787` — sinon Traefik ne sait pas vers quel
 port du conteneur router. Même piège que Kong et son `:8000`.
 
-⚠️ **Enregistrement DNS dédié obligatoire.** Le wildcard `*.polemil.dev` ne
-matche qu'**un seul** label : il ne couvre pas `mcp.penduline.polemil.dev`, pas
-plus qu'il ne couvrait `api.penduline.polemil.dev`.
+⚠️ **Enregistrement DNS dédié obligatoire.** Le wildcard `*.zozios.app` ne
+matche qu'**un seul** label : il ne couvre pas `mcp.penduline.zozios.app`, pas
+plus qu'il ne couvre `api.penduline.zozios.app`.
 
 ### Les variables, toutes runtime
 
@@ -608,12 +609,12 @@ rebuild.
 
 | Variable | Valeur |
 |---|---|
-| `SUPABASE_URL` | `https://api.penduline.polemil.dev:8000` |
+| `SUPABASE_URL` | `https://api.penduline.zozios.app:8000` |
 | `SUPABASE_ANON_KEY` | la clé anon (Kong exige l'en-tête `apikey`) |
 | `SUPABASE_JWT_SECRET` | 🔒 celui de l'instance Supabase |
 | `MCP_TOKEN_SECRET` | 🔒 **à générer, DISTINCT du précédent** |
-| `MCP_PUBLIC_URL` | `https://mcp.penduline.polemil.dev` |
-| `WEB_APP_URL` | `https://penduline.polemil.dev` |
+| `MCP_PUBLIC_URL` | `https://mcp.penduline.zozios.app` |
+| `WEB_APP_URL` | `https://penduline.zozios.app` |
 | `PORT` | `8787` (celui repris dans le domaine) |
 | `MCP_QUOTA_CALLS_PER_MINUTE` | facultatif, 60 par défaut |
 | `MCP_QUOTA_WRITES_PER_DAY` | facultatif, 500 par défaut |
@@ -629,7 +630,7 @@ listant d'un coup tout ce qui manque. Vérifié en conteneur.
 ### Sur la ressource WEB : un build arg de plus
 
 ```
-VITE_MCP_URL=https://mcp.penduline.polemil.dev
+VITE_MCP_URL=https://mcp.penduline.zozios.app
 ```
 
 ⚠️ **Build arg, donc rebuild.** Un restart n'aura aucun effet — Vite l'inline.

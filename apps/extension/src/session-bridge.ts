@@ -29,8 +29,8 @@ export function listenForSharedSession(): () => void {
     if (!isConfigured) return;
 
     // `!==` sur l'origine ENTIÈRE, jamais un `startsWith` :
-    // `https://penduline.polemil.dev` est un préfixe de
-    // `https://penduline.polemil.dev.attaquant.example`.
+    // `https://penduline.zozios.app` est un préfixe de
+    // `https://penduline.zozios.app.attaquant.example`.
     //
     // Redondant avec `externally_connectable` du manifeste, et gardé pour deux
     // raisons. D'abord parce qu'une vérification de sécurité qui repose sur un
