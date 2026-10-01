@@ -625,7 +625,7 @@ rebuild.
 
 | Variable | Valeur |
 |---|---|
-| `SUPABASE_URL` | `https://api.penduline.zozios.app:8000` |
+| `SUPABASE_URL` | `https://api.penduline.zozios.app` — **sans port**, voir l'encadré |
 | `SUPABASE_ANON_KEY` | la clé anon (Kong exige l'en-tête `apikey`) |
 | `SUPABASE_JWT_SECRET` | 🔒 celui de l'instance Supabase |
 | `MCP_TOKEN_SECRET` | 🔒 **à générer, DISTINCT du précédent** |
@@ -634,6 +634,32 @@ rebuild.
 | `PORT` | `8787` (celui repris dans le domaine) |
 | `MCP_QUOTA_CALLS_PER_MINUTE` | facultatif, 60 par défaut |
 | `MCP_QUOTA_WRITES_PER_DAY` | facultatif, 500 par défaut |
+
+⚠️ **Le `:8000` du champ « domaine » n'a RIEN à faire dans `SUPABASE_URL`.**
+Cette table a porté l'erreur jusqu'au premier déploiement, et elle coûte une
+panne entière : `POST /register` répondait `500 {"error":"server_error"}`, le
+client MCP échouait sur « Dynamic Client Registration rejected », et les routes
+de découverte marchaient parfaitement — parce qu'elles sont les seules à ne pas
+toucher la base.
+
+Les deux `:8000` ne désignent pas la même chose :
+
+| Où | Forme | Qui la lit |
+|---|---|---|
+| Champ **domaine** de la ressource Supabase | `https://api.penduline.zozios.app:8000` | Coolify, syntaxe `fqdn:port`, pour dire à Traefik vers quel port du CONTENEUR router |
+| Variable **`SUPABASE_URL`** du MCP | `https://api.penduline.zozios.app` | le code, qui appelle une URL PUBLIQUE — servie en 443 par Traefik |
+
+Le symptôme ne ment pas, encore faut-il lire les journaux du conteneur :
+
+```
+TypeError: fetch failed
+  [cause]: ERR_SSL_WRONG_VERSION_NUMBER — SSL routines:wrong version number
+```
+
+Du HTTPS parlé à un port qui répond en clair. Le repère qui tranche, et qui ne
+demande aucun diagnostic : **l'app web consomme la même instance**, et son
+`VITE_SUPABASE_URL` n'a jamais porté de port. Toute variable qui pointe sur Kong
+depuis l'extérieur doit s'écrire comme la sienne.
 
 **Les deux secrets DOIVENT différer**, et le serveur refuse de démarrer sinon.
 Ce n'est pas une précaution de style : un jeton d'accès MCP signé avec le secret
