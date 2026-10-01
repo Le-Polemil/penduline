@@ -32,9 +32,19 @@ manifeste — même si l'extension ne sert pas au build web.
 
 ## Gotchas
 
-**Le wildcard DNS `*.zozios.app` ne couvre pas `api.penduline.zozios.app`.**
-Un wildcard DNS ne matche qu'**un seul** label, et cet hôte en compte deux sous la
-zone. Un enregistrement dédié a été créé.
+**Deux enregistrements DNS, et le wildcard est posé au bon niveau.**
+Un wildcard ne matche qu'**un seul** label — c'est ce qui avait piégé l'ancienne
+zone, où `*.polemil.dev` ne couvrait pas `api.penduline.polemil.dev`, deux labels
+plus bas. La zone actuelle place le wildcard un cran plus bas :
+
+| Enregistrement | Couvre |
+|---|---|
+| `penduline` | `penduline.zozios.app` — l'apex, qu'un wildcard ne couvre jamais |
+| `*.penduline` | `api.penduline.zozios.app`, `mcp.penduline.zozios.app` |
+
+Donc aucun enregistrement à ajouter pour le serveur MCP le jour de son
+déploiement. ⚠️ Un wildcard **DNS** n'est pas un certificat wildcard : Coolify
+demande un certificat par hôte concret en HTTP-01, et c'est suffisant.
 
 **Le domaine Kong doit porter le port : `https://api.penduline.zozios.app:8000`.**
 Coolify utilise la syntaxe `fqdn:port` pour savoir vers quel port conteneur router.
@@ -44,6 +54,12 @@ Sans le `:8000`, le routage Traefik ne pointe pas sur Kong.
 - `API_EXTERNAL_URL` valait `http://supabase-kong:8000` (URL *interne*) → corrigé
   vers l'URL publique, sinon GoTrue fabrique des liens inatteignables.
 - `GOTRUE_SITE_URL` pointait sur l'URL de l'API → corrigé vers l'app web.
+  ⚠️ **Le croisement est la source d'erreur de toute bascule de domaine :** la
+  ressource Supabase porte QUATRE variables qui désignent l'app web
+  (`GOTRUE_SITE_URL`, `GOTRUE_URI_ALLOW_LIST`, les deux `MAILER_TEMPLATES_*`),
+  et la ressource front en porte une qui désigne l'API (`VITE_SUPABASE_URL`).
+  Le champ « Domains » de Coolify sert à Traefik ; ces variables sont des valeurs
+  distinctes, que rien ne synchronise.
 - `ENABLE_EMAIL_AUTOCONFIRM=false` **sans SMTP configuré** : `signUp()` crée un
   utilisateur jamais confirmé, donc impossible à connecter. Passé à `true`.
   → Contournement levé depuis, voir « SMTP » plus bas (#33).
@@ -597,9 +613,9 @@ ghcr.io/le-polemil/penduline-mcp:latest
 `https://mcp.penduline.zozios.app:8787` — sinon Traefik ne sait pas vers quel
 port du conteneur router. Même piège que Kong et son `:8000`.
 
-⚠️ **Enregistrement DNS dédié obligatoire.** Le wildcard `*.zozios.app` ne
-matche qu'**un seul** label : il ne couvre pas `mcp.penduline.zozios.app`, pas
-plus qu'il ne couvre `api.penduline.zozios.app`.
+✅ **Rien à faire côté DNS.** Le wildcard `*.penduline.zozios.app` couvre déjà
+cet hôte — voir « Gotchas » plus haut. C'était un enregistrement dédié à créer
+du temps de l'ancienne zone, où le wildcard était posé un cran trop haut.
 
 ### Les variables, toutes runtime
 
