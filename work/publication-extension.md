@@ -640,9 +640,18 @@ changement de forme.
 Le manifeste ne change que sur le numéro de version — aucune permission nouvelle,
 rien à faire relire.
 
-### ⚠️ Ce qui attend cette publication — et cette fois, c'est TOUT
+### ⚠️ Ce qui attendait cette publication
 
-Deux migrations de #53 cassent le paquet **1.5.0 actuellement en ligne**.
+> **Résolu.** La 1.6.0 est diffusée. Les migrations de #53 ne sont plus
+> bloquées : le paquet en ligne lit le schéma qu'elles installent, le front et
+> les migrations peuvent partir ensemble en `migrations=auto`.
+>
+> ⚠️ **Cette section a menti pendant un temps.** Elle a continué d'annoncer la
+> 1.5.0 « actuellement en ligne » après la diffusion de la 1.6.0 — exactement
+> comme la section de la 1.5.0 avant elle. Le marqueur de diffusion se pose **au
+> moment où Chrome diffuse**, pas à la prochaine session qui passe par là.
+
+Deux migrations de #53 cassaient le paquet **1.5.0 alors en ligne**.
 
 **`20260922140000_partage_rangement.sql`** supprime `boards.universe_id` et
 `boards.position`. Le paquet 1.5.0 fait :
@@ -685,6 +694,59 @@ L'ordre est donc :
 > garde-fou, alors qu'elles cassent plus largement. Le garde-fou y est désormais.
 > À poser SUR LA MIGRATION au moment de l'écrire, pas au moment de déployer —
 > c'est au déploiement qu'il est trop tard pour s'en apercevoir.
+
+## Version 1.6.1 — notes de publication
+
+Un correctif de domaine, et un correctif de temps réel. Rien de visible dans
+l'interface.
+
+### ⚠️ Pourquoi cette version existe : le pont de session est CASSÉ en production
+
+Le domaine de production est passé sur `zozios.app` (#165). L'ancienne origine
+est figée **à deux endroits** dans le paquet 1.6.0 en ligne :
+
+- `externally_connectable` dans le manifeste ;
+- `WEB_APP_ORIGIN`, compilé dans le bundle depuis `VITE_WEB_APP_URL`.
+
+Les deux comparent l'origine **entière**, jamais un préfixe — c'est délibéré, et
+`session-bridge.ts` dit pourquoi : `https://penduline.zozios.app` est un préfixe
+de `https://penduline.zozios.app.attaquant.example`.
+
+Conséquence : depuis le nouveau domaine, l'app web ne peut plus transmettre sa
+session à l'extension installée. L'extension n'est pas morte — elle garde sa
+propre connexion — mais le pont ne passe plus, et il ne repassera qu'à la
+diffusion de cette version.
+
+⚠️ **L'ancien domaine doit rester joignable jusque-là.** Le retirer de Coolify
+avant la diffusion coupe le pont pour de bon au lieu de le couper quelques jours.
+
+### Le temps réel qui mourait en dormant (#163)
+
+Le correctif a été poussé **après** le bump 1.6.0. Selon le moment où le zip de
+la 1.6.0 a été produit, il est dans le paquet en ligne ou non — à vérifier plutôt
+qu'à supposer. Il est listé ici dans le doute : le mentionner deux fois ne coûte
+rien, l'omettre cacherait un correctif.
+
+### Rien de nouveau à déclarer sur la fiche
+
+Aucune permission nouvelle. `externally_connectable` change de **valeur**, pas de
+nature : c'est toujours une seule origine, celle de l'app web.
+
+### ⚠️ Avant de zipper
+
+```bash
+grep VITE_WEB_APP_URL .env      # doit dire https://penduline.zozios.app
+```
+
+Et le manifeste du `dist` ne doit pas porter l'élargissement local (voir
+« Tester en local » plus haut) : un `http://localhost/*` oublié dans le paquet
+soumis, c'est une origine de développement autorisée chez tous les utilisateurs.
+
+### Ce que cette version ne bloque pas
+
+Contrairement à la 1.5.0 et à la 1.6.0, **aucune migration n'attend celle-ci**.
+Le déploiement du front et des migrations de #53 peut partir sans elle ; seul le
+pont de session attend.
 
 ## Le point à peser avant de publier
 
