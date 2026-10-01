@@ -46,7 +46,7 @@ Pense à rétablir le fichier ensuite : il est versionné.
 ## Production — Supabase AUTO-HÉBERGÉ
 
 > ⚠️ La production **n'est pas** un projet supabase.com. C'est une instance
-> auto-hébergée sur Coolify (`https://api.penduline.polemil.dev`), dégraissée à
+> auto-hébergée sur Coolify (`https://api.penduline.zozios.app`), dégraissée à
 > PostgREST + GoTrue — voir `work/coolify-deploy.md`. Les commandes `link` et
 > `push` du CLI, qui visent un `--project-ref` supabase.com, **ne s'appliquent
 > pas ici.**

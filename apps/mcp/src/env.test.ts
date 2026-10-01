@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { EnvError, readEnv } from './env';
 
 const valide = {
-  SUPABASE_URL: 'https://api.penduline.polemil.dev:8000',
+  SUPABASE_URL: 'https://api.penduline.zozios.app:8000',
   SUPABASE_ANON_KEY: 'anon-key',
   SUPABASE_JWT_SECRET: 'a'.repeat(40),
   MCP_TOKEN_SECRET: 'b'.repeat(40),
-  MCP_PUBLIC_URL: 'https://mcp.penduline.polemil.dev',
-  WEB_APP_URL: 'https://penduline.polemil.dev',
+  MCP_PUBLIC_URL: 'https://mcp.penduline.zozios.app',
+  WEB_APP_URL: 'https://penduline.zozios.app',
 };
 
 describe('readEnv', () => {

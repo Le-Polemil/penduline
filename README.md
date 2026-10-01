@@ -143,7 +143,7 @@ notifications. Détails dans `work/architecture.md`.
 
 ## Production
 
-Déployée sur Coolify : app web sur https://penduline.polemil.dev, Supabase
-auto-hébergé sur https://api.penduline.polemil.dev, serveur MCP sur
-https://mcp.penduline.polemil.dev. Voir
+Déployée sur Coolify : app web sur https://penduline.zozios.app, Supabase
+auto-hébergé sur https://api.penduline.zozios.app, serveur MCP sur
+https://mcp.penduline.zozios.app. Voir
 [work/coolify-deploy.md](work/coolify-deploy.md) pour les décisions et les pièges.

@@ -116,7 +116,7 @@ npm run typecheck -w @penduline/mcp
 ## Brancher un client
 
 ```bash
-claude mcp add --transport http penduline https://mcp.penduline.polemil.dev/mcp
+claude mcp add --transport http penduline https://mcp.penduline.zozios.app/mcp
 ```
 
 Le client découvre le reste tout seul : au premier appel il reçoit un `401`

@@ -76,7 +76,7 @@ n'accepte une session que d'une origine exactement égale à celle-ci
 n'accepterait donc que le serveur local, et le partage serait mort en production.
 
 ```bash
-grep VITE_WEB_APP_URL .env      # doit dire https://penduline.polemil.dev
+grep VITE_WEB_APP_URL .env      # doit dire https://penduline.zozios.app
 ```
 
 **2. `externally_connectable` ne doit lister QUE l'origine de production.** C'est
@@ -96,7 +96,7 @@ l'utilisateur à parler à l'extension.
 ```bash
 npm run build:ext
 # puis, à la main dans apps/extension/dist/manifest.json :
-#   "matches": ["https://penduline.polemil.dev/*", "http://localhost/*"]
+#   "matches": ["https://penduline.zozios.app/*", "http://localhost/*"]
 ```
 
 Et côté app web, `VITE_EXTENSION_ID` doit porter l'ID affiché par
@@ -153,7 +153,7 @@ approfondi.
 > qu'après un déploiement du front.
 
 
-Publiée à `https://penduline.polemil.dev/confidentialite`
+Publiée à `https://penduline.zozios.app/confidentialite`
 (`apps/web/public/confidentialite/index.html`). Page autonome : aucune police
 distante, aucun script, pour rester lisible même si l'application est en panne.
 C'est cette URL à renseigner dans la fiche du Store — elle est **obligatoire**,
@@ -588,7 +588,7 @@ zip**, pas seulement dans `dist/` :
 |---|---|
 | Version du manifeste | `1.5.0` |
 | `externally_connectable` | production uniquement |
-| URL Supabase compilée | `api.penduline.polemil.dev` |
+| URL Supabase compilée | `api.penduline.zozios.app` |
 | Colonne `pinned` réclamée | **0 occurrence** — l'enjeu du garde-fou |
 | Menu réorganisé, sous-menus par univers | présents |
 | Cache local (`penduline-snapshot`) | présent |

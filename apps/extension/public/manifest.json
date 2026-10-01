@@ -29,7 +29,7 @@
   ],
   "externally_connectable": {
     "matches": [
-      "https://penduline.polemil.dev/*"
+      "https://penduline.zozios.app/*"
     ]
   },
   "background": {
