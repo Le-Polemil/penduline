@@ -496,7 +496,7 @@ button { font: inherit; }
 }
 
 /* ── En-tête matrice ──────────────────────────────────────────────────────── */
-.matrix { max-width: 1060px; margin: 0 auto; padding: 28px 24px 60px; animation: mm-in 0.3s ease backwards; }
+.matrix { max-width: 1200px; margin: 0 auto; padding: 22px 24px 64px; animation: mm-in 0.3s ease backwards; }
 /* `flex-wrap` et `min-width: 0` : sans les deux, l'en-tête DÉBORDAIT (#89).
    `.board-switch__label` porte bien `text-overflow: ellipsis`, mais aucun de ses
    parents ne pouvait rétrécir — un élément flex a `min-width: auto`, donc la
@@ -2294,7 +2294,7 @@ button.uni-head__name:focus-visible {
    Les couleurs vivent dans des variables locales au bandeau : au clair, c'est la
    seule surface sombre de l'application, et elle ne doit rien imposer au reste.
    Au sombre, `--band-base` la fait descendre d'un cran sous la page. */
-.topbar, .hero {
+.topbar, .hero, .shero {
   --band: var(--band-base, #1d1a16);
   --band-raised: var(--band-raised-base, #28231d);
   --band-text: #f3e9d8;
@@ -2360,7 +2360,7 @@ button.uni-head__name:focus-visible {
 @media (hover: hover) and (pointer: fine) {
   .topbar__menu-item:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
 }
-.topbar :focus-visible, .hero :focus-visible { outline-color: #f0a774; }
+.topbar :focus-visible, .hero :focus-visible, .shero :focus-visible { outline-color: #f0a774; }
 
 /* Au téléphone, la navigation passe sous le logo et défile à l'horizontale :
    cinq entrées ne tiennent pas, et les replier dans un menu cacherait
@@ -2401,7 +2401,7 @@ button.uni-head__name:focus-visible {
 .hero__count {
   min-height: 44px; display: inline-flex; align-items: center; gap: 10px;
   padding: 0 16px 0 10px; border-radius: 999px; border: none; cursor: pointer;
-  font: 600 14px var(--font-body);
+  font: 600 14px var(--font-body); text-decoration: none;
 }
 .hero__count-n { min-width: 24px; text-align: center; font: 400 22px var(--font-heading); }
 /* Les teintes sombres des cases, déjà choisies pour l'extension et les widgets MCP. */
@@ -2673,4 +2673,167 @@ button.uni-head__name:focus-visible {
 .auth > * { position: relative; }
 @media (prefers-color-scheme: dark) {
   .auth::before { background: #f3e9d8; opacity: 0.07; }
+}
+
+/* ── Héros réduit des écrans intérieurs ──────────────────────────────────────
+   Même bandeau d'encre que `.topbar` et `.hero` (variables déclarées avec eux),
+   mais plus court : ces écrans ont du contenu à montrer, pas une phrase du jour
+   à poser. Le nid reprend les décalages de l'accueil dans une taille réduite —
+   à hauteur égale, celui de l'accueil déborderait du bandeau. */
+.shero { position: relative; z-index: 20; }
+/* La couche de décor, et elle seule, rogne ce qui dépasse. */
+.shero__decor { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.shero__inner {
+  position: relative; z-index: 1; max-width: 1200px; margin: 0 auto;
+  padding: 4px 24px 62px; display: flex; flex-direction: column; gap: 22px;
+}
+/* Une ligne du héros : ce qui identifie l'écran à gauche, ce qui le compte à droite. */
+.shero__row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px 24px; flex-wrap: wrap;
+}
+.shero__lead { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.shero__side { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Le petit titre de section — et le fil d'Ariane, qui en tient lieu sur la matrice. */
+.shero__eyebrow,
+.shero__crumb {
+  margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font: 700 12px var(--font-body); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--band-muted);
+}
+.shero__crumb-link {
+  min-height: 24px; display: inline-flex; align-items: center; padding: 0;
+  border: none; background: none; cursor: pointer; color: inherit; font: inherit;
+  border-radius: 6px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .shero__crumb-link:hover { color: var(--band-text); }
+}
+.shero__titleline { position: relative; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.shero__title {
+  margin: 0; max-width: 20ch; font: 400 clamp(32px, 4.6vw, 54px)/1.05 var(--font-heading);
+  text-wrap: balance;
+}
+/* Le titre EST le sélecteur sur la vue globale : un bouton qui porte le titre,
+   plutôt qu'un chevron posé à côté. */
+.shero__title-btn {
+  min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 0;
+  border: none; background: none; cursor: pointer; text-align: left;
+  color: var(--band-text); font: 400 clamp(32px, 4.6vw, 54px)/1.05 var(--font-heading);
+  border-radius: 12px;
+}
+.shero__title-chev { flex: none; color: var(--color-accent); transition: rotate 0.2s; }
+.shero__title-btn[aria-expanded='true'] .shero__title-chev { rotate: 180deg; }
+.shero__switch {
+  width: 44px; height: 44px; flex: none; margin-top: 6px; display: grid; place-items: center;
+  border: none; border-radius: 999px; background: transparent; color: var(--band-text); cursor: pointer;
+}
+.shero__switch[aria-expanded='true'] { background: color-mix(in srgb, #f3e9d8 16%, transparent); }
+@media (hover: hover) and (pointer: fine) {
+  .shero__switch:hover { background: var(--band-raised); }
+}
+/* Le menu retombe sur la page, pas sur le bandeau : il appartient au contenu. */
+.shero__menu {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; min-width: 280px;
+  max-height: min(72vh, 560px); overflow: auto; padding: 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--card-warm); color: var(--color-text);
+  border-radius: 20px; box-shadow: var(--shadow-lg);
+}
+.shero__menu-group {
+  padding: 8px 12px 2px; font: 700 11px var(--font-body); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.shero__menu-item {
+  min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 12px; border: none; border-radius: 12px; background: none; cursor: pointer;
+  text-align: left; color: var(--color-text); font: 500 14.5px var(--font-body);
+}
+.shero__menu-item[aria-current='page'] { background: var(--color-surface); font-weight: 700; }
+.shero__menu-item--danger { color: var(--color-danger); }
+.shero__menu-meta { flex: none; font: 600 12.5px var(--font-body); color: var(--color-neutral-700); }
+@media (hover: hover) and (pointer: fine) {
+  .shero__menu-item:hover { background: var(--color-accent-100); }
+}
+.shero__menu-sep { display: block; height: 1px; background: var(--color-divider); margin: 6px 8px; }
+.shero__pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.shero__meta { font: 600 14px var(--font-body); color: var(--band-muted); }
+.shero__meta-late { color: #f0b4a5; }
+/* Deux boutons de bandeau, même dessin : la corbeille et les portées de la vue globale. */
+.shero__ghost {
+  min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px;
+  border: 1.5px solid color-mix(in srgb, #f3e9d8 28%, transparent); border-radius: 999px;
+  background: transparent; color: var(--band-text); font: 600 14px var(--font-body); cursor: pointer;
+  text-decoration: none;
+}
+.shero__ghost--on { background: var(--band-text); color: var(--band); border-color: var(--band-text); font-weight: 700; }
+.shero__ghost--late { border-color: #e5826b; color: #f0b4a5; font-weight: 700; }
+@media (hover: hover) and (pointer: fine) {
+  .shero__ghost:not(.shero__ghost--on):hover { background: var(--band-raised); }
+}
+.shero__badge {
+  min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px;
+  background: color-mix(in srgb, #f3e9d8 14%, transparent); font: 700 12px var(--font-body);
+}
+.shero__ghost--on .shero__badge { background: color-mix(in srgb, #1d1a16 12%, transparent); }
+.shero__nest {
+  position: absolute; top: -40px; right: clamp(-120px, 2vw, 60px);
+  width: 310px; height: 312px; opacity: 0.08; pointer-events: none;
+}
+.shero__branch, .shero__swing, .shero__nid { position: absolute; inset: 0; }
+.shero__branch, .shero__nid { background: var(--band-text); }
+.shero__branch {
+  -webkit-mask: url('/decor/nid-branche.png') center / contain no-repeat;
+  mask: url('/decor/nid-branche.png') center / contain no-repeat;
+}
+.shero__nid {
+  -webkit-mask: url('/decor/nid.png') center / contain no-repeat;
+  mask: url('/decor/nid.png') center / contain no-repeat;
+}
+/* Les mêmes images-clés que l'accueil : un seul balancement dans la feuille. */
+.shero__swing { transform-origin: 54.6% 21%; animation: hero-sway 9s ease-in-out infinite; }
+.shero__wave { position: absolute; left: 0; bottom: -1px; display: block; width: 100%; height: 40px; }
+.shero__wave path { fill: var(--color-bg); }
+@media (max-width: 720px) {
+  .shero__inner { padding: 4px 16px 50px; gap: 16px; }
+  .shero__nest { width: 240px; height: 242px; top: -20px; right: -92px; }
+  .shero__title, .shero__title-btn { font-size: clamp(28px, 9vw, 38px); }
+  .shero__side { width: 100%; }
+}
+
+/* ── La grille et ses axes ───────────────────────────────────────────────────
+   Une gouttière de 20 px à gauche porte « Important » / « Pas important » à la
+   verticale, un bandeau de 18 px au-dessus porte « Urgent » / « Pas urgent ».
+   `--axes-gutter` sert aussi à décaler « À trier », qui vit sous la grille et
+   doit s'aligner sur les cases, pas sur les axes. */
+.axes {
+  --axes-gutter: 20px;
+  display: grid; grid-template-columns: var(--axes-gutter) repeat(2, minmax(0, 1fr));
+  grid-template-rows: 18px auto auto; gap: 14px;
+}
+.axes__top, .axes__side {
+  font: 700 11px/18px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-neutral-700); text-align: center;
+}
+/* `writing-mode` puis demi-tour : sans la rotation, le texte vertical se lit de
+   haut en bas mais les lettres regardent à droite — illisible de biais. */
+.axes__side { writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1; }
+/* Le coin central reste carré : les quatre cases se referment sur le milieu de
+   la matrice, comme les tuiles de l'icône. Par classe de case et non par
+   `nth-child` — avec les axes, les cases ne sont plus les quatre premiers
+   enfants, et un rang codé en dur casserait au premier libellé déplacé. */
+.axes .quad--faire { border-bottom-right-radius: 0; }
+.axes .quad--planifier { border-bottom-left-radius: 0; }
+.axes .quad--deleguer { border-top-right-radius: 0; }
+.axes .quad--eliminer { border-top-left-radius: 0; }
+/* « À trier » sous la grille, alignée sur les cases. */
+.tray { margin-left: calc(20px + 14px); }
+.tray.quad--park { grid-column: auto; }
+@media (max-width: 720px) {
+  /* En colonne, les axes n'ont plus de géométrie à décrire : ils disparaissent
+     avec leur gouttière, et chaque case retrouve ses quatre coins. */
+  .axes { grid-template-columns: 1fr; grid-template-rows: none; }
+  .axes__top, .axes__side, .axes__corner { display: none; }
+  .axes .quad { border-radius: var(--radius-lg); }
+  .tray { margin-left: 0; }
 }
