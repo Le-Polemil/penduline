@@ -1,0 +1,660 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Penduline</title>
+<!--
+  Visuels Penduline pour les hôtes MCP Apps. Gabarit assemblé par `ui.ts`
+  (palette et logo injectés au chargement du serveur).
+
+  ⚠️ Cette page ne décide RIEN : ordre des lignes, statut des échéances,
+  pluriels, libellés — tout arrive déjà calculé dans `structuredContent`
+  (voir `visuels.ts`, testé). Elle pose du texte dans des boîtes, et parle à
+  l'hôte. Toute donnée passe par `textContent`, jamais par `innerHTML` : un
+  titre de tâche est une saisie libre.
+
+  ⚠️ Aucun `color-scheme` déclaré, ni en meta ni en CSS : quand celui d'une
+  iframe diffère de celui de la page hôte, le navigateur peint un fond OPAQUE
+  derrière elle — un rectangle sombre autour d'une carte claire aux coins
+  arrondis. La page n'a aucun contrôle natif qui en aurait besoin.
+
+  Les polices (Caprasimo, Figtree) sont un bonus : si le bac à sable de l'hôte
+  les refuse, les piles de repli prennent le relais sans rien casser.
+-->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caprasimo&amp;family=Figtree:wght@400;500;600;700&amp;display=swap">
+<style>
+/*__JETONS__*/
+:root{--f-titre:'Caprasimo',Georgia,'Times New Roman',serif;--f-texte:'Figtree',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:transparent}
+body{font-family:var(--f-texte);color:var(--text);-webkit-font-smoothing:antialiased}
+a{color:var(--link)}a:hover{color:var(--text)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#racine{max-width:680px;display:flex;flex-direction:column;gap:20px}
+
+[data-q=faire]{--ink:var(--faire);--fg:var(--faire-d);--tint:var(--faire-bg)}
+[data-q=planifier]{--ink:var(--planifier);--fg:var(--planifier-d);--tint:var(--planifier-bg)}
+[data-q=deleguer]{--ink:var(--deleguer);--fg:var(--deleguer-d);--tint:var(--deleguer-bg)}
+[data-q=eliminer]{--ink:var(--eliminer);--fg:var(--eliminer-d);--tint:var(--eliminer-bg)}
+[data-q=parking]{--ink:var(--muted);--fg:var(--muted);--tint:var(--surface)}
+
+.carte{background:var(--card);color:var(--text);border:1px solid var(--divider);border-radius:22px;padding:18px 20px 14px;display:flex;flex-direction:column;gap:14px}
+.entete{display:flex;align-items:center;gap:12px}
+.entete img{flex:none}
+.entete-texte{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+.surtitre{font:700 11px var(--f-texte);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.titre{font:400 22px/1.1 var(--f-titre);overflow-wrap:anywhere}
+.bouton{flex:none;min-height:44px;display:flex;align-items:center;gap:6px;padding:0 14px;border:1.5px solid var(--divider);border-radius:999px;text-decoration:none;font:700 13px var(--f-texte)}
+.pied{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+
+/* ── Matrice ── */
+.grille{display:grid;grid-template-columns:18px repeat(2,minmax(0,1fr));gap:8px}
+.axe{font:700 10.5px/18px var(--f-texte);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.axe-v{writing-mode:vertical-rl;transform:rotate(180deg);text-align:center;line-height:1}
+.case{min-height:150px;border-radius:16px;padding:10px 10px 8px 12px;display:flex;flex-direction:column;gap:2px;background:var(--tint)}
+.case.masquee{background:transparent;border:1.5px dashed var(--divider)}
+.case-tete{display:flex;align-items:baseline;justify-content:space-between;padding-bottom:4px}
+.case-nom{font:400 17px var(--f-titre);color:var(--fg)}
+.case-compte{font:700 12px var(--f-texte);color:var(--fg)}
+.masquee .case-nom,.masquee .case-compte{color:var(--muted)}
+.ligne{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-height:36px}
+.coche{width:32px;height:36px;flex:none;display:grid;place-items:center;margin-left:-8px;border:none;background:none;padding:0;color:inherit}
+button.coche{cursor:pointer}
+button.coche:disabled{cursor:default}
+.rond{width:18px;height:18px;border-radius:999px;display:grid;place-items:center;border:2px solid var(--ink);background:transparent;color:var(--card);font:700 11px var(--f-texte)}
+.faite .rond{background:var(--ink)}
+.ligne-titre{flex:1 1 7em;min-width:0;font:500 14px/1.3 var(--f-texte);overflow-wrap:break-word}
+.faite .ligne-titre{text-decoration:line-through;color:var(--muted)}
+.puce{flex:none;padding:2px 7px;border-radius:999px;font:600 11px var(--f-texte)}
+.puce-agent{border:1.5px dashed var(--ink);color:var(--fg)}
+.puce-echeance{padding:3px 8px;font:700 11.5px var(--f-texte);background:var(--card);color:var(--text)}
+.puce-echeance[data-statut=overdue]{background:var(--danger-bg);color:var(--danger)}
+.reste,.vide{font:600 12px var(--f-texte);color:var(--fg);padding:4px 0 0}
+.vide{font-weight:500}
+.parking{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1.5px dashed var(--divider);border-radius:16px}
+.parking-nom{font:400 16px var(--f-titre);color:var(--muted)}
+.pastille{padding:5px 11px;border-radius:999px;background:var(--surface);font:500 13.5px var(--f-texte);overflow-wrap:anywhere}
+.alerte-texte{color:var(--danger);font-weight:600}
+
+/* ── Vos matrices ── */
+.legende{display:flex;flex-wrap:wrap;gap:10px;font:600 11.5px var(--f-texte);color:var(--muted)}
+.legende span{display:flex;align-items:center;gap:4px}
+.legende i{width:9px;height:9px;border-radius:3px;background:var(--ink)}
+.groupe{display:flex;flex-direction:column;gap:2px}
+.groupe-nom{padding:0 0 4px}
+.matrice{display:grid;grid-template-columns:minmax(0,1fr) 200px 92px;align-items:center;gap:16px;min-height:48px;padding:6px 10px;margin:0 -10px;border-radius:14px;text-decoration:none;color:var(--text)}
+a.matrice:hover{background:var(--surface);color:var(--text)}
+.matrice-nom{font:400 18px/1.2 var(--f-titre);overflow-wrap:anywhere}
+.barre{display:flex;height:12px;border-radius:999px;overflow:hidden;gap:2px;background:var(--surface)}
+.barre span{background:var(--ink)}
+.meta{text-align:right;font:600 13px var(--f-texte);color:var(--muted)}
+.meta.alerte{color:var(--danger)}
+.pied-bord{padding-top:10px;border-top:1px solid var(--divider)}
+.pied a{font-weight:700}
+
+/* ── Écritures ── */
+.ecriture{padding:16px 18px}
+.rangee{display:flex;align-items:center;gap:18px}
+.mini{flex:none;display:grid;grid-template-columns:repeat(2,22px);grid-template-rows:repeat(2,22px);gap:3px}
+.mini span{border-radius:6px;background:var(--ghost)}
+.mini .plein{background:var(--ink)}
+.mini .pointille{background:transparent;border:2px dashed var(--ink)}
+.corps{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.corps .surtitre{color:var(--fg);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.titre-ecriture{font:400 21px/1.2 var(--f-titre);overflow-wrap:anywhere}
+.barree{text-decoration:line-through;text-decoration-thickness:2px;text-decoration-color:var(--ink)}
+.chemin{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.chemin .puce{font-size:11.5px;padding:2px 8px}
+.chemin .puce-agent{border-color:var(--divider);color:var(--muted)}
+.chemin .puce-echeance{background:var(--surface)}
+.rond-fait{flex:none;width:47px;height:47px;border-radius:999px;display:grid;place-items:center;background:var(--ink);color:var(--card)}
+.note{margin:0;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;font-size:13.5px;line-height:1.4}
+.note svg{flex:none}
+.note-paire{background:var(--tint);color:var(--fg)}
+.note-defaite{background:var(--surface);color:var(--muted)}
+.note-defaite strong{color:var(--text)}
+.etat{background:var(--card);color:var(--muted);border:1px solid var(--divider);border-radius:22px;padding:14px 18px;font-size:13.5px}
+
+@media (max-width:520px){
+  .carte{padding:14px 14px 12px}
+  .matrice{grid-template-columns:minmax(0,1fr) auto;gap:6px 12px}
+  .barre{grid-column:1/-1;order:3}
+  .rangee{gap:12px}
+  .case{min-height:0}
+}
+</style>
+</head>
+<body>
+<main id="racine" aria-label="Penduline">
+  <p class="etat" role="status">Lecture de Penduline…</p>
+</main>
+<script>
+(function () {
+  'use strict';
+
+  var LOGO = '__LOGO__';
+  var VERSION = '__VERSION_MCP_APPS__';
+  var racine = document.getElementById('racine');
+  var html = document.documentElement;
+
+  /** Ce que l'hôte a annoncé à l'initialisation (liens, outils…). */
+  var capacites = {};
+  var fuseau;
+
+  // ── Le pont JSON-RPC avec l'hôte ─────────────────────────────────────────
+  //
+  // Un sous-ensemble de MCP Apps : `ui/initialize` puis
+  // `ui/notifications/initialized` ; on écoute `tool-result` et
+  // `host-context-changed` ; on répond à `ping` et `ui/resource-teardown`.
+  // Tout le reste est ignoré sans bruit — un hôte plus récent peut envoyer des
+  // notifications que cette page ne connaît pas.
+
+  var prochainId = 1;
+  var attente = {};
+
+  function envoie(message) {
+    message.jsonrpc = '2.0';
+    window.parent.postMessage(message, '*');
+  }
+
+  function demande(method, params, delai) {
+    var id = prochainId++;
+    return new Promise(function (resoudre, rejeter) {
+      attente[id] = { resoudre: resoudre, rejeter: rejeter };
+      envoie({ id: id, method: method, params: params || {} });
+      setTimeout(function () {
+        if (attente[id]) {
+          delete attente[id];
+          rejeter(new Error('délai dépassé : ' + method));
+        }
+      }, delai || 15000);
+    });
+  }
+
+  function notifie(method, params) {
+    envoie({ method: method, params: params || {} });
+  }
+
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent) return;
+    var m = e.data;
+    if (!m || m.jsonrpc !== '2.0') return;
+
+    // Une réponse à l'une de nos demandes.
+    if (m.id !== undefined && m.id !== null && !m.method) {
+      var a = attente[m.id];
+      if (!a) return;
+      delete attente[m.id];
+      if (m.error) a.rejeter(new Error(m.error.message || 'erreur'));
+      else a.resoudre(m.result);
+      return;
+    }
+
+    // Une demande de l'hôte : y répondre, toujours, pour ne pas le faire attendre.
+    if (m.id !== undefined && m.id !== null) {
+      if (m.method === 'ping' || m.method === 'ui/resource-teardown') {
+        envoie({ id: m.id, result: {} });
+      } else {
+        envoie({ id: m.id, error: { code: -32601, message: 'Méthode inconnue : ' + m.method } });
+      }
+      return;
+    }
+
+    if (m.method === 'ui/notifications/tool-result') dessine(m.params);
+    else if (m.method === 'ui/notifications/host-context-changed') contexte(m.params);
+    else if (m.method === 'ui/notifications/tool-cancelled') etat('Appel annulé.');
+  });
+
+  /** Thème et fuseau de l'hôte. Sans thème annoncé, `prefers-color-scheme` décide. */
+  function contexte(c) {
+    if (!c) return;
+    if (c.theme === 'dark' || c.theme === 'light') {
+      html.classList.toggle('pd-dark', c.theme === 'dark');
+      html.classList.toggle('pd-light', c.theme === 'light');
+    }
+    if (typeof c.timeZone === 'string') fuseau = c.timeZone;
+  }
+
+  /** Signaler la hauteur, pour que l'hôte ajuste l'iframe sans barre de défilement. */
+  var derniere = { l: 0, h: 0 };
+  var prevue = false;
+  function mesure() {
+    if (prevue) return;
+    prevue = true;
+    requestAnimationFrame(function () {
+      prevue = false;
+      var avant = html.style.height;
+      html.style.height = 'max-content';
+      var h = Math.ceil(html.getBoundingClientRect().height);
+      html.style.height = avant;
+      var l = Math.ceil(window.innerWidth);
+      if (h !== derniere.h || l !== derniere.l) {
+        derniere = { l: l, h: h };
+        notifie('ui/notifications/size-changed', { width: l, height: h });
+      }
+    });
+  }
+  if (typeof ResizeObserver === 'function') {
+    var ro = new ResizeObserver(mesure);
+    ro.observe(html);
+    ro.observe(document.body);
+  }
+
+  demande('ui/initialize', {
+    appInfo: { name: 'penduline-visuels', version: '1.0.0' },
+    appCapabilities: {},
+    protocolVersion: VERSION,
+  })
+    .then(function (r) {
+      r = r || {};
+      capacites = r.hostCapabilities || {};
+      contexte(r.hostContext);
+      notifie('ui/notifications/initialized', {});
+      mesure();
+    })
+    .catch(function () {
+      // Un hôte qui ne répond pas à l'initialisation peut tout de même pousser
+      // le résultat : on continue d'écouter, sans rien promettre de plus.
+      mesure();
+    });
+
+  // ── Petits outils DOM ────────────────────────────────────────────────────
+
+  /** `h('span', { class: 'x' }, enfant…)` — les chaînes deviennent du TEXTE. */
+  function h(tag, attrs) {
+    var el = document.createElement(tag);
+    if (attrs) {
+      for (var k in attrs) {
+        if (attrs[k] === null || attrs[k] === undefined || attrs[k] === false) continue;
+        if (k === 'class') el.className = attrs[k];
+        else if (k === 'text') el.textContent = attrs[k];
+        else el.setAttribute(k, attrs[k] === true ? '' : attrs[k]);
+      }
+    }
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c === null || c === undefined || c === false) continue;
+      el.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    }
+    return el;
+  }
+
+  /** Les icônes : des chaînes CONSTANTES, seul usage d'`innerHTML` de la page. */
+  var ICONES = {
+    ouvrir: '<path d="M7 17 17 7M8 7h9v9"></path>',
+    vers: '<path d="M5 12h14M13 6l6 6-6 6"></path>',
+    fait: '<path d="m5 12 5 5 9-10"></path>',
+    lien: '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"></path>',
+    delie: '<path d="M10 14a4 4 0 0 0 5.7 0l1-1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7M4 4l16 16"></path>',
+  };
+  function icone(nom, taille, epaisseur, label) {
+    var s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    s.setAttribute('width', taille);
+    s.setAttribute('height', taille);
+    s.setAttribute('viewBox', '0 0 24 24');
+    s.setAttribute('fill', 'none');
+    s.setAttribute('stroke', 'currentColor');
+    s.setAttribute('stroke-width', epaisseur);
+    s.setAttribute('stroke-linecap', 'round');
+    s.setAttribute('stroke-linejoin', 'round');
+    if (label) {
+      s.setAttribute('role', 'img');
+      s.setAttribute('aria-label', label);
+    } else {
+      s.setAttribute('aria-hidden', 'true');
+    }
+    s.innerHTML = ICONES[nom];
+    return s;
+  }
+
+  /**
+   * Un lien vers l'app. `ui/open-link` quand l'hôte le propose — une iframe
+   * isolée n'a souvent pas le droit d'ouvrir un onglet elle-même — et le lien
+   * ordinaire sinon.
+   */
+  function lien(url, attrs, enfants) {
+    var a = h('a', Object.assign({ href: url, target: '_blank', rel: 'noopener noreferrer' }, attrs));
+    enfants.forEach(function (c) {
+      a.appendChild(typeof c === 'string' ? document.createTextNode(c) : c);
+    });
+    a.addEventListener('click', function (e) {
+      if (!capacites.openLinks) return;
+      e.preventDefault();
+      demande('ui/open-link', { url: url }).catch(function () {
+        window.open(url, '_blank', 'noopener');
+      });
+    });
+    return a;
+  }
+
+  function logo() {
+    return h('img', { src: LOGO, alt: '', width: '21', height: '32' });
+  }
+
+  function entete(surtitre, titre, droite) {
+    return h(
+      'header',
+      { class: 'entete' },
+      logo(),
+      h('div', { class: 'entete-texte' }, h('span', { class: 'surtitre', text: surtitre }), h('span', { class: 'titre', text: titre })),
+      droite,
+    );
+  }
+
+  function puceEcheance(e) {
+    return e ? h('span', { class: 'puce puce-echeance', 'data-statut': e.statut, text: e.texte }) : null;
+  }
+
+  function etat(texte) {
+    racine.replaceChildren(h('p', { class: 'etat', role: 'status', text: texte }));
+    mesure();
+  }
+
+  function heure(iso) {
+    try {
+      var o = { hour: '2-digit', minute: '2-digit' };
+      if (fuseau) o.timeZone = fuseau;
+      var p = new Intl.DateTimeFormat('fr-FR', o).formatToParts(new Date(iso));
+      var hh = '', mm = '';
+      p.forEach(function (x) {
+        if (x.type === 'hour') hh = String(Number(x.value));
+        if (x.type === 'minute') mm = x.value;
+      });
+      return hh && mm ? 'Lu à ' + hh + ' h ' + mm : '';
+    } catch (e) {
+      return '';
+    }
+  }
+
+  // ── Rendu ────────────────────────────────────────────────────────────────
+
+  function dessine(resultat) {
+    resultat = resultat || {};
+    var v = resultat.structuredContent;
+    if (resultat.isError) {
+      var msg = (resultat.content || []).filter(function (c) { return c && c.type === 'text'; })[0];
+      return etat(msg ? msg.text : 'Penduline a refusé cet appel.');
+    }
+    if (!v || typeof v !== 'object') return etat('Penduline n’a rien à afficher pour cet appel.');
+    var vue;
+    if (v.vue === 'matrice') vue = matrice(v);
+    else if (v.vue === 'matrices') vue = matrices(v);
+    else if (v.vue === 'ecriture') vue = ecriture(v);
+    else return etat('Penduline n’a rien à afficher pour cet appel.');
+    racine.replaceChildren(vue);
+    mesure();
+  }
+
+  // ── Vue « matrice » ──
+
+  function matrice(v) {
+    // Le pied décrit la matrice telle qu'elle a été LUE (« Lu à 14 h 32 ») : on
+    // ne le recalcule pas ici, on y ajoute ce qui a été coché depuis la page.
+    var terminees = 0;
+    var piedTexte = h('span', { text: v.pied });
+    var ajout = h('span');
+    var annonce = h('span', { class: 'alerte-texte', role: 'status', 'aria-live': 'polite' });
+
+    /** Cocher depuis la page : seulement si l'hôte relaie les appels d'outils. */
+    var cochable = !!capacites.serverTools;
+
+    function ligne(t, c) {
+      var titre = h('span', { class: 'ligne-titre', text: t.titre });
+      var rond = h('span', { class: 'rond', 'aria-hidden': 'true' });
+      var coche;
+      if (cochable) {
+        coche = h('button', { type: 'button', class: 'coche', 'aria-label': 'Terminer « ' + t.titre + ' »', 'aria-pressed': 'false' }, rond);
+      } else {
+        coche = h('span', { class: 'coche', 'aria-hidden': 'true' }, rond);
+      }
+      var el = h(
+        'div',
+        { class: 'ligne' },
+        coche,
+        titre,
+        t.agent ? h('span', { class: 'puce puce-agent', text: 'agent' }) : null,
+        puceEcheance(t.echeance),
+      );
+      if (cochable) {
+        coche.addEventListener('click', function () {
+          if (coche.disabled) return;
+          coche.disabled = true;
+          el.classList.add('faite');
+          rond.textContent = '✓';
+          coche.setAttribute('aria-pressed', 'true');
+          demande('tools/call', { name: 'complete_task', arguments: { task_id: t.id } }, 30000)
+            .then(function (r) {
+              if (r && r.isError) throw new Error('refus');
+              coche.setAttribute('aria-label', '« ' + t.titre + ' » terminée');
+              c.ouvertes -= 1;
+              compte(c);
+              terminees += 1;
+              annonce.textContent = '';
+              ajout.textContent = ' · ' + terminees + (terminees === 1 ? ' terminée ici' : ' terminées ici');
+              if (capacites.updateModelContext) {
+                demande('ui/update-model-context', {
+                  content: [{ type: 'text', text: 'L’utilisateur a terminé « ' + t.titre + ' » depuis la matrice affichée (complete_task).' }],
+                }).catch(function () {});
+              }
+            })
+            .catch(function () {
+              coche.disabled = false;
+              el.classList.remove('faite');
+              rond.textContent = '';
+              coche.setAttribute('aria-pressed', 'false');
+              annonce.textContent = 'Impossible de terminer « ' + t.titre + ' ».';
+            });
+        });
+      }
+      return el;
+    }
+
+    var compteurs = {};
+    function compte(c) {
+      var n = compteurs[c.key];
+      if (n) n.textContent = String(c.ouvertes);
+    }
+
+    function zone(c) {
+      var nb = h('span', { class: 'case-compte', 'aria-hidden': 'true', text: c.masquee ? '—' : String(c.ouvertes) });
+      compteurs[c.key] = nb;
+      var s = h(
+        'section',
+        { class: 'case' + (c.masquee ? ' masquee' : ''), 'data-q': c.key, 'aria-label': c.aria },
+        h('div', { class: 'case-tete' }, h('span', { class: 'case-nom', text: c.label }), nb),
+      );
+      if (!c.masquee) {
+        c.taches.forEach(function (t) { s.appendChild(ligne(t, c)); });
+        if (c.reste) s.appendChild(h('span', { class: 'reste', text: '+ ' + c.reste + (c.reste === 1 ? ' autre' : ' autres') }));
+        if (!c.ouvertes) s.appendChild(h('span', { class: 'vide', text: 'Rien ici' }));
+      }
+      return s;
+    }
+
+    var g = h(
+      'div',
+      { class: 'grille' },
+      h('span'),
+      h('span', { class: 'axe', text: 'Urgent' }),
+      h('span', { class: 'axe', text: 'Pas urgent' }),
+      h('span', { class: 'axe axe-v', text: 'Important' }),
+      zone(v.cases[0]),
+      zone(v.cases[1]),
+      h('span', { class: 'axe axe-v', text: 'Pas important' }),
+      zone(v.cases[2]),
+      zone(v.cases[3]),
+    );
+
+    var p = v.parking;
+    var parking = null;
+    if (!p.masquee && p.ouvertes) {
+      parking = h('section', { class: 'parking', 'data-q': 'parking', 'aria-label': p.aria }, h('span', { class: 'parking-nom', text: p.label }));
+      p.taches.forEach(function (t) { parking.appendChild(h('span', { class: 'pastille', text: t.titre })); });
+      if (p.reste) parking.appendChild(h('span', { class: 'reste', text: '+ ' + p.reste }));
+    }
+
+    return h(
+      'article',
+      { class: 'carte', 'aria-label': 'Matrice ' + v.matrice },
+      entete(
+        v.surtitre,
+        v.matrice,
+        v.lien ? lien(v.lien, { class: 'bouton', 'aria-label': 'Ouvrir Penduline' }, ['Ouvrir', icone('ouvrir', 13, 2.2)]) : null,
+      ),
+      g,
+      parking,
+      h('footer', { class: 'pied' }, h('span', null, piedTexte, ajout, ' ', annonce), h('span', { text: heure(v.luA) })),
+    );
+  }
+
+  // ── Vue « vos matrices » ──
+
+  var LEGENDE = [['faire', 'Faire'], ['planifier', 'Planifier'], ['deleguer', 'Déléguer'], ['eliminer', 'Éliminer']];
+
+  function matrices(v) {
+    var legende = h('span', { class: 'legende', 'aria-hidden': 'true' });
+    LEGENDE.forEach(function (l) {
+      legende.appendChild(h('span', { 'data-q': l[0] }, h('i'), l[1]));
+    });
+
+    var carte = h('article', { class: 'carte', 'aria-label': 'Vos matrices' }, entete('Penduline', 'Vos matrices', legende));
+
+    v.groupes.forEach(function (gr) {
+      var s = h('section', { class: 'groupe', 'aria-label': gr.nom }, h('span', { class: 'surtitre groupe-nom', text: gr.nom }));
+      gr.matrices.forEach(function (m) {
+        var barre = h('span', { class: 'barre', role: 'img', 'aria-label': m.aria });
+        LEGENDE.forEach(function (l) {
+          var n = m.comptes[l[0]] || 0;
+          if (n > 0) {
+            var seg = h('span', { 'data-q': l[0] });
+            seg.style.flex = n + ' 1 0';
+            barre.appendChild(seg);
+          }
+        });
+        var enfants = [h('span', { class: 'matrice-nom', text: m.nom }), barre, h('span', { class: 'meta' + (m.alerte ? ' alerte' : ''), text: m.meta })];
+        if (v.lien) s.appendChild(lien(v.lien, { class: 'matrice' }, enfants));
+        else s.appendChild(h.apply(null, ['div', { class: 'matrice' }].concat(enfants)));
+      });
+      carte.appendChild(s);
+    });
+
+    if (!v.groupes.length) carte.appendChild(h('p', { class: 'vide', text: 'Aucune matrice pour l’instant.' }));
+
+    carte.appendChild(
+      h(
+        'footer',
+        { class: 'pied pied-bord' },
+        h('span', { text: v.pied }),
+        v.lien ? lien(v.lien, null, ['Ouvrir Penduline']) : null,
+      ),
+    );
+    return carte;
+  }
+
+  // ── Vue « écriture » ──
+
+  var ORDRE = ['faire', 'planifier', 'deleguer', 'eliminer'];
+
+  /** La mini-grille : la case d'arrivée pleine, celle de départ en pointillé. */
+  function mini(plein, pointille) {
+    var g = h('span', { class: 'mini', 'aria-hidden': 'true' });
+    ORDRE.forEach(function (k) {
+      var cls = k === plein ? 'plein' : k === pointille ? 'pointille' : '';
+      g.appendChild(h('span', { class: cls, 'data-q': k }));
+    });
+    return g;
+  }
+
+  function voir(v) {
+    return v.lien ? lien(v.lien, { class: 'bouton', 'aria-label': 'Voir dans Penduline' }, ['Voir']) : null;
+  }
+
+  function ecriture(v) {
+    var a = h('article', { class: 'carte ecriture' });
+
+    if (v.type === 'ajout' || v.type === 'modification') {
+      a.setAttribute('data-q', v.case.key);
+      a.setAttribute('aria-label', v.surtitre + ' : ' + v.titre);
+      a.appendChild(
+        h(
+          'div',
+          { class: 'rangee' },
+          mini(v.case.key, null),
+          h(
+            'div',
+            { class: 'corps' },
+            h('span', { class: 'surtitre', text: v.surtitre }),
+            h('span', { class: 'titre-ecriture', text: v.titre }),
+            h('span', { class: 'chemin' }, v.chemin, v.agent ? h('span', { class: 'puce puce-agent', text: 'agent' }) : null, puceEcheance(v.echeance)),
+          ),
+          voir(v),
+        ),
+      );
+      return a;
+    }
+
+    if (v.type === 'deplacement') {
+      a.setAttribute('data-q', v.vers.key);
+      a.setAttribute('aria-label', 'Déplacée de ' + v.de.label + ' vers ' + v.vers.label + ' : ' + v.titre);
+      var sur = h(
+        'span',
+        { class: 'surtitre' },
+        h('span', { 'data-q': v.de.key, style: 'color:var(--fg)', text: v.de.label }),
+        (function () { var s = icone('vers', 14, 2.4, 'vers'); s.style.color = 'var(--muted)'; return s; })(),
+        h('span', { 'data-q': v.vers.key, style: 'color:var(--fg)', text: v.vers.label }),
+      );
+      a.appendChild(
+        h(
+          'div',
+          { class: 'rangee' },
+          mini(v.vers.key, v.de.key !== v.vers.key ? v.de.key : null),
+          h('div', { class: 'corps' }, sur, h('span', { class: 'titre-ecriture', text: v.titre }), h('span', { class: 'chemin', text: v.chemin })),
+          voir(v),
+        ),
+      );
+      if (v.paire) {
+        a.appendChild(
+          h('p', { class: 'note note-paire' }, icone('lien', 16, 2), h('span', null, 'Sa paire ', h('strong', { text: v.paire }), ' a suivi : elles restent ensemble.')),
+        );
+      }
+      return a;
+    }
+
+    if (v.type === 'terminee') {
+      a.setAttribute('data-q', v.case.key);
+      a.setAttribute('aria-label', 'Terminée : ' + v.titre);
+      a.appendChild(
+        h(
+          'div',
+          { class: 'rangee' },
+          h('span', { class: 'rond-fait', 'aria-hidden': 'true' }, icone('fait', 24, 3)),
+          h(
+            'div',
+            { class: 'corps' },
+            h('span', { class: 'surtitre', text: 'Terminée · rangée dans « Terminées »' }),
+            h('span', { class: 'titre-ecriture barree', text: v.titre }),
+            h('span', { class: 'chemin', text: v.chemin + (v.retard ? ' · ' + v.retard : '') }),
+          ),
+          voir(v),
+        ),
+      );
+      if (v.paireDefaite) {
+        a.appendChild(
+          h(
+            'p',
+            { class: 'note note-defaite' },
+            icone('delie', 16, 2),
+            h('span', null, 'La paire est défaite : ', h('strong', { text: v.paireDefaite.titre }), ' reste dans ' + v.paireDefaite.case.label + ', seule.'),
+          ),
+        );
+      }
+      return a;
+    }
+
+    return h('p', { class: 'etat', text: 'Écriture enregistrée.' });
+  }
+})();
+</script>
+</body>
+</html>
