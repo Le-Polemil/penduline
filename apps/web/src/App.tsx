@@ -20,6 +20,7 @@ import { AuthorizeScreen } from './screens/Authorize';
 import { readInvitation } from './lib/partage';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
+import { TopBar } from './components/TopBar';
 
 /**
  * Les événements qui valent la peine d'être poussés vers l'extension.
@@ -126,7 +127,7 @@ export function App() {
   // s'inscrit d'abord et retombe ici, l'URL n'ayant pas bougé. C'est ce qui fait
   // tenir « invitation d'une adresse sans compte » sans un chemin de plus.
   if (invitation) return <InvitationScreen jeton={invitation} />;
-  return <AppRoot userId={session.user.id} />;
+  return <AppRoot userId={session.user.id} email={session.user.email ?? null} />;
 }
 
 /**
@@ -237,24 +238,47 @@ function useMatriceDisparue(store: Store, view: View, setView: (v: View) => void
   }, [disparue, id, toast, announce, setView]);
 }
 
-function AppRoot({ userId }: { userId: string }) {
+function AppRoot({ userId, email }: { userId: string; email: string | null }) {
   return (
     // Une seule région d'annonce pour toute l'application : plusieurs zones
     // `aria-live` concurrentes sont mal restituées par les lecteurs d'écran.
     <AnnounceProvider>
       <ToastProvider>
-        <Workspace userId={userId} />
+        <Workspace userId={userId} email={email} />
       </ToastProvider>
     </AnnounceProvider>
   );
 }
 
-function Workspace({ userId }: { userId: string }) {
+/**
+ * « / » ouvre la recherche, comme dans la plupart des outils du genre.
+ *
+ * Inerte dans un champ de saisie et derrière une modale — mêmes gardes que
+ * `useUndoShortcut`, pour les mêmes raisons : on y tape un « / », on n'y cherche
+ * pas.
+ */
+function useSearchShortcut(setOpen: (open: boolean) => void) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const cible = e.target as HTMLElement | null;
+      if (cible?.tagName === 'INPUT' || cible?.tagName === 'TEXTAREA' || cible?.isContentEditable) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      e.preventDefault();
+      setOpen(true);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setOpen]);
+}
+
+function Workspace({ userId, email }: { userId: string; email: string | null }) {
   const store = useStore(userId);
   const [view, setView] = useState<View>(readView);
   const [searching, setSearching] = useState(false);
   const [apps, setApps] = useState(false);
   useUndoShortcut(store);
+  useSearchShortcut(setSearching);
   useMatriceDisparue(store, view, setView);
 
   // Changer d'écran change le contexte : une entrée d'annulation viserait des
@@ -288,36 +312,22 @@ function Workspace({ userId }: { userId: string }) {
 
   return (
     <>
-      {/* Le retour vit dans la barre du haut, face à « Déconnexion » — et non
-          dans l'en-tête de la matrice, où il était mêlé à son titre. */}
-      <div className="userbar">
-        {view.kind !== 'home' ? (
-          <button className="crumb" onClick={onHome}>
-            ‹ Retour
-          </button>
-        ) : (
-          <span />
-        )}
-        <span className="userbar__right">
-          {/* Dans la barre plutôt que dans un écran : la recherche est ainsi
-              atteignable depuis les trois, sans qu'aucun n'ait à la porter. */}
-          <button className="searchbtn" onClick={() => setSearching(true)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            Rechercher
-          </button>
-          {/* À côté de « Déconnexion » : c'est le même registre — ce qui
-              concerne le compte, pas les matrices. */}
-          <button className="signout" onClick={() => setApps(true)}>
-            Applications
-          </button>
-          <button className="signout" onClick={() => supabase.auth.signOut()}>
-            Déconnexion
-          </button>
-        </span>
-      </div>
+      {/* La barre du haut, la même partout : elle remplace la `userbar` et son
+          « ‹ Retour » — c'est « Matrices » qui ramène à l'accueil. */}
+      <TopBar
+        view={view.kind}
+        email={email}
+        onNavigate={(to) =>
+          setView(
+            to === 'home' ? HOME
+              : to === 'global' ? { kind: 'global', scope: { kind: 'all' } }
+              : { kind: to },
+          )
+        }
+        onSearch={() => setSearching(true)}
+        onApps={() => setApps(true)}
+        onSignOut={() => void supabase.auth.signOut()}
+      />
       {searching && (
         <Search boards={store.boards} tasks={store.tasks} onClose={() => setSearching(false)} onPick={allerA} />
       )}
@@ -349,9 +359,7 @@ function Workspace({ userId }: { userId: string }) {
           store={store}
           onOpen={(id) => setView({ kind: 'board', id })}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
-          onFocus={() => setView({ kind: 'focus' })}
           onReview={() => setView({ kind: 'review' })}
-          onStats={() => setView({ kind: 'stats' })}
         />
       )}
     </>

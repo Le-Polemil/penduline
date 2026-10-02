@@ -387,10 +387,6 @@ button { font: inherit; }
    Le `wrap` est le filet : si même l'ellipse ne suffit pas, la ligne casse au
    lieu de sortir. */
 .matrix-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 0 2px 14px; }
-.crumb { font: 600 13px var(--font-body); color: var(--color-accent-700); background: none; border: none; cursor: pointer; }
-@media (hover: hover) and (pointer: fine) {
-  .crumb:hover { color: var(--color-accent-800); }
-}
 .board-switch { position: relative; flex: 1 1 auto; min-width: 0; }
 /* `nowrap` : sans lui, le chevron passe à la ligne dès que la largeur manque —
    très visible sur mobile, où il se retrouvait sous le nom. */
@@ -1124,11 +1120,6 @@ button { font: inherit; }
 /* ── Barre du haut (déconnexion) ──────────────────────────────────────────── */
 /* Retour à gauche, déconnexion à droite. `space-between` avec un `<span/>` vide
    quand il n'y a pas de retour, pour que « Déconnexion » ne se recentre pas. */
-.userbar { max-width: 1060px; margin: 0 auto; padding: 14px 24px 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.signout { background: none; border: 1.5px solid var(--color-neutral-300); color: var(--color-neutral-700); border-radius: 999px; padding: 6px 14px; font: 600 12px var(--font-body); cursor: pointer; }
-@media (hover: hover) and (pointer: fine) {
-  .signout:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
-}
 
 /* ── Responsive : la grille 2×2 s'empile sur mobile ───────────────────────── */
 @media (max-width: 720px) {
@@ -1427,16 +1418,6 @@ button.uni-head__name:focus-visible {
    du même produit n'ont pas de raison de se ressembler à moitié. Il s'ancre en
    revanche vers le haut — on cherche en tapant, l'œil doit rester près du champ
    pendant que la liste s'allonge en dessous. */
-.userbar__right { display: flex; align-items: center; gap: 8px; }
-.searchbtn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: none; border: 1.5px solid var(--color-neutral-300);
-  color: var(--color-neutral-700); border-radius: 999px; padding: 6px 14px;
-  font: 600 12px var(--font-body); cursor: pointer;
-}
-@media (hover: hover) and (pointer: fine) {
-  .searchbtn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
-}
 
 .sr-panel {
   background: var(--card-warm); border-radius: var(--radius-lg); box-shadow: var(--shadow-lg);
@@ -1969,9 +1950,6 @@ button.uni-head__name:focus-visible {
   /* Le minimum des deux plateformes. `min-height` explicite plutôt qu'un calcul
      de marges : une marge suffisante aujourd'hui cesse de l'être dès qu'on
      touche à la police, et personne ne le remarque. */
-  .crumb,
-  .searchbtn,
-  .signout,
   .bin-btn,
   .board-switch__name,
   .home-global,
@@ -2003,7 +1981,6 @@ button.uni-head__name:focus-visible {
   .sr-hit,
   .review-board { display: flex; align-items: center; }
   .move-btn { display: inline-flex; align-items: center; justify-content: center; }
-  .crumb,
   .board-switch__name,
   .btn-link,
   .bin-foot__link,
@@ -2117,13 +2094,12 @@ button.uni-head__name:focus-visible {
    additionner ne changerait rien — mais sur un écran qui en a une, additionner
    doublerait une marge déjà suffisante. On veut le plus grand des deux, pas leur
    somme. */
-.userbar { padding-top: max(14px, env(safe-area-inset-top)); }
+.topbar__inner { padding-top: max(14px, env(safe-area-inset-top)); }
 .home,
 .matrix,
 .review,
 .stats,
-.focus,
-.userbar {
+.focus {
   padding-left: max(24px, env(safe-area-inset-left));
   padding-right: max(24px, env(safe-area-inset-right));
 }
@@ -2190,3 +2166,259 @@ button.uni-head__name:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Barre du haut (accueil « grand header ») ────────────────────────────────
+   Un bandeau d'encre, le même sur tous les écrans. Sur l'accueil, il se
+   prolonge par le héros (`.hero`), de la même couleur : les deux se lisent
+   comme un seul en-tête. Ailleurs, il reste seul et sobre.
+   Les couleurs vivent dans des variables locales au bandeau : c'est la seule
+   surface sombre de l'application, et elle ne doit rien imposer au reste. */
+.topbar, .hero {
+  --band: #1d1a16;
+  --band-raised: #28231d;
+  --band-text: #f3e9d8;
+  --band-muted: #c2b6a2;
+  --band-line: color-mix(in srgb, #f3e9d8 22%, transparent);
+  background: var(--band); color: var(--band-text);
+}
+.topbar__inner {
+  max-width: 1200px; margin: 0 auto; padding: 14px 24px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.topbar__brand {
+  display: inline-flex; align-items: center; gap: 10px; min-height: 44px;
+  background: none; border: none; padding: 0; cursor: pointer; color: var(--band-text);
+  border-radius: 12px;
+}
+.topbar__brand img { display: block; width: 26px; height: 40px; }
+.topbar__name { font: 400 24px var(--font-heading); }
+.topbar__nav { display: flex; gap: 4px; flex-wrap: wrap; margin-left: 12px; }
+.topbar__link {
+  min-height: 40px; padding: 0 14px; border-radius: 999px; border: none; cursor: pointer;
+  background: transparent; color: var(--band-text); font: 600 14px var(--font-body);
+  transition: background 0.15s, color 0.15s;
+}
+.topbar__link[aria-current='page'] { background: var(--band-text); color: var(--band); font-weight: 700; }
+@media (hover: hover) and (pointer: fine) {
+  .topbar__link:not([aria-current='page']):hover { background: var(--band-raised); }
+}
+.topbar__right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+.topbar__search {
+  min-height: 44px; min-width: 220px; display: flex; align-items: center; gap: 10px;
+  padding: 0 14px 0 16px; border-radius: 999px; cursor: pointer;
+  border: 1.5px solid var(--band-line); background: var(--band-raised);
+  color: var(--band-muted); font: 500 14px var(--font-body); text-align: left;
+}
+.topbar__search-label { flex: 1; }
+.topbar__kbd {
+  font: 700 11px var(--font-body); border: 1px solid var(--band-line);
+  border-radius: 6px; padding: 1px 6px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .topbar__search:hover { color: var(--band-text); }
+}
+.topbar__account { position: relative; }
+.topbar__avatar {
+  width: 44px; height: 44px; border-radius: 999px; border: none; cursor: pointer;
+  background: #e08a52; color: var(--band); font: 400 18px var(--font-heading);
+}
+.topbar__menu {
+  position: absolute; right: 0; top: calc(100% + 8px); z-index: 70; min-width: 240px;
+  display: flex; flex-direction: column; padding: 8px;
+  background: var(--card-warm); color: var(--color-text);
+  border-radius: 18px; box-shadow: var(--shadow-lg);
+}
+.topbar__menu-email {
+  margin: 4px 10px 8px; font: 600 12.5px var(--font-body); color: var(--color-neutral-700);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.topbar__menu-item {
+  min-height: 44px; padding: 0 12px; border: none; border-radius: 12px; background: none;
+  text-align: left; cursor: pointer; font: 600 14px var(--font-body); color: var(--color-text);
+}
+@media (hover: hover) and (pointer: fine) {
+  .topbar__menu-item:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
+.topbar :focus-visible, .hero :focus-visible { outline-color: #f0a774; }
+
+/* Au téléphone, la navigation passe sous le logo et défile à l'horizontale :
+   cinq entrées ne tiennent pas, et les replier dans un menu cacherait
+   « Aujourd'hui » — la plus utilisée au doigt. */
+@media (max-width: 720px) {
+  .topbar__inner { padding: 10px 16px; gap: 10px; }
+  .topbar__name { font-size: 21px; }
+  .topbar__right { order: 2; }
+  .topbar__search { min-width: 0; width: 44px; padding: 0; justify-content: center; }
+  .topbar__search-label, .topbar__kbd { display: none; }
+  .topbar__nav {
+    order: 3; flex-basis: 100%; margin: 0 -16px; padding: 0 16px 2px;
+    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
+  }
+  .topbar__nav::-webkit-scrollbar { display: none; }
+  .topbar__link { flex: none; }
+}
+
+/* ── Héros de l'accueil ──────────────────────────────────────────────────────
+   Il prolonge `.topbar` (même bandeau, variables déclarées plus haut). Le nid
+   est un décor en filigrane : la branche est fixe, seul le nid se balance autour
+   du nœud qui l'attache (54,6 % / 21 % de l'image). Les deux couches sont des
+   masques teintés par `background` : une seule image par forme, recolorable. */
+.hero { position: relative; overflow: hidden; }
+.hero__inner {
+  position: relative; z-index: 1; max-width: 1200px; margin: 0 auto;
+  padding: 28px 24px 84px; display: flex; flex-direction: column; gap: 18px;
+}
+.hero__date {
+  margin: 0; font: 700 12px var(--font-body); letter-spacing: 0.12em;
+  text-transform: uppercase; color: var(--band-muted);
+}
+.hero__title {
+  margin: 0; max-width: 700px; font: 400 clamp(36px, 5.5vw, 68px)/1 var(--font-heading);
+  text-wrap: balance;
+}
+.hero__counts { display: flex; gap: 8px; flex-wrap: wrap; }
+.hero__count {
+  min-height: 44px; display: inline-flex; align-items: center; gap: 10px;
+  padding: 0 16px 0 10px; border-radius: 999px; border: none; cursor: pointer;
+  font: 600 14px var(--font-body);
+}
+.hero__count-n { min-width: 24px; text-align: center; font: 400 22px var(--font-heading); }
+/* Les teintes sombres des cases, déjà choisies pour l'extension et les widgets MCP. */
+.hero__count--faire     { background: #2c3324; color: #c9d6b3; }
+.hero__count--faire .hero__count-n     { color: #a3b585; }
+.hero__count--planifier { background: #23303b; color: #bcd2e4; }
+.hero__count--planifier .hero__count-n { color: #8db0cc; }
+.hero__count--deleguer  { background: #3a2f1a; color: #ecd29a; }
+.hero__count--deleguer .hero__count-n  { color: #d9ae4c; }
+.hero__count--eliminer  { background: #3a2622; color: #f0b4a5; }
+.hero__count--eliminer .hero__count-n  { color: #e5826b; }
+.hero__count--parking {
+  padding: 0 16px; background: none; color: var(--band-text);
+  border: 1.5px dashed color-mix(in srgb, #f3e9d8 30%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .hero__count:hover { filter: brightness(1.15); }
+}
+.hero__nest {
+  position: absolute; top: -40px; right: clamp(-120px, 2vw, 60px);
+  width: 517px; height: 520px; opacity: 0.08; pointer-events: none;
+}
+.hero__branch, .hero__swing, .hero__nid { position: absolute; inset: 0; }
+.hero__branch, .hero__nid { background: var(--band-text); }
+.hero__branch {
+  -webkit-mask: url('/decor/nid-branche.png') center / contain no-repeat;
+  mask: url('/decor/nid-branche.png') center / contain no-repeat;
+}
+.hero__nid {
+  -webkit-mask: url('/decor/nid.png') center / contain no-repeat;
+  mask: url('/decor/nid.png') center / contain no-repeat;
+}
+.hero__swing { transform-origin: 54.6% 21%; animation: hero-sway 9s ease-in-out infinite; }
+@keyframes hero-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+@media (prefers-reduced-motion: reduce) { .hero__swing { animation: none; } }
+/* Le bord ondulé rejoint le fond de la page — d'où `--color-bg`, pas une couleur en dur. */
+.hero__wave { position: absolute; left: 0; bottom: -1px; display: block; width: 100%; height: 40px; }
+.hero__wave path { fill: var(--color-bg); }
+@media (max-width: 720px) {
+  .hero__inner { padding: 20px 16px 64px; }
+  .hero__nest { width: 320px; height: 322px; top: -20px; right: -110px; }
+}
+
+/* L'accueil s'élargit : la liste vit désormais sous un en-tête pleine largeur, et
+   760 px y faisaient une colonne étroite au milieu d'un bandeau de 1200. */
+.home { max-width: 960px; padding-top: 28px; }
+.home-section { margin: 28px 0 6px; font: 400 28px var(--font-heading); color: var(--color-text); }
+
+/* ── « Ça stagne » ───────────────────────────────────────────────────────────
+   Fond et encres validés sur la maquette (contrastes ≥ 4,5:1 pour les textes,
+   ≥ 3:1 pour les bords de boutons). */
+.stuck {
+  display: flex; flex-wrap: wrap; gap: 4px 28px; padding: 16px 22px 10px;
+  background: #dccec7; color: #33241b; border-radius: 26px;
+}
+.stuck__head { flex: 0 1 200px; display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
+.stuck__title {
+  margin: 0; display: flex; align-items: center; gap: 8px;
+  font: 400 22px var(--font-heading); color: #33241b;
+}
+.stuck__title svg { color: #9a5228; flex: none; }
+.stuck__all {
+  align-self: flex-start; min-height: 36px; padding: 0; border: none; background: none; cursor: pointer;
+  font: 700 13.5px var(--font-body); color: #7a3e1c;
+}
+.stuck__list { flex: 999 1 520px; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
+.stuck__item {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
+  gap: 6px 16px; padding: 9px 0; border-bottom: 1px solid color-mix(in srgb, #3a2a20 12%, transparent);
+}
+.stuck__item:last-child { border-bottom: none; }
+.stuck__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.stuck__line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.stuck__kind {
+  padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #3a2a20 12%, transparent);
+  font: 700 10.5px var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: #4a382c;
+}
+.stuck__name { font: 700 15px var(--font-body); color: #33241b; }
+.stuck__why { font-size: 12.5px; color: #5e4a3c; }
+.stuck__acts { display: flex; gap: 5px; flex-wrap: wrap; }
+.stuck__act {
+  min-height: 30px; padding: 0 11px; border-radius: 999px; background: transparent; cursor: pointer;
+  font: 700 12px var(--font-body);
+  border: 1.5px solid color-mix(in srgb, #3a2a20 45%, transparent); color: #4a382c;
+}
+.stuck__act--faire     { border-color: #5c6b45; color: #3d482a; }
+.stuck__act--planifier { border-color: #38607f; color: #243f54; }
+.stuck__act--deleguer  { border-color: #8f6a14; color: #5e450c; }
+.stuck__act--eliminer  { border-color: #a63d2a; color: #74291b; }
+.stuck__act--open      { border-color: #9a5228; color: #7a3e1c; }
+@media (hover: hover) and (pointer: fine) {
+  .stuck__act:hover, .stuck__all:hover, .stuck__undo:hover { background: color-mix(in srgb, #3a2a20 10%, transparent); }
+}
+/* Petits au pointeur fin, comme sur la maquette ; au doigt, la zone de frappe
+   remonte à 44 px sans que le dessin grossisse. */
+@media (pointer: coarse) {
+  .stuck__act, .stuck__undo, .stuck__all { min-height: 44px; }
+}
+.stuck__done { display: flex; align-items: center; gap: 10px; font: 600 13px var(--font-body); color: #4a382c; }
+.stuck__undo {
+  min-height: 30px; padding: 0 4px; border: none; background: none; cursor: pointer; border-radius: 6px;
+  font: 700 12.5px var(--font-body); color: #7a3e1c; text-decoration: underline;
+}
+.stuck .due-edit { flex-basis: 100%; padding-left: 0; }
+
+/* ── Univers en plateaux, matrices en mini-grilles ───────────────────────────
+   Le plateau est la teinte de surface ; « Sans univers » n'en a pas — un cadre
+   en pointillé, rangement par défaut plutôt que lieu. La mécanique (interstices,
+   glisser, replis) est inchangée : seul l'habillage bouge. */
+.uni--tray, .uni--loose { border-radius: 30px; padding: 4px 12px 10px; margin-top: 12px; }
+.uni--tray { background: var(--color-surface); }
+.uni--loose { border: 1.5px dashed var(--color-neutral-400); }
+.uni--tray .uni-head, .uni--loose .uni-head { padding: 10px 8px 4px; }
+.uni--tray .uni-head__name, .uni--loose .uni-head__name {
+  font: 400 22px var(--font-heading); letter-spacing: 0; text-transform: none; color: var(--color-text);
+}
+.uni--loose .uni-head__name { color: var(--color-neutral-700); }
+.uni--tray .uni-head__summary, .uni--loose .uni-head__summary { font-size: 13px; font-weight: 600; letter-spacing: 0; }
+.uni--tray .board-row { box-shadow: none; }
+
+.board-card__text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.mini-grid {
+  flex: none; display: grid; grid-template-columns: repeat(2, 26px); grid-template-rows: repeat(2, 26px); gap: 3px;
+}
+.mini-grid__cell {
+  display: grid; place-items: center; border-radius: 8px; font: 700 12px var(--font-body);
+}
+.mini-grid__cell--faire     { background: #dbe3ce; color: #43502f; }
+.mini-grid__cell--planifier { background: #dde7ef; color: #27455c; }
+.mini-grid__cell--deleguer  { background: #f2e0c4; color: #6b4f0e; }
+.mini-grid__cell--eliminer  { background: #e3d8d4; color: #7c2d1e; }
+.mini-grid__cell--empty { background: none; box-shadow: inset 0 0 0 1.5px var(--color-divider); }
+.stuck__more {
+  flex-basis: 100%; align-self: flex-start; min-height: 36px; padding: 0; margin: 2px 0 0 228px;
+  border: none; background: none; cursor: pointer; text-align: left;
+  font: 700 13px var(--font-body); color: #7a3e1c;
+}
+@media (max-width: 760px) { .stuck__more { margin-left: 0; } }
+@media (pointer: coarse) { .stuck__more { min-height: 44px; } }
+.uni--tray .uni-head__name, .uni--loose .uni-head__name { white-space: nowrap; }
+.stuck__last { font: 500 12px var(--font-body); color: #5e4a3c; }
