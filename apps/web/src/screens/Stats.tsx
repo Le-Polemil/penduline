@@ -1,13 +1,13 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import {
   PERIODS,
-  quadrant,
   statsReadings,
   statsSentence,
   type StatsPeriod,
   type StatsReadings,
   type WeekPoint,
 } from '@penduline/shared';
+import { quadrant } from '../lib/quads';
 import type { Store } from '../data/store';
 import { useStats } from '../data/useStats';
 
@@ -172,7 +172,7 @@ function Repartition({ readings }: { readings: StatsReadings }) {
             <span className="bar__track">
               <span
                 className="bar__fill"
-                style={{ width: `${(q.completed / max) * 100}%`, background: q.ink } as CSSProperties}
+                style={{ width: `${(q.completed / max) * 100}%`, background: quadrant(q.quadrant).ink } as CSSProperties}
               />
             </span>
             {/* Étiquette directe : la valeur ne dépend jamais de la couleur. */}
@@ -241,7 +241,7 @@ function Tendance({ readings }: { readings: StatsReadings }) {
             </span>
             <span className="spark__plot">
               {weeks.map((w) => (
-                <Colonne key={w.week} week={w} value={w.byQuadrant[q.quadrant]} max={max} ink={q.ink} label={q.label} />
+                <Colonne key={w.week} week={w} value={w.byQuadrant[q.quadrant]} max={max} ink={quadrant(q.quadrant).ink} label={q.label} />
               ))}
             </span>
           </div>
@@ -322,7 +322,7 @@ function Delais({ readings }: { readings: StatsReadings }) {
             <span className="bar__track">
               <span
                 className="bar__fill"
-                style={{ width: `${((q.avgDays ?? 0) / max) * 100}%`, background: q.ink } as CSSProperties}
+                style={{ width: `${((q.avgDays ?? 0) / max) * 100}%`, background: quadrant(q.quadrant).ink } as CSSProperties}
               />
             </span>
             <span className="bar__value">{fr(q.avgDays ?? 0)} j</span>

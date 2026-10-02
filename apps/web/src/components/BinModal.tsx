@@ -1,5 +1,8 @@
 import { useState, type CSSProperties } from 'react';
-import { quadrant, type Task } from '@penduline/shared';
+import {
+  type Task,
+} from '@penduline/shared';
+import { quadrant } from '../lib/quads';
 import { useDialog } from '../a11y/useDialog';
 
 /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { ALL } from '@penduline/shared';
 
 /**
  * La feuille de styles est, comme le manifeste, une pièce dont la rupture est
@@ -70,5 +71,32 @@ describe('styles.css', () => {
     /* `a:hover` est la seule exception, et elle est documentée : un changement de
        couleur de lien ne se colle pas au doigt et ne se lit pas comme un état. */
     expect(horsGarde).toEqual(['a:hover { color: var(--color-accent-800); }']);
+  });
+
+  /* ── Les cases du thème clair ne divergent pas de `quadrants.ts` ─────────── */
+  it('reprend au clair les couleurs exactes de `quadrants.ts`', () => {
+    // `lib/quads.ts` remplace chaque teinte par une variable CSS pour que le
+    // thème sombre puisse la changer. Le thème clair, lui, doit rester celui que
+    // partagent l'extension et le serveur MCP — à la lettre.
+    const racine = css.slice(css.indexOf(':root {'), css.indexOf('}', css.indexOf(':root {')));
+    const lire = (nom: string) => racine.match(new RegExp(`--${nom}:\\s*(#[0-9a-f]{6})`, 'i'))?.[1];
+    const ecarts = ALL.flatMap((q) =>
+      (['ink', 'dark', 'bg'] as const)
+        .filter((role) => !(role === 'bg' && q.bg === 'transparent'))
+        .filter((role) => lire(`q-${q.key}-${role}`)?.toLowerCase() !== q[role].toLowerCase())
+        .map((role) => `${q.key}.${role}`),
+    );
+    expect(ecarts).toEqual([]);
+  });
+
+  it('donne une valeur sombre à chaque variable de case', () => {
+    const sombre = css.slice(css.indexOf('@media (prefers-color-scheme: dark)'));
+    const manquantes = ALL.flatMap((q) =>
+      (['ink', 'dark', 'bg'] as const)
+        .filter((role) => !(role === 'bg' && q.bg === 'transparent'))
+        .map((role) => `--q-${q.key}-${role}`)
+        .filter((nom) => !sombre.includes(`${nom}:`)),
+    );
+    expect(manquantes).toEqual([]);
   });
 });

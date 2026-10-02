@@ -4,7 +4,6 @@ import {
   formatDeadline,
   groupByUniverse,
   partnerOf,
-  QUADS,
   type Attachment,
   type BoardRange,
   type Quadrant,
@@ -12,6 +11,7 @@ import {
   type Task,
   type Universe,
 } from '@penduline/shared';
+import { QUADS } from '../lib/quads';
 import {
   IconAlarmClock,
   IconFlag,

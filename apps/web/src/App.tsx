@@ -21,6 +21,7 @@ import { readInvitation } from './lib/partage';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
 import { TopBar } from './components/TopBar';
+import { Icon } from './components/Icons';
 
 /**
  * Les événements qui valent la peine d'être poussés vers l'extension.
@@ -374,6 +375,17 @@ const TITLES: Record<Mode, string> = {
   forgot: 'Réinitialiser le mot de passe',
 };
 
+/**
+ * L'accroche de chaque mode. Le nom fonctionnel (« Connexion à votre compte »…)
+ * reste celui du formulaire (`aria-label`) : l'accroche donne le ton, pas
+ * l'information.
+ */
+const HEADLINES: Record<Mode, string> = {
+  signin: 'Qu’est-ce qui compte, là\u00a0?',
+  signup: 'Une matrice, et on s’y met.',
+  forgot: 'Un lien, et on repart.',
+};
+
 const SUBMITS: Record<Mode, string> = {
   signin: 'Se connecter',
   signup: "S'inscrire",
@@ -398,6 +410,7 @@ function SignIn({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<Mode>('signin');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Initialiseur paresseux : `readSessionNotice` est pure, mais l'appeler à
   // chaque rendu pour rien n'a pas d'intérêt.
@@ -475,70 +488,152 @@ function SignIn({
   }
 
   return (
-    <main className="auth">
-      <form className="auth-card" onSubmit={submit}>
-        <h1>Penduline</h1>
-        <p className="muted">{TITLES[mode]}</p>
+    <main className="login">
+      <LoginNest />
+      <header className="login__brand">
+        <img src="/logo.png" alt="" width={26} height={40} />
+        <span>Penduline</span>
+      </header>
+
+      <div className="login__body">
+        <h1 className="login__title">{HEADLINES[mode]}</h1>
         {invitation && (
-          <p className="muted">
+          <p className="login__lead">
             Une matrice vous attend. Connectez-vous ou créez un compte, et vous y serez ramené.
           </p>
         )}
-        <label>
-          Email
-          <input
-            type="email"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        {/* En mode « oublié », seule l'adresse est demandée. */}
-        {mode !== 'forgot' && (
-          <label>
-            Mot de passe
-            <input
-              type="password"
-              name="password"
-              // `new-password` en inscription, sinon le gestionnaire propose un mot
-              // de passe existant là où il faut en créer un.
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </label>
-        )}
-        {error && <p className="error">{error}</p>}
-        {notice && <p className="notice">{notice}</p>}
-        <button className="btn-primary" type="submit" disabled={busy}>
-          {busy ? '…' : SUBMITS[mode]}
-        </button>
-        {mode === 'forgot' ? (
-          <button type="button" className="btn-link" onClick={() => switchMode('signin')}>
-            ‹ Retour à la connexion
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="btn-link"
-              onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
-            >
-              {mode === 'signin' ? 'Pas de compte ? Créer' : 'Déjà un compte ? Se connecter'}
-            </button>
-            {mode === 'signin' && (
-              <button type="button" className="btn-link" onClick={() => switchMode('forgot')}>
-                Mot de passe oublié ?
-              </button>
+        <div className="login__stack">
+          {/* Le titre visible est une accroche ; le nom du formulaire dit ce
+              qu'il fait, pour qui le parcourt au lecteur d'écran. */}
+          <form
+            className={`login__form${mode === 'forgot' ? ' login__form--short' : ''}`}
+            onSubmit={submit}
+            aria-label={TITLES[mode]}
+          >
+            <div className="login__field">
+              <label htmlFor="login-email">E-mail</label>
+              <input
+                id="login-email"
+                type="email"
+                name="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            {/* En mode « oublié », seule l'adresse est demandée. */}
+            {mode !== 'forgot' && (
+              <div className="login__field">
+                <label htmlFor="login-password">Mot de passe</label>
+                <div className="login__secret">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    // `new-password` en inscription, sinon le gestionnaire propose un mot
+                    // de passe existant là où il faut en créer un.
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className="login__eye"
+                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    <Icon size={20}>
+                      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                      {showPassword && <path d="M4 4l16 16" />}
+                    </Icon>
+                  </button>
+                </div>
+              </div>
             )}
-          </>
-        )}
-      </form>
+            <button className="login__submit" type="submit" disabled={busy}>
+              {busy ? '…' : SUBMITS[mode]}
+            </button>
+          </form>
+          {(error || notice) && (
+            <div className="login__messages" aria-live="polite">
+              {error && <p className="error">{error}</p>}
+              {notice && <p className="notice">{notice}</p>}
+            </div>
+          )}
+          <div className="login__links">
+            {mode === 'forgot' ? (
+              <button type="button" className="login__link" onClick={() => switchMode('signin')}>
+                ‹ Retour à la connexion
+              </button>
+            ) : mode === 'signin' ? (
+              <>
+                <span>
+                  Pas encore de compte ?{' '}
+                  <button type="button" className="login__link login__link--strong" onClick={() => switchMode('signup')}>
+                    Créer un compte
+                  </button>
+                </span>
+                <button type="button" className="login__link" onClick={() => switchMode('forgot')}>
+                  Mot de passe oublié ?
+                </button>
+              </>
+            ) : (
+              <span>
+                Déjà un compte ?{' '}
+                <button type="button" className="login__link login__link--strong" onClick={() => switchMode('signin')}>
+                  Se connecter
+                </button>
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <ul className="login__features" aria-label="Penduline en bref">
+        <li>
+          <Icon size={18}>
+            <rect x="4" y="4" width="7" height="7" rx="2" />
+            <rect x="13" y="4" width="7" height="7" rx="2" />
+            <rect x="4" y="13" width="7" height="7" rx="2" />
+            <rect x="13" y="13" width="7" height="7" rx="2" />
+          </Icon>
+          Triez en quatre cases
+        </li>
+        <li>
+          <Icon size={18}>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
+          </Icon>
+          Engagez-vous pour la journée
+        </li>
+        <li>
+          <Icon size={18}>
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <path d="M3 9h18M12 13v4M10 15h4" />
+          </Icon>
+          Capturez depuis le navigateur
+        </li>
+      </ul>
     </main>
+  );
+}
+
+/**
+ * Le nid en filigrane des écrans de connexion : la branche fixe, le nid qui se
+ * balance — les deux mêmes masques que le héros de l'accueil, pour que l'oiseau
+ * « habite » le même nid de la porte d'entrée jusqu'à la maison.
+ */
+function LoginNest() {
+  return (
+    <span className="login__nest" aria-hidden="true">
+      <span className="login__branch" />
+      <span className="login__swing"><span className="login__nid" /></span>
+    </span>
   );
 }
 

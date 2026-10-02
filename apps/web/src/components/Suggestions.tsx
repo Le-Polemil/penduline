@@ -5,7 +5,6 @@ import {
   homeSuggestions,
   orderedBoards,
   planPairMove,
-  quadrant,
   reviewSignals,
   sinceLabel,
   snoozeUntil,
@@ -15,6 +14,7 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
+import { quadrant } from '../lib/quads';
 import type { Store } from '../data/store';
 import { useReview } from '../data/useReview';
 import { readLastReview, readThresholds } from '../data/reviewPrefs';

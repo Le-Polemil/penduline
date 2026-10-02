@@ -63,6 +63,126 @@
 
   /* Surfaces chaudes des cartes (hors ramp, valeurs de la maquette). */
   --card-warm: #fdf6e9;
+
+  /* Le navigateur peint ses propres contrôles (champs, barres de défilement,
+     sélecteur de date) dans le thème annoncé ici. */
+  color-scheme: light dark;
+
+  /* Texte posé SUR l'accent ou sur l'encre d'une case. Blanc au clair ; au
+     sombre, accent et encres s'éclaircissent et le blanc n'y tiendrait plus. */
+  --color-on-accent: #fff;
+  --q-on-ink: #fff;
+
+  /* Le rouge du produit, et son fond de pastille. */
+  --color-danger: #a63d2a;
+  --color-danger-bg: #f6e4df;
+  /* Échéance proche : la seule teinte violette, hors des quatre cases. */
+  --due-soon-bg: #ece7f5;
+  --due-soon-text: #5b4a86;
+  --toast-bg: #2e2b25;
+
+  /* Les cases, par thème (voir `lib/quads.ts`). Valeurs claires = celles de
+     `packages/shared/src/quadrants.ts` — `styles.test.ts` y veille. */
+  --q-faire-ink: #5c6b45;     --q-faire-dark: #43502f;     --q-faire-bg: #dbe3ce;
+  --q-planifier-ink: #38607f; --q-planifier-dark: #27455c; --q-planifier-bg: #dde7ef;
+  --q-deleguer-ink: #8f6a14;  --q-deleguer-dark: #6b4f0e;  --q-deleguer-bg: #f2e0c4;
+  --q-eliminer-ink: #a63d2a;  --q-eliminer-dark: #7c2d1e;  --q-eliminer-bg: #e3d8d4;
+  --q-parking-ink: #7b756a;   --q-parking-dark: #5d5850;
+
+  /* « Ça stagne », validé sur la maquette (contrastes ≥ 4,5:1 pour les textes,
+     ≥ 3:1 pour les bords de boutons). */
+  --stuck-bg: #dccec7;
+  --stuck-text: #33241b;
+  --stuck-soft: #4a382c;
+  --stuck-muted: #5e4a3c;
+  --stuck-icon: #9a5228;
+  --stuck-link: #7a3e1c;
+  --stuck-line: color-mix(in srgb, #3a2a20 12%, transparent);
+  --stuck-hover: color-mix(in srgb, #3a2a20 10%, transparent);
+  --stuck-act-neutral: color-mix(in srgb, #3a2a20 45%, transparent);
+  --stuck-faire-b: #5c6b45;     --stuck-faire-t: #3d482a;
+  --stuck-planifier-b: #38607f; --stuck-planifier-t: #243f54;
+  --stuck-deleguer-b: #8f6a14;  --stuck-deleguer-t: #5e450c;
+  --stuck-eliminer-b: #a63d2a;  --stuck-eliminer-t: #74291b;
+  --stuck-open-b: #9a5228;      --stuck-open-t: #7a3e1c;
+}
+
+/* ── Thème sombre ─────────────────────────────────────────────────────────────
+   Suit le réglage du système (`prefers-color-scheme`), sans interrupteur dans
+   l'application. Valeurs reprises des maquettes « Accueil 5 — thème sombre » et
+   « Nocturne » : un brun d'encre pour le fond, les plateaux et les cartes un cran
+   plus clairs à chaque niveau, et des cases aux teintes profondes dont le texte
+   devient la teinte claire.
+
+   La rampe des neutres est INVERSÉE et non recalculée : chaque palier garde son
+   rôle (100-200 en fond, 300-400 en trait, 700 en texte secondaire), seul le sens
+   du contraste change. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1d1a16;
+    --color-surface: #2f2922;
+    --color-text: #f3e9d8;
+    --color-accent: #e08a52;
+    --card-today: #4a3c2c;
+    --card-warm: #3d352c;
+    --color-accent-2: #a3b585;
+    --color-divider: color-mix(in srgb, #f3e9d8 14%, transparent);
+
+    --color-neutral-100: #26211b;
+    --color-neutral-200: #2f2922;
+    --color-neutral-300: #463e34;
+    --color-neutral-400: #5a5146;
+    --color-neutral-500: #7d7262;
+    --color-neutral-600: #9c907e;
+    --color-neutral-700: #c2b6a2;
+    --color-neutral-800: #d8cdb9;
+    --color-neutral-900: #f3e9d8;
+
+    --color-accent-100: #3b2a1d;
+    --color-accent-300: #8c5634;
+    --color-accent-600: #e9a06e;
+    --color-accent-700: #f0a774;
+    --color-accent-800: #f6c39d;
+    --color-accent-2-800: #c9d6b3;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+    --shadow-md: 0 3px 10px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5);
+
+    --color-on-accent: #1d1a16;
+    --q-on-ink: #1d1a16;
+    --color-danger: #f0b4a5;
+    --color-danger-bg: #3a2622;
+    --due-soon-bg: #2e2840;
+    --due-soon-text: #cfc3ee;
+    --toast-bg: #4a4036;
+
+    --q-faire-ink: #a3b585;     --q-faire-dark: #c9d6b3;     --q-faire-bg: #2c3324;
+    --q-planifier-ink: #8db0cc; --q-planifier-dark: #bcd2e4; --q-planifier-bg: #23303b;
+    --q-deleguer-ink: #d9ae4c;  --q-deleguer-dark: #ecd29a;  --q-deleguer-bg: #3a2f1a;
+    --q-eliminer-ink: #e5826b;  --q-eliminer-dark: #f0b4a5;  --q-eliminer-bg: #3a2622;
+    --q-parking-ink: #9c907e;   --q-parking-dark: #c2b6a2;
+
+    /* Le bandeau du haut, déjà sombre au clair, descend d'un cran pour rester
+       un en-tête au-dessus d'une page elle-même sombre. */
+    --band-base: #110e0b;
+    --band-raised-base: #231e18;
+
+    --stuck-bg: #3a2622;
+    --stuck-text: #e6d8c4;
+    --stuck-soft: #d2c3ae;
+    --stuck-muted: #b9a893;
+    --stuck-icon: #c98458;
+    --stuck-link: #d99a6e;
+    --stuck-line: color-mix(in srgb, #f6ecdc 8%, transparent);
+    --stuck-hover: color-mix(in srgb, #f6ecdc 8%, transparent);
+    --stuck-act-neutral: #8c7764;
+    --stuck-faire-b: #7f8e66;     --stuck-faire-t: #b3c09c;
+    --stuck-planifier-b: #6d8aa3; --stuck-planifier-t: #a8bfd2;
+    --stuck-deleguer-b: #a88a45;  --stuck-deleguer-t: #d6bd84;
+    --stuck-eliminer-b: #b26a58;  --stuck-eliminer-t: #dca596;
+    --stuck-open-b: #b5734c;      --stuck-open-t: #d99a6e;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -290,7 +410,7 @@ button { font: inherit; }
    lignes bougent d'une matrice à l'autre se relit à chaque ouverture. */
 .sheet__item:disabled { opacity: 0.35; cursor: default; }
 .sheet__item:disabled:active { background: none; }
-.sheet__item--danger { color: #a63d2a; }
+.sheet__item--danger { color: var(--color-danger); }
 .sheet__item--cancel { color: var(--color-neutral-700); font-weight: 400; }
 @media (prefers-reduced-motion: reduce) {
   .sheet-backdrop, .sheet { animation: none; }
@@ -302,9 +422,9 @@ button { font: inherit; }
 }
 @media (hover: hover) and (pointer: fine) {
   .board-act:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
-  .board-act--danger:hover { background: #f6e4df; color: #a63d2a; }
+  .board-act--danger:hover { background: var(--color-danger-bg); color: var(--color-danger); }
 }
-.board-act--ok { background: var(--color-accent); color: #fff; opacity: 1 !important; }
+.board-act--ok { background: var(--color-accent); color: var(--color-on-accent); opacity: 1 !important; }
 .board-act--ok:disabled { opacity: 0.45 !important; cursor: not-allowed; }
 .board-row__rename { display: flex; align-items: center; gap: 8px; flex: 1; padding: 12px 14px 12px 20px; }
 .board-row__input {
@@ -351,7 +471,7 @@ button { font: inherit; }
 }
 .add-board-input:focus { outline: 2px solid var(--color-accent-600); outline-offset: 1px; }
 .add-board-submit {
-  border: none; background: var(--color-accent); color: #fff;
+  border: none; background: var(--color-accent); color: var(--color-on-accent);
   border-radius: 999px; padding: 10px 18px;
   font: 600 13px var(--font-body); cursor: pointer;
 }
@@ -452,7 +572,7 @@ button { font: inherit; }
 .quad-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .quad-label { font: 400 19px var(--font-heading); color: var(--q-dark); }
 .quad-sub { font: 11.5px var(--font-body); color: var(--q-dark); }
-.quad-count { margin-left: auto; background: var(--q-ink); color: #fff; border-radius: 999px; font: 700 11px/1 var(--font-body); padding: 4px 8px; }
+.quad-count { margin-left: auto; background: var(--q-ink); color: var(--q-on-ink); border-radius: 999px; font: 700 11px/1 var(--font-body); padding: 4px 8px; }
 .quad-fill { flex: 1; min-height: 10px; }
 
 /* ── Vue globale : regroupement par matrice ───────────────────────────────────
@@ -657,11 +777,11 @@ button { font: inherit; }
 .due--soon { background: var(--color-accent-100); color: var(--color-accent-800); }
 /* « Dans le rouge ». Le même `#a63d2a` que l'encre « éliminer » et les erreurs
    de saisie : une seule teinte d'alarme dans toute l'application. */
-.due--overdue { background: #f7e4e0; color: #a63d2a; }
+.due--overdue { background: var(--color-danger-bg); color: var(--color-danger); }
 /* La carte elle-même se liseré : le badge seul se perdrait dans une case pleine.
    Elle reste GLISSABLE — comme une épinglée, on peut la changer de case ; c'est
    seulement son rang DANS sa case qui ne lui appartient plus. */
-.task--overdue { border-color: #a63d2a; }
+.task--overdue { border-color: var(--color-danger); }
 
 /* « agent » — créé par une application connectée (#23).
    Même gabarit que `.due`, et comme elle le badge PORTE SON TEXTE : la couleur
@@ -671,7 +791,7 @@ button { font: inherit; }
 .agent-badge {
   flex: none; font: 600 10.5px/1 var(--font-body); white-space: nowrap;
   padding: 3px 8px; border-radius: 999px;
-  background: #ece7f5; color: #5b4a86;
+  background: var(--due-soon-bg); color: var(--due-soon-text);
 }
 
 /* La frontière entre la zone « en retard » et l'ordre manuel. Discrète : elle
@@ -690,8 +810,8 @@ button { font: inherit; }
   font: 600 11px/1 var(--font-body); border: none; border-radius: 999px;
   padding: 5px 11px; cursor: pointer;
 }
-.due-edit__ok { background: var(--color-accent); color: #fff; }
-.due-edit__del { background: none; color: #a63d2a; text-decoration: underline; padding-left: 4px; }
+.due-edit__ok { background: var(--color-accent); color: var(--color-on-accent); }
+.due-edit__del { background: none; color: var(--color-danger); text-decoration: underline; padding-left: 4px; }
 
 /* ── Pièces jointes (#78) ─────────────────────────────────────────────────────
    Des pastilles sous la carte. Une tâche SANS lien n'affiche rien : le composant
@@ -728,8 +848,8 @@ button { font: inherit; }
   background: var(--color-neutral-100); border: 1.5px solid var(--color-accent);
   border-radius: 999px; padding: 3px 10px; outline: none; min-width: 0;
 }
-.att__input--bad { border-color: #a63d2a; }
-.att__error { font: 10.5px var(--font-body); color: #a63d2a; padding-left: 10px; }
+.att__input--bad { border-color: var(--color-danger); }
+.att__error { font: 10.5px var(--font-body); color: var(--color-danger); padding-left: 10px; }
 
 /* ── Étapes (#50) ─────────────────────────────────────────────────────────────
    Sous la carte, jamais dedans. Le bloc est volontairement plus petit et plus
@@ -823,10 +943,10 @@ button { font: inherit; }
     flex: none; width: 44px;
     display: inline-flex; align-items: center; justify-content: center;
     background: none; border: none; padding: 0; cursor: pointer;
-    color: #fff;
+    color: var(--q-on-ink);
   }
   .task-swipe__act:disabled { opacity: 0.45; cursor: not-allowed; }
-  .task-swipe__act:focus-visible { outline: 2px solid #fff; outline-offset: -4px; }
+  .task-swipe__act:focus-visible { outline: 2px solid currentColor; outline-offset: -4px; }
 }
 
 @media (max-width: 720px) and (prefers-reduced-motion: reduce) {
@@ -1008,7 +1128,7 @@ button { font: inherit; }
 }
 .toast {
   pointer-events: auto;
-  background: var(--color-neutral-900); color: #fff; border-radius: 999px; box-shadow: var(--shadow-lg);
+  background: var(--toast-bg); color: #fff; border-radius: 999px; box-shadow: var(--shadow-lg);
   padding: 11px 18px; display: flex; align-items: center; gap: 14px; font: 13.5px var(--font-body);
   animation: mm-slideup 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.25) both;
 }
@@ -1061,8 +1181,8 @@ button { font: inherit; }
 .app-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--color-divider); }
 .app-row__nom { font: 600 14px var(--font-body); color: var(--color-text); }
 .app-row__meta { grid-column: 1; font: 12px var(--font-body); color: var(--color-neutral-700); }
-.app-row__revoke { grid-column: 2; grid-row: 1 / span 2; font: 600 13px var(--font-body); background: none; border: 1px solid var(--color-divider); border-radius: 999px; padding: 6px 12px; color: #a63d2a; cursor: pointer; }
-.error { color: #a63d2a; font: 13px var(--font-body); margin: 0; }
+.app-row__revoke { grid-column: 2; grid-row: 1 / span 2; font: 600 13px var(--font-body); background: none; border: 1px solid var(--color-divider); border-radius: 999px; padding: 6px 12px; color: var(--color-danger); cursor: pointer; }
+.error { color: var(--color-danger); font: 13px var(--font-body); margin: 0; }
 /* Message d'information, distinct de `.error` : le parcours de réinitialisation
    confirme un envoi ou signale un lien périmé — ce n'est pas un échec, et le
    rouge le ferait lire comme tel. */
@@ -1156,9 +1276,9 @@ button { font: inherit; }
 
 /* ── Renommage / suppression d'une matrice ────────────────────────────────── */
 .board-menu__sep { display: block; height: 1px; background: var(--color-neutral-200); margin: 6px 4px; }
-.board-menu__item--danger { color: #a63d2a; }
+.board-menu__item--danger { color: var(--color-danger); }
 @media (hover: hover) and (pointer: fine) {
-  .board-menu__item--danger:hover { background: #f6e4df; }
+  .board-menu__item--danger:hover { background: var(--color-danger-bg); }
 }
 
 .board-rename { display: inline-flex; align-items: center; gap: 8px; }
@@ -1169,7 +1289,7 @@ button { font: inherit; }
 }
 .board-rename__input:focus { outline: 2px solid var(--color-accent-600); outline-offset: 1px; }
 .board-rename__ok {
-  border: none; background: var(--color-accent); color: #fff;
+  border: none; background: var(--color-accent); color: var(--color-on-accent);
   border-radius: 999px; padding: 7px 14px; font: 600 12.5px var(--font-body); cursor: pointer;
 }
 .board-rename__ok:disabled { opacity: 0.45; cursor: not-allowed; }
@@ -1189,7 +1309,7 @@ button { font: inherit; }
 /* Variante non destructive : même forme, couleur d'accent au lieu du rouge.
    Un déplacement de paire s'annonce, il ne se redoute pas. */
 .confirm-go {
-  border: none; background: var(--color-accent); color: #fff; border-radius: 999px;
+  border: none; background: var(--color-accent); color: var(--color-on-accent); border-radius: 999px;
   padding: 9px 18px; font: 600 13px var(--font-body); cursor: pointer;
 }
 @media (hover: hover) and (pointer: fine) {
@@ -2171,11 +2291,12 @@ button.uni-head__name:focus-visible {
    Un bandeau d'encre, le même sur tous les écrans. Sur l'accueil, il se
    prolonge par le héros (`.hero`), de la même couleur : les deux se lisent
    comme un seul en-tête. Ailleurs, il reste seul et sobre.
-   Les couleurs vivent dans des variables locales au bandeau : c'est la seule
-   surface sombre de l'application, et elle ne doit rien imposer au reste. */
+   Les couleurs vivent dans des variables locales au bandeau : au clair, c'est la
+   seule surface sombre de l'application, et elle ne doit rien imposer au reste.
+   Au sombre, `--band-base` la fait descendre d'un cran sous la page. */
 .topbar, .hero {
-  --band: #1d1a16;
-  --band-raised: #28231d;
+  --band: var(--band-base, #1d1a16);
+  --band-raised: var(--band-raised-base, #28231d);
   --band-text: #f3e9d8;
   --band-muted: #c2b6a2;
   --band-line: color-mix(in srgb, #f3e9d8 22%, transparent);
@@ -2334,55 +2455,55 @@ button.uni-head__name:focus-visible {
    ≥ 3:1 pour les bords de boutons). */
 .stuck {
   display: flex; flex-wrap: wrap; gap: 4px 28px; padding: 16px 22px 10px;
-  background: #dccec7; color: #33241b; border-radius: 26px;
+  background: var(--stuck-bg); color: var(--stuck-text); border-radius: 26px;
 }
 .stuck__head { flex: 0 1 200px; display: flex; flex-direction: column; gap: 4px; padding-top: 6px; }
 .stuck__title {
   margin: 0; display: flex; align-items: center; gap: 8px;
-  font: 400 22px var(--font-heading); color: #33241b;
+  font: 400 22px var(--font-heading); color: var(--stuck-text);
 }
-.stuck__title svg { color: #9a5228; flex: none; }
+.stuck__title svg { color: var(--stuck-icon); flex: none; }
 .stuck__all {
   align-self: flex-start; min-height: 36px; padding: 0; border: none; background: none; cursor: pointer;
-  font: 700 13.5px var(--font-body); color: #7a3e1c;
+  font: 700 13.5px var(--font-body); color: var(--stuck-link);
 }
 .stuck__list { flex: 999 1 520px; margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; }
 .stuck__item {
   display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap;
-  gap: 6px 16px; padding: 9px 0; border-bottom: 1px solid color-mix(in srgb, #3a2a20 12%, transparent);
+  gap: 6px 16px; padding: 9px 0; border-bottom: 1px solid var(--stuck-line);
 }
 .stuck__item:last-child { border-bottom: none; }
 .stuck__text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 .stuck__line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .stuck__kind {
-  padding: 2px 8px; border-radius: 999px; background: color-mix(in srgb, #3a2a20 12%, transparent);
-  font: 700 10.5px var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: #4a382c;
+  padding: 2px 8px; border-radius: 999px; background: var(--stuck-line);
+  font: 700 10.5px var(--font-body); letter-spacing: 0.04em; text-transform: uppercase; color: var(--stuck-soft);
 }
-.stuck__name { font: 700 15px var(--font-body); color: #33241b; }
-.stuck__why { font-size: 12.5px; color: #5e4a3c; }
+.stuck__name { font: 700 15px var(--font-body); color: var(--stuck-text); }
+.stuck__why { font-size: 12.5px; color: var(--stuck-muted); }
 .stuck__acts { display: flex; gap: 5px; flex-wrap: wrap; }
 .stuck__act {
   min-height: 30px; padding: 0 11px; border-radius: 999px; background: transparent; cursor: pointer;
   font: 700 12px var(--font-body);
-  border: 1.5px solid color-mix(in srgb, #3a2a20 45%, transparent); color: #4a382c;
+  border: 1.5px solid var(--stuck-act-neutral); color: var(--stuck-soft);
 }
-.stuck__act--faire     { border-color: #5c6b45; color: #3d482a; }
-.stuck__act--planifier { border-color: #38607f; color: #243f54; }
-.stuck__act--deleguer  { border-color: #8f6a14; color: #5e450c; }
-.stuck__act--eliminer  { border-color: #a63d2a; color: #74291b; }
-.stuck__act--open      { border-color: #9a5228; color: #7a3e1c; }
+.stuck__act--faire     { border-color: var(--stuck-faire-b); color: var(--stuck-faire-t); }
+.stuck__act--planifier { border-color: var(--stuck-planifier-b); color: var(--stuck-planifier-t); }
+.stuck__act--deleguer  { border-color: var(--stuck-deleguer-b); color: var(--stuck-deleguer-t); }
+.stuck__act--eliminer  { border-color: var(--stuck-eliminer-b); color: var(--stuck-eliminer-t); }
+.stuck__act--open      { border-color: var(--stuck-icon); color: var(--stuck-link); }
 @media (hover: hover) and (pointer: fine) {
-  .stuck__act:hover, .stuck__all:hover, .stuck__undo:hover { background: color-mix(in srgb, #3a2a20 10%, transparent); }
+  .stuck__act:hover, .stuck__all:hover, .stuck__undo:hover { background: var(--stuck-hover); }
 }
 /* Petits au pointeur fin, comme sur la maquette ; au doigt, la zone de frappe
    remonte à 44 px sans que le dessin grossisse. */
 @media (pointer: coarse) {
   .stuck__act, .stuck__undo, .stuck__all { min-height: 44px; }
 }
-.stuck__done { display: flex; align-items: center; gap: 10px; font: 600 13px var(--font-body); color: #4a382c; }
+.stuck__done { display: flex; align-items: center; gap: 10px; font: 600 13px var(--font-body); color: var(--stuck-soft); }
 .stuck__undo {
   min-height: 30px; padding: 0 4px; border: none; background: none; cursor: pointer; border-radius: 6px;
-  font: 700 12.5px var(--font-body); color: #7a3e1c; text-decoration: underline;
+  font: 700 12.5px var(--font-body); color: var(--stuck-link); text-decoration: underline;
 }
 .stuck .due-edit { flex-basis: 100%; padding-left: 0; }
 
@@ -2408,17 +2529,148 @@ button.uni-head__name:focus-visible {
 .mini-grid__cell {
   display: grid; place-items: center; border-radius: 8px; font: 700 12px var(--font-body);
 }
-.mini-grid__cell--faire     { background: #dbe3ce; color: #43502f; }
-.mini-grid__cell--planifier { background: #dde7ef; color: #27455c; }
-.mini-grid__cell--deleguer  { background: #f2e0c4; color: #6b4f0e; }
-.mini-grid__cell--eliminer  { background: #e3d8d4; color: #7c2d1e; }
+.mini-grid__cell--faire     { background: var(--q-faire-bg); color: var(--q-faire-dark); }
+.mini-grid__cell--planifier { background: var(--q-planifier-bg); color: var(--q-planifier-dark); }
+.mini-grid__cell--deleguer  { background: var(--q-deleguer-bg); color: var(--q-deleguer-dark); }
+.mini-grid__cell--eliminer  { background: var(--q-eliminer-bg); color: var(--q-eliminer-dark); }
 .mini-grid__cell--empty { background: none; box-shadow: inset 0 0 0 1.5px var(--color-divider); }
 .stuck__more {
   flex-basis: 100%; align-self: flex-start; min-height: 36px; padding: 0; margin: 2px 0 0 228px;
   border: none; background: none; cursor: pointer; text-align: left;
-  font: 700 13px var(--font-body); color: #7a3e1c;
+  font: 700 13px var(--font-body); color: var(--stuck-link);
 }
 @media (max-width: 760px) { .stuck__more { margin-left: 0; } }
 @media (pointer: coarse) { .stuck__more { min-height: 44px; } }
 .uni--tray .uni-head__name, .uni--loose .uni-head__name { white-space: nowrap; }
-.stuck__last { font: 500 12px var(--font-body); color: #5e4a3c; }
+.stuck__last { font: 500 12px var(--font-body); color: var(--stuck-muted); }
+
+/* ── Connexion « Nocturne » ───────────────────────────────────────────────────
+   Maquettes « Avec mot de passe — nid en filigrane » (sombre) et sa version
+   « aube » (claire) : une grande question en bas d'écran, le formulaire en une
+   ligne dessous, le nid de l'accueil en filigrane. Le thème suit le système,
+   comme tout le reste — il n'y a donc qu'une feuille, et seules quelques
+   variables changent de valeur. */
+.login {
+  --login-nid: #645c50;
+  --login-nid-opacity: 0.15;
+  --login-card: #ede0ca;
+  --login-field: var(--card-warm);
+  --login-submit: var(--color-accent-600);
+  position: relative; overflow: hidden;
+  min-height: 100vh; min-height: 100dvh;
+  padding: 48px clamp(24px, 5vw, 64px);
+  display: flex; flex-direction: column;
+  background: var(--color-bg); color: var(--color-text);
+}
+@media (prefers-color-scheme: dark) {
+  .login {
+    --login-nid: #f3e9d8;
+    --login-nid-opacity: 0.07;
+    --login-card: #28231d;
+    --login-field: #1d1a16;
+    --login-submit: var(--color-accent);
+  }
+}
+.login__nest {
+  position: absolute; right: -72px; top: -75px; width: 798px; height: 798px;
+  opacity: var(--login-nid-opacity); pointer-events: none;
+}
+.login__branch, .login__swing, .login__nid { position: absolute; inset: 0; }
+.login__branch, .login__nid { background: var(--login-nid); }
+.login__branch {
+  -webkit-mask: url('/decor/nid-branche.png') center / contain no-repeat;
+  mask: url('/decor/nid-branche.png') center / contain no-repeat;
+}
+.login__nid {
+  -webkit-mask: url('/decor/nid.png') center / contain no-repeat;
+  mask: url('/decor/nid.png') center / contain no-repeat;
+}
+/* Le même balancement que le héros, en réutilisant ses images-clés. */
+.login__swing { transform-origin: 54.6% 21%; animation: hero-sway 9s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .login__swing { animation: none; } }
+
+.login__brand {
+  position: relative; display: inline-flex; align-items: center; gap: 10px; align-self: flex-start;
+  font: 400 30px/1 var(--font-heading);
+}
+.login__body {
+  position: relative; margin-top: auto; padding-top: 48px;
+  display: flex; flex-direction: column; gap: 32px;
+}
+.login__title {
+  margin: 0; max-width: 900px; text-wrap: balance;
+  font: 400 clamp(44px, 7vw, 92px)/1 var(--font-heading);
+}
+.login__lead { margin: -16px 0 0; max-width: 640px; font-size: 16px; line-height: 1.5; color: var(--color-neutral-700); }
+.login__stack { max-width: 960px; display: flex; flex-direction: column; gap: 12px; }
+.login__form {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; align-items: end;
+  background: var(--login-card); border: 1px solid var(--color-divider); border-radius: 28px; padding: 20px;
+}
+.login__form--short { max-width: 640px; }
+.login__field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.login__field label { font: 700 14px var(--font-body); color: var(--color-neutral-700); }
+.login__field input {
+  width: 100%; min-height: 52px; padding: 0 18px;
+  border: 1.5px solid color-mix(in srgb, var(--color-text) 20%, transparent); border-radius: 999px;
+  background: var(--login-field); color: var(--color-text); font: 16px var(--font-body);
+}
+.login__field input:focus-visible { outline: 2px solid var(--color-accent-600); outline-offset: 1px; border-color: var(--color-accent); }
+.login__secret { position: relative; }
+.login__secret input { padding-right: 56px; }
+.login__eye {
+  position: absolute; right: 4px; top: 4px; width: 44px; height: 44px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; border-radius: 999px; background: none; color: var(--color-neutral-700); cursor: pointer;
+}
+.login__submit {
+  min-height: 52px; padding: 0 32px; border: none; border-radius: 999px; cursor: pointer;
+  background: var(--login-submit); color: var(--color-on-accent); font: 700 17px var(--font-body);
+}
+.login__submit:disabled { opacity: 0.6; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .login__submit:not(:disabled):hover { filter: brightness(1.08); }
+  .login__eye:hover { color: var(--color-text); }
+  .login__link:hover { color: var(--color-text); }
+}
+.login__messages { padding: 0 24px; display: flex; flex-direction: column; gap: 6px; }
+.login__links {
+  display: flex; gap: 8px 16px; flex-wrap: wrap; justify-content: flex-end; align-items: center;
+  padding: 0 24px; font-size: 14px; color: var(--color-neutral-700);
+}
+.login__link {
+  min-height: 44px; padding: 0; border: none; background: none; cursor: pointer;
+  font: 600 14px var(--font-body); color: var(--color-neutral-700);
+}
+.login__link--strong { font-weight: 700; text-decoration: underline; color: var(--color-accent-700); }
+.login__features {
+  position: relative; margin: 0; padding: 40px 0 0; list-style: none;
+  display: flex; gap: 12px 28px; flex-wrap: wrap;
+}
+.login__features li {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: 600 14px var(--font-body); color: var(--color-neutral-700);
+}
+.login__features svg { color: var(--color-accent-600); flex: none; }
+@media (max-width: 640px) {
+  .login { padding: 24px 20px 28px; }
+  .login__nest { width: 520px; height: 520px; right: -190px; top: -40px; }
+  .login__links { justify-content: flex-start; padding: 0 4px; }
+  .login__messages { padding: 0 4px; }
+}
+
+/* Les autres écrans de seuil (nouveau mot de passe, autorisation d'une
+   application, invitation) gardent leur carte centrée, mais sur le même fond :
+   le nid, immobile, en filigrane. Deux calques de masque — branche et nid —
+   sur un seul pseudo-élément. */
+.auth { position: relative; overflow: hidden; }
+.auth::before {
+  content: ''; position: absolute; right: -72px; top: -75px; width: 798px; height: 798px;
+  pointer-events: none; opacity: 0.15; background: #645c50;
+  -webkit-mask: url('/decor/nid-branche.png') center / contain no-repeat, url('/decor/nid.png') center / contain no-repeat;
+  mask: url('/decor/nid-branche.png') center / contain no-repeat, url('/decor/nid.png') center / contain no-repeat;
+}
+.auth > * { position: relative; }
+@media (prefers-color-scheme: dark) {
+  .auth::before { background: #f3e9d8; opacity: 0.07; }
+}

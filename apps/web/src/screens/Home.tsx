@@ -10,11 +10,11 @@ import {
   isOpenRow,
   groupByUniverse,
   planBoardReorder,
-  QUADS,
   summarizeUniverse,
   type Universe,
   type UniverseSummary,
 } from '@penduline/shared';
+import { QUADS } from '../lib/quads';
 import type { Store } from '../data/store';
 import { HomeHero } from '../components/HomeHero';
 import { Suggestions } from '../components/Suggestions';

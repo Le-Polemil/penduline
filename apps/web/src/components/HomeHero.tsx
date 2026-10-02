@@ -1,4 +1,10 @@
-import { dayHeadline, dayLabel, quadrantTotals, QUADS, type Task } from '@penduline/shared';
+import {
+  dayHeadline,
+  dayLabel,
+  quadrantTotals,
+  type Task,
+} from '@penduline/shared';
+import { QUADS } from '../lib/quads';
 
 /**
  * Le héros de l'accueil : la date, une phrase, et le compte de chaque case.
