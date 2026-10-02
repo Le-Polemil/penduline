@@ -3,9 +3,11 @@ import {
   binOrder,
   buildRows,
   countOpen,
+  deadlineStatus,
   deleteLabel,
   endPosition,
   focusRefusal,
+  groupByUniverse,
   localDay,
   insertPosition,
   isOpenRow,
@@ -24,13 +26,16 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
-import { ALL, quadrant } from '../lib/quads';
+import { PARK, QUADS, quadrant } from '../lib/quads';
 import { withVT } from '../lib/viewTransition';
 import type { Store } from '../data/store';
 import { readFocusLimit } from '../data/focusPrefs';
 import { Confirm } from '../components/Confirm';
 import { BinModal } from '../components/BinModal';
 import { TaskCard } from '../components/TaskCard';
+import { ScreenHero } from '../components/ScreenHero';
+import { AxisGrid } from '../components/AxisGrid';
+import { Icon } from '../components/Icons';
 import { useCompletion } from '../data/useCompletion';
 import { useBinCount } from '../data/useBinCount';
 import { useMembres } from '../data/useMembres';
@@ -174,6 +179,21 @@ export function MatrixScreen({
   const boardTasks = tasks.filter((t) => t.board_id === board.id);
   const totalOpen = boardTasks.filter(isOpenRow).length;
   const otherBoards = store.boards.filter((b) => b.id !== board.id);
+
+  /** L'univers où CETTE personne range la matrice. `null` est un état normal (#53). */
+  const universe = board.universe_id
+    ? store.universes.find((u) => u.id === board.universe_id) ?? null
+    : null;
+  /**
+   * Combien de tâches ont dépassé leur échéance — l'alerte du héros.
+   *
+   * Recompté ici plutôt que déduit des `splitOverdue` de chaque case : le héros
+   * est rendu AVANT elles, et le faire dépendre d'un calcul de case créerait un
+   * ordre entre deux morceaux qui n'en ont pas besoin.
+   */
+  const late = boardTasks.filter(
+    (t) => isOpenRow(t) && deadlineStatus(t.due_at, now) === 'overdue',
+  ).length;
 
   /**
    * Applique des écritures préparées par `packages/shared`.
@@ -480,136 +500,30 @@ export function MatrixScreen({
     );
   }
 
-  return (
-    <div className="matrix">
-      <div className="matrix-head">
-        <span className="board-switch">
-          {renaming === null ? (
-            <button className="board-switch__name" onClick={() => setBoardMenu((o) => !o)}>
-              <span className="board-switch__label">{board.name}</span>
-              <span className="board-switch__caret">▾</span>
-            </button>
-          ) : (
-            <form
-              className="board-rename"
-              onSubmit={(e) => {
-                e.preventDefault();
-                const name = renaming.trim();
-                if (name && name !== board.name) void store.renameBoard(board.id, name);
-                setRenaming(null);
-              }}
-            >
-              <input
-                className="board-rename__input"
-                value={renaming}
-                autoFocus
-                maxLength={120}
-                onChange={(e) => setRenaming(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Escape') setRenaming(null);
-                }}
-              />
-              <button className="board-rename__ok" type="submit" disabled={!renaming.trim()}>
-                OK
-              </button>
-            </form>
-          )}
-          {boardMenu && (
-            <span className="board-menu">
-              {/* La vue globale ouvre la liste : c'est le même geste — « où
-                  veux-je regarder » — et le menu est déjà l'endroit où on en
-                  décide. */}
-              <button
-                className="board-menu__item"
-                onClick={() => {
-                  setBoardMenu(false);
-                  setMenuTask(null);
-                  // Toutes les matrices, pas l'univers de celle-ci : le menu
-                  // sert à élargir le regard, et le sélecteur de portée de la
-                  // vue globale permet ensuite de le resserrer.
-                  onGlobal({ kind: 'all' });
-                }}
-              >
-                Vue globale
-              </button>
-              <span className="board-menu__sep" />
-              {store.boards.map((r) => (
-                <button
-                  key={r.id}
-                  className={`board-menu__item${r.id === board.id ? ' board-menu__item--active' : ''}`}
-                  onClick={() => {
-                    onSwitch(r.id);
-                    setBoardMenu(false);
-                    setMenuTask(null);
-                  }}
-                >
-                  {r.name}
-                </button>
-              ))}
-              <span className="board-menu__sep" />
-              <button
-                className="board-menu__item"
-                onClick={() => {
-                  setRenaming(board.name);
-                  setBoardMenu(false);
-                }}
-              >
-                Renommer
-              </button>
-              <button
-                className="board-menu__item board-menu__item--danger"
-                onClick={() => {
-                  setBoardMenu(false);
-                  setConfirmDelete(true);
-                }}
-              >
-                Supprimer la matrice
-              </button>
-            </span>
-          )}
-        </span>
-        <span className="matrix-total">
-          {totalOpen ? `${totalOpen} ${totalOpen > 1 ? 'tâches ouvertes' : 'tâche ouverte'}` : 'Tout est fait'}
-        </span>
-        <button
-          className="bin-btn"
-          // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
-          // propre compteur lui tenait lieu d'intitulé.
-          aria-label={`Corbeille, ${binCount} élément${binCount > 1 ? 's' : ''}`}
-          style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
-          onClick={() => {
-            // Le contenu n'est plus en mémoire au démarrage (#40) : on le
-            // demande ici, une seule fois par session.
-            void store.loadBin([board.id]);
-            withVT(() => setBinOpen(true));
-            setMenuTask(null);
-            setBoardMenu(false);
-          }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-            <path d="M3 6h18" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-          {binCount}
-        </button>
-      </div>
-
-      <div className="grid">
-        {ALL.map((q) => {
-          // Deux zones (#19) : en retard, puis ordre manuel. Seule la
-          // dernière porte des interstices — les deux premières ont un ordre
-          // qui n'appartient pas à l'utilisateur.
-          const { overdue: lateRows, rest: rows } = splitOverdue(
-            buildRows(visibleTasks(tasks, board.id, q.key, pending)),
-            now,
-          );
-          const focused = focusQuad === q.key;
-          const draft = drafts[q.key] ?? '';
-          return (
-            <div
+  /**
+   * Une case de la matrice, avec ses cartes, ses interstices et son champ d'ajout.
+   *
+   * Extraite de la boucle d'origine : les quatre cases sont désormais posées une
+   * à une dans `AxisGrid` (qui doit les recevoir comme enfants DIRECTS, sinon la
+   * gouttière des axes s'effondre), et « À trier » vit sous la grille.
+   */
+  function quadBlock(q: Quadrant) {
+    // Deux zones (#19) : en retard, puis ordre manuel. Seule la
+    // dernière porte des interstices — les deux premières ont un ordre
+    // qui n'appartient pas à l'utilisateur.
+    const { overdue: lateRows, rest: rows } = splitOverdue(
+      buildRows(visibleTasks(tasks, board.id, q.key, pending)),
+      now,
+    );
+    const focused = focusQuad === q.key;
+    const draft = drafts[q.key] ?? '';
+    const open = countOpen(tasks, board.id, q.key);
+    return (
+            <section
               key={q.key}
-              className={`quad${q.key === 'parking' ? ' quad--park' : ''}${drag ? ' quad--drag' : ''}`}
+              id={`q-${q.key}`}
+              aria-label={`${q.label}, ${open} ${open > 1 ? 'tâches ouvertes' : 'tâche ouverte'}`}
+              className={`quad quad--${q.key}${q.key === 'parking' ? ' quad--park tray' : ''}${drag ? ' quad--drag' : ''}`}
               style={{
                 '--q-ink': q.ink,
                 '--q-dark': q.dark,
@@ -632,7 +546,7 @@ export function MatrixScreen({
               <div className="quad-head">
                 <span className="quad-label">{q.label}</span>
                 {q.sub && <span className="quad-sub">{q.sub}</span>}
-                <span className="quad-count">{countOpen(tasks, board.id, q.key)}</span>
+                <span className="quad-count">{open}</span>
               </div>
 
 
@@ -737,10 +651,216 @@ export function MatrixScreen({
                   <span className="add-word">ajouter</span>
                 </span>
               </div>
+            </section>
+    );
+  }
+
+  return (
+    <>
+      <ScreenHero>
+        <div className="shero__row">
+          <div className="shero__lead">
+            {/* Le fil d'Ariane remplace le « ‹ Retour » : il dit OÙ l'on est,
+                et son premier maillon ramène à l'accueil. */}
+            <nav className="shero__crumb" aria-label="Fil d’Ariane">
+              <button className="shero__crumb-link" onClick={onHome}>
+                {universe?.name ?? 'Sans univers'}
+              </button>
+              <span aria-hidden="true">›</span>
+              <span aria-current="page">{board.name}</span>
+            </nav>
+
+            <div className="shero__titleline">
+              {renaming === null ? (
+                <>
+                  <h1 className="shero__title">{board.name}</h1>
+                  <button
+                    className="shero__switch"
+                    aria-label="Changer de matrice"
+                    aria-haspopup="menu"
+                    aria-expanded={boardMenu}
+                    onClick={() => setBoardMenu((o) => !o)}
+                  >
+                    <Icon size={18}>
+                      <path d="m6 9 6 6 6-6" />
+                    </Icon>
+                  </button>
+                </>
+              ) : (
+                <form
+                  className="board-rename"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    const name = renaming.trim();
+                    if (name && name !== board.name) void store.renameBoard(board.id, name);
+                    setRenaming(null);
+                  }}
+                >
+                  <input
+                    className="board-rename__input"
+                    value={renaming}
+                    autoFocus
+                    aria-label="Nouveau nom de la matrice"
+                    maxLength={120}
+                    onChange={(e) => setRenaming(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setRenaming(null);
+                    }}
+                  />
+                  <button className="board-rename__ok" type="submit" disabled={!renaming.trim()}>
+                    OK
+                  </button>
+                </form>
+              )}
+
+              {boardMenu && (
+                <div className="shero__menu" role="menu" aria-label="Matrices">
+                  {/* Les matrices rangées comme à l'accueil : un en-tête d'univers
+                      par groupe, « Sans univers » en dernier. Sans aucun univers,
+                      l'en-tête unique coûterait une ligne pour rien. */}
+                  {groupByUniverse(store.universes, store.boards).map((g) =>
+                    g.boards.length === 0 ? null : (
+                      <div key={g.universe?.id ?? 'sans'}>
+                        {store.universes.length > 0 && (
+                          <p className="shero__menu-group">{g.universe?.name ?? 'Sans univers'}</p>
+                        )}
+                        {g.boards.map((r) => {
+                          const n = tasks.filter((t) => t.board_id === r.id && isOpenRow(t)).length;
+                          return (
+                            <button
+                              key={r.id}
+                              role="menuitem"
+                              className="shero__menu-item"
+                              aria-current={r.id === board.id ? 'page' : undefined}
+                              onClick={() => {
+                                onSwitch(r.id);
+                                setBoardMenu(false);
+                                setMenuTask(null);
+                              }}
+                            >
+                              {r.name}
+                              <span className="shero__menu-meta">
+                                {n > 1 ? `${n} tâches` : `${n} tâche`}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ),
+                  )}
+                  <span className="shero__menu-sep" />
+                  {/* La vue globale ouvre la liste : c'est le même geste — « où
+                      veux-je regarder » — et le menu est déjà l'endroit où on en
+                      décide. */}
+                  <button
+                    role="menuitem"
+                    className="shero__menu-item"
+                    onClick={() => {
+                      setBoardMenu(false);
+                      setMenuTask(null);
+                      // Toutes les matrices, pas l'univers de celle-ci : le menu
+                      // sert à élargir le regard, et le sélecteur de portée de la
+                      // vue globale permet ensuite de le resserrer.
+                      onGlobal({ kind: 'all' });
+                    }}
+                  >
+                    Vue globale
+                  </button>
+                  <span className="shero__menu-sep" />
+                  <button
+                    role="menuitem"
+                    className="shero__menu-item"
+                    onClick={() => {
+                      setRenaming(board.name);
+                      setBoardMenu(false);
+                    }}
+                  >
+                    Renommer
+                  </button>
+                  <button
+                    role="menuitem"
+                    className="shero__menu-item shero__menu-item--danger"
+                    onClick={() => {
+                      setBoardMenu(false);
+                      setConfirmDelete(true);
+                    }}
+                  >
+                    Supprimer la matrice
+                  </button>
+                </div>
+              )}
             </div>
-          );
-        })}
-      </div>
+
+            {/* Les chiffres clés, et chacun est une ancre vers sa case : sur une
+                matrice pleine, le compteur sert aussi de raccourci. */}
+            <div className="shero__pills">
+              {QUADS.map((q) => {
+                const n = countOpen(tasks, board.id, q.key);
+                return (
+                  <a
+                    key={q.key}
+                    className={`hero__count hero__count--${q.key}`}
+                    href={`#q-${q.key}`}
+                    aria-label={`${q.label} : ${n} ${n > 1 ? 'tâches' : 'tâche'} — aller à la case`}
+                  >
+                    <span className="hero__count-n" aria-hidden="true">{n}</span>
+                    <span aria-hidden="true">{q.label}</span>
+                  </a>
+                );
+              })}
+              <a className="hero__count hero__count--parking" href="#q-parking">
+                {countOpen(tasks, board.id, 'parking')} à trier ›
+              </a>
+              {late > 0 && (
+                <a className="shero__ghost shero__ghost--late" href="#q-faire">
+                  <Icon size={16}>
+                    <circle cx="12" cy="13" r="8" />
+                    <path d="M12 9v4l2.5 2M9 2h6" />
+                  </Icon>
+                  {late} en retard
+                </a>
+              )}
+            </div>
+          </div>
+
+          <div className="shero__side">
+            <span className="shero__meta" aria-live="polite">
+              {totalOpen ? `${totalOpen} ${totalOpen > 1 ? 'tâches ouvertes' : 'tâche ouverte'}` : 'Tout est fait'}
+            </span>
+            <button
+              className="shero__ghost"
+              // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
+              // propre compteur lui tenait lieu d'intitulé.
+              aria-label={`Corbeille, ${binCount} élément${binCount > 1 ? 's' : ''}`}
+              style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
+              onClick={() => {
+                // Le contenu n'est plus en mémoire au démarrage (#40) : on le
+                // demande ici, une seule fois par session.
+                void store.loadBin([board.id]);
+                withVT(() => setBinOpen(true));
+                setMenuTask(null);
+                setBoardMenu(false);
+              }}
+            >
+              <Icon size={16}>
+                <path d="M3 6h18" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </Icon>
+              <span className="shero__badge">{binCount}</span>
+            </button>
+          </div>
+        </div>
+      </ScreenHero>
+
+      <div className="matrix">
+        <AxisGrid
+          faire={quadBlock(quadrant('faire'))}
+          planifier={quadBlock(quadrant('planifier'))}
+          deleguer={quadBlock(quadrant('deleguer'))}
+          eliminer={quadBlock(quadrant('eliminer'))}
+        />
+        {quadBlock(PARK)}
 
       {binOpen && (
         <BinModal
@@ -798,6 +918,7 @@ export function MatrixScreen({
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }
