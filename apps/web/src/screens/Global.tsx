@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type DragEvent } from 'react';
 import {
   binOrder,
+  deadlineStatus,
   deleteLabel,
   endPosition,
   focusRefusal,
@@ -21,13 +22,16 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
-import { ALL, quadrant } from '../lib/quads';
+import { PARK, QUADS, quadrant } from '../lib/quads';
 import { withVT } from '../lib/viewTransition';
 import type { Store } from '../data/store';
 import { readFocusLimit } from '../data/focusPrefs';
 import { BinModal } from '../components/BinModal';
 import { Confirm } from '../components/Confirm';
 import { TaskCard } from '../components/TaskCard';
+import { ScreenHero } from '../components/ScreenHero';
+import { AxisGrid } from '../components/AxisGrid';
+import { Icon } from '../components/Icons';
 import { useCompletion } from '../data/useCompletion';
 import { useBinCount } from '../data/useBinCount';
 import { useNow } from '../data/useNow';
@@ -107,16 +111,57 @@ export function GlobalScreen({
 
   // L'ordre de l'accueil, filtré : la portée est une décision d'écran, et les
   // fonctions partagées n'ont donc rien à savoir des univers.
-  const boards = orderedBoards(store.universes, store.boards).filter(
-    (b) => scoped.kind === 'all' || b.universe_id === scoped.id,
-  );
+  const allBoards = orderedBoards(store.universes, store.boards);
+  const boards = allBoards.filter((b) => scoped.kind === 'all' || b.universe_id === scoped.id);
   const scopeLabel = universe?.name ?? 'Toutes les matrices';
+
+  /**
+   * Les portées offertes, chacune avec de quoi se choisir : combien de matrices,
+   * combien de tâches ouvertes.
+   *
+   * Le menu ET les pastilles lisent la même liste. Deux constructions séparées
+   * finiraient par diverger — typiquement sur le compte, qu'on oublierait de
+   * mettre à jour d'un côté.
+   *
+   * Les matrices sans univers n'ont pas de pastille à elles : la portée ne sait
+   * dire que « tout » ou « cet univers », et en inventer une troisième ici
+   * changerait un type que l'accueil et la vue persistée partagent. Elles restent
+   * atteignables par « Toutes ».
+   */
+  const scopeStat = (within: BoardRange[]) => {
+    const ids = new Set(within.map((b) => b.id));
+    return {
+      n: within.length,
+      open: tasks.filter((t) => ids.has(t.board_id) && isOpenRow(t)).length,
+    };
+  };
+  const SCOPES = [
+    { key: 'all', label: 'Toutes', scope: { kind: 'all' } as Scope, on: scoped.kind === 'all', within: allBoards },
+    ...store.universes.map((u) => ({
+      key: u.id,
+      label: u.name,
+      scope: { kind: 'universe', id: u.id } as Scope,
+      on: scoped.kind === 'universe' && scoped.id === u.id,
+      within: allBoards.filter((b) => b.universe_id === u.id),
+    })),
+  ].map((s) => {
+    const { n, open } = scopeStat(s.within);
+    return {
+      ...s,
+      open,
+      meta: `${n > 1 ? `${n} matrices` : `${n} matrice`} · ${open > 1 ? `${open} tâches` : `${open} tâche`}`,
+    };
+  });
   // Après `boards` : la portée de la corbeille est celle de l'écran.
   const binCount = useBinCount(store, boards.map((b) => b.id));
 
   const inScope = new Set(boards.map((b) => b.id));
   const scopedTasks = tasks.filter((t) => inScope.has(t.board_id));
   const totalOpen = scopedTasks.filter(isOpenRow).length;
+  /** Les échéances dépassées de la portée — l'alerte du héros. */
+  const late = scopedTasks.filter(
+    (t) => isOpenRow(t) && deadlineStatus(t.due_at, now) === 'overdue',
+  ).length;
   // Voir `Matrix.tsx` : `archived` n'est plus le critère d'affichage, il ne peut
   // donc plus être celui de la récupération (#75).
   // Idem écran matrice : une étape n'est pas une ligne de corbeille.
@@ -295,94 +340,21 @@ export function GlobalScreen({
     );
   }
 
-  return (
-    <div className="matrix">
-      <div className="matrix-head">
-        <span className="board-switch">
-          {/* Sans aucun univers, il n'existe qu'une portée : un menu à une seule
-              entrée coûterait un clic pour rien. Même règle que l'accueil, qui
-              n'affiche pas d'en-tête de groupe dans ce cas. */}
-          {store.universes.length > 0 ? (
-            <button className="board-switch__name" onClick={() => setScopeMenu((o) => !o)}>
-              <span className="board-switch__label">{scopeLabel}</span>
-              <span className="board-switch__caret">▾</span>
-            </button>
-          ) : (
-            <span className="board-switch__name board-switch__name--static">
-              <span className="board-switch__label">{scopeLabel}</span>
-            </span>
-          )}
-          {scopeMenu && (
-            <span className="board-menu">
-              <button
-                className={`board-menu__item${scoped.kind === 'all' ? ' board-menu__item--active' : ''}`}
-                onClick={() => {
-                  onScope({ kind: 'all' });
-                  setScopeMenu(false);
-                  setMenuTask(null);
-                }}
-              >
-                Toutes les matrices
-              </button>
-              <span className="board-menu__sep" />
-              {store.universes.map((u) => (
-                <button
-                  key={u.id}
-                  className={`board-menu__item${scoped.kind === 'universe' && scoped.id === u.id ? ' board-menu__item--active' : ''}`}
-                  onClick={() => {
-                    onScope({ kind: 'universe', id: u.id });
-                    setScopeMenu(false);
-                    setMenuTask(null);
-                  }}
-                >
-                  {u.name}
-                </button>
-              ))}
-            </span>
-          )}
-        </span>
-        <span className="matrix-total">
-          {totalOpen ? `${totalOpen} ${totalOpen > 1 ? 'tâches ouvertes' : 'tâche ouverte'}` : 'Tout est fait'}
-        </span>
-        <button
-          className="bin-btn"
-          // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
-          // propre compteur lui tenait lieu d'intitulé.
-          aria-label={`Corbeille, ${binCount} élément${binCount > 1 ? 's' : ''}`}
-          style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
-          onClick={() => {
-            // Le contenu n'est plus en mémoire au démarrage (#40) : on le
-            // demande ici, une seule fois par session.
-            void store.loadBin(boards.map((b) => b.id));
-            withVT(() => setBinOpen(true));
-            setMenuTask(null);
-            setScopeMenu(false);
-          }}
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.75" strokeLinecap="round" strokeLinejoin="round" width="15" height="15">
-            <path d="M3 6h18" />
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
-            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-          {binCount}
-        </button>
-      </div>
-
-      {boards.length === 0 ? (
-        <p className="home-empty">
-          {universe
-            ? `« ${universe.name} » ne contient aucune matrice pour l'instant.`
-            : "Aucune matrice pour l'instant."}
-        </p>
-      ) : (
-        <div className={`grid grid--${FRAME}`}>
-          {ALL.map((q) => {
+  /**
+   * Une case de la vue globale : les tâches de la portée, groupées par matrice.
+   *
+   * Extraite de la boucle d'origine — `AxisGrid` veut les quatre cases comme
+   * enfants DIRECTS, et « À trier » vit désormais sous la grille.
+   */
+  function quadBlock(q: Quadrant) {
             const groups = groupTasksByBoard(tasks, boards, q.key, pending, now);
             const open = scopedTasks.filter((t) => t.quadrant === q.key && isOpenRow(t)).length;
             return (
-              <div
+              <section
                 key={q.key}
-                className={`quad${q.key === 'parking' ? ' quad--park' : ''}${drag ? ' quad--drag' : ''}`}
+                id={`q-${q.key}`}
+                aria-label={`${q.label}, ${open} ${open > 1 ? 'tâches ouvertes' : 'tâche ouverte'}`}
+                className={`quad quad--${q.key}${q.key === 'parking' ? ' quad--park tray' : ''}${drag ? ' quad--drag' : ''}`}
                 style={{
                   '--q-ink': q.ink,
                   '--q-dark': q.dark,
@@ -455,10 +427,158 @@ export function GlobalScreen({
                 ))}
 
                 <div className="quad-fill" />
-              </div>
+              </section>
             );
-          })}
+  }
+
+  return (
+    <>
+      <ScreenHero>
+        <div className="shero__row">
+          <div className="shero__lead">
+            <p className="shero__eyebrow">Vue globale</p>
+
+            <div className="shero__titleline">
+              {/* Sans aucun univers, il n'existe qu'une portée : un menu à une
+                  seule entrée coûterait un clic pour rien. Même règle que
+                  l'accueil, qui n'affiche pas d'en-tête de groupe dans ce cas. */}
+              {store.universes.length > 0 ? (
+                <h1 className="shero__title-h">
+                  <button
+                    className="shero__title-btn"
+                    aria-haspopup="menu"
+                    aria-expanded={scopeMenu}
+                    onClick={() => setScopeMenu((o) => !o)}
+                  >
+                    {scopeLabel}
+                    <span className="shero__title-chev">
+                      <Icon size={26}>
+                        <path d="m6 9 6 6 6-6" />
+                      </Icon>
+                    </span>
+                  </button>
+                </h1>
+              ) : (
+                <h1 className="shero__title">{scopeLabel}</h1>
+              )}
+              <span className="shero__meta">
+                {boards.length > 1 ? `${boards.length} matrices` : `${boards.length} matrice`}
+              </span>
+
+              {scopeMenu && (
+                <div className="shero__menu" role="menu" aria-label="Choisir la portée">
+                  {SCOPES.map((s) => (
+                    <button
+                      key={s.key}
+                      role="menuitemradio"
+                      aria-checked={s.on}
+                      className="shero__menu-item"
+                      aria-current={s.on ? 'page' : undefined}
+                      onClick={() => {
+                        onScope(s.scope);
+                        setScopeMenu(false);
+                        setMenuTask(null);
+                      }}
+                    >
+                      {s.label}
+                      <span className="shero__menu-meta">{s.meta}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Les portées en pastilles, en plus du menu : sur deux ou trois
+                univers, changer de lentille ne devrait pas demander d'ouvrir
+                quoi que ce soit. */}
+            {store.universes.length > 0 && (
+              <div className="shero__scopes" role="group" aria-label="Portée">
+                {SCOPES.map((s) => (
+                  <button
+                    key={s.key}
+                    className={`shero__ghost${s.on ? ' shero__ghost--on' : ''}`}
+                    aria-pressed={s.on}
+                    onClick={() => {
+                      onScope(s.scope);
+                      setMenuTask(null);
+                    }}
+                  >
+                    {s.label}
+                    <span className="shero__chip-n">{s.open}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="shero__pills">
+              {QUADS.map((q) => {
+                const n = scopedTasks.filter((t) => t.quadrant === q.key && isOpenRow(t)).length;
+                return (
+                  <a
+                    key={q.key}
+                    className={`hero__count hero__count--${q.key}`}
+                    href={`#q-${q.key}`}
+                    aria-label={`${q.label} : ${n} ${n > 1 ? 'tâches' : 'tâche'} — aller à la case`}
+                  >
+                    <span className="hero__count-n" aria-hidden="true">{n}</span>
+                    <span aria-hidden="true">{q.label}</span>
+                  </a>
+                );
+              })}
+              <a className="hero__count hero__count--parking" href="#q-parking">
+                {scopedTasks.filter((t) => t.quadrant === 'parking' && isOpenRow(t)).length} à trier ›
+              </a>
+            </div>
+          </div>
+
+          <div className="shero__side">
+            <span className="shero__meta" aria-live="polite">
+              {totalOpen ? `${totalOpen} ${totalOpen > 1 ? 'tâches ouvertes' : 'tâche ouverte'}` : 'Tout est fait'}
+              {late > 0 && <span className="shero__meta-late"> · {late} en retard</span>}
+            </span>
+            <button
+              className="shero__ghost"
+              // Sans nom, l'arbre d'accessibilité annonçait ce bouton « 0 » : son
+              // propre compteur lui tenait lieu d'intitulé.
+              aria-label={`Corbeille, ${binCount} élément${binCount > 1 ? 's' : ''}`}
+              style={{ viewTransitionName: binOpen ? 'none' : 'bin' } as CSSProperties}
+              onClick={() => {
+                // Le contenu n'est plus en mémoire au démarrage (#40) : on le
+                // demande ici, une seule fois par session.
+                void store.loadBin(boards.map((b) => b.id));
+                withVT(() => setBinOpen(true));
+                setMenuTask(null);
+                setScopeMenu(false);
+              }}
+            >
+              <Icon size={16}>
+                <path d="M3 6h18" />
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+              </Icon>
+              <span className="shero__badge">{binCount}</span>
+            </button>
+          </div>
         </div>
+      </ScreenHero>
+
+      <div className={`matrix grid--${FRAME}`}>
+      {boards.length === 0 ? (
+        <p className="home-empty">
+          {universe
+            ? `« ${universe.name} » ne contient aucune matrice pour l'instant.`
+            : "Aucune matrice pour l'instant."}
+        </p>
+      ) : (
+        <>
+          <AxisGrid
+            faire={quadBlock(quadrant('faire'))}
+            planifier={quadBlock(quadrant('planifier'))}
+            deleguer={quadBlock(quadrant('deleguer'))}
+            eliminer={quadBlock(quadrant('eliminer'))}
+          />
+          {quadBlock(PARK)}
+        </>
       )}
 
       {binOpen && (
@@ -502,6 +622,7 @@ export function GlobalScreen({
           }}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

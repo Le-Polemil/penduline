@@ -495,52 +495,8 @@ button { font: inherit; }
   .board-row--fresh { animation: none; }
 }
 
-/* ── En-tête matrice ──────────────────────────────────────────────────────── */
+/* ── Écran matrice ────────────────────────────────────────────────────────── */
 .matrix { max-width: 1200px; margin: 0 auto; padding: 22px 24px 64px; animation: mm-in 0.3s ease backwards; }
-/* `flex-wrap` et `min-width: 0` : sans les deux, l'en-tête DÉBORDAIT (#89).
-   `.board-switch__label` porte bien `text-overflow: ellipsis`, mais aucun de ses
-   parents ne pouvait rétrécir — un élément flex a `min-width: auto`, donc la
-   taille de son contenu pour plancher — et `.board-switch__name` est en
-   `white-space: nowrap`. À 390 px sur la vue globale, « Toutes les matrices »
-   poussait le compteur hors cadre et **le bouton corbeille entièrement hors
-   écran**, donc inatteignable : 471 px de large pour 390 de fenêtre.
-   Le `wrap` est le filet : si même l'ellipse ne suffit pas, la ligne casse au
-   lieu de sortir. */
-.matrix-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 0 2px 14px; }
-.board-switch { position: relative; flex: 1 1 auto; min-width: 0; }
-/* `nowrap` : sans lui, le chevron passe à la ligne dès que la largeur manque —
-   très visible sur mobile, où il se retrouvait sous le nom. */
-.board-switch__name {
-  font: 400 30px/1 var(--font-heading); color: var(--color-text);
-  cursor: pointer; background: none; border: none; padding: 0;
-  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-  max-width: 100%;
-}
-/* Sans univers, la portée de la vue globale ne peut pas changer : le sélecteur
-   devient une étiquette, pas un bouton qui n'ouvrirait qu'une seule entrée. */
-.board-switch__name--static { cursor: default; }
-.board-switch__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.board-switch__caret { font-size: 24px; line-height: 1; color: var(--color-neutral-700); flex: none; }
-.board-menu {
-  position: absolute; left: 0; top: 110%; z-index: 30; background: var(--card-warm);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 8px;
-  display: flex; flex-direction: column; gap: 2px; min-width: 200px;
-  animation: mm-pop 0.16s ease both; transform-origin: top left;
-}
-.board-menu__item { font: 400 14px var(--font-body); color: var(--color-text); padding: 8px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; background: none; border: none; text-align: left; }
-.board-menu__item--active { font-weight: 700; }
-@media (hover: hover) and (pointer: fine) {
-  .board-menu__item:hover { background: var(--color-accent-100); }
-}
-.matrix-total { margin-left: auto; font: 13px var(--font-body); color: var(--color-neutral-700); }
-.bin-btn {
-  display: flex; align-items: center; gap: 7px; border: 1.5px solid var(--color-neutral-300);
-  background: none; border-radius: 999px; padding: 7px 13px; cursor: pointer;
-  color: var(--color-neutral-700); font: 700 12px var(--font-body); transition: background 0.15s, color 0.15s;
-}
-@media (hover: hover) and (pointer: fine) {
-  .bin-btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
-}
 
 /* ── Grille des cases ─────────────────────────────────────────────────────── */
 /* ⚠️ `auto auto` et surtout PAS `1fr 1fr`.
@@ -553,21 +509,12 @@ button { font: inherit; }
    `auto` dimensionne chaque ligne sur son propre contenu. Les cases d'une MÊME
    ligne restent alignées (l'étirement par défaut de la grille s'en charge), ce
    qui préserve le 2×2 et son coin central carré. */
-.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 14px; }
 .quad {
   min-width: 0; background: var(--q-bg); border: 2px dotted var(--q-outline, transparent);
   border-radius: var(--radius-lg); padding: 14px 16px 16px; display: flex; flex-direction: column;
   min-height: 180px; transition: border-color 0.18s;
 }
-/* Coin central carré : les 4 cases se referment sur le centre de la matrice,
-   comme les tuiles de l'icône. Uniquement pertinent en 2×2 — la règle est
-   annulée dans le média mobile, où la grille passe en colonne et n'a plus de
-   centre. `--park` est exclue : elle occupe toute la largeur. */
-.grid > .quad:nth-child(1) { border-bottom-right-radius: 0; }
-.grid > .quad:nth-child(2) { border-bottom-left-radius: 0; }
-.grid > .quad:nth-child(3) { border-top-right-radius: 0; }
-.grid > .quad:nth-child(4) { border-top-left-radius: 0; }
-.quad--park { grid-column: 1 / -1; min-height: 90px; }
+.quad--park { min-height: 90px; }
 .quad--drag { border-color: var(--q-ink); }
 .quad-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .quad-label { font: 400 19px var(--font-heading); color: var(--q-dark); }
@@ -1241,13 +1188,8 @@ button { font: inherit; }
 /* Retour à gauche, déconnexion à droite. `space-between` avec un `<span/>` vide
    quand il n'y a pas de retour, pour que « Déconnexion » ne se recentre pas. */
 
-/* ── Responsive : la grille 2×2 s'empile sur mobile ───────────────────────── */
+/* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
-  .grid { grid-template-columns: 1fr; grid-template-rows: none; }
-  .quad--park { grid-column: auto; }
-  /* En colonne, plus de centre : on rend leur rayon aux quatre coins. */
-  .grid > .quad { border-radius: var(--radius-lg); }
-
   /* Le champ de renommage d'une matrice : 340 px de champ plus le bouton « OK »
      ne tiennent pas dans les 342 px disponibles à 390 px de fenêtre. Il prend la
      ligne entière et se laisse rétrécir (#89). */
@@ -1274,13 +1216,7 @@ button { font: inherit; }
   .card-row { flex-direction: column; gap: 10px; }
 }
 
-/* ── Renommage / suppression d'une matrice ────────────────────────────────── */
-.board-menu__sep { display: block; height: 1px; background: var(--color-neutral-200); margin: 6px 4px; }
-.board-menu__item--danger { color: var(--color-danger); }
-@media (hover: hover) and (pointer: fine) {
-  .board-menu__item--danger:hover { background: var(--color-danger-bg); }
-}
-
+/* ── Renommage d'une matrice ──────────────────────────────────────────────── */
 .board-rename { display: inline-flex; align-items: center; gap: 8px; }
 .board-rename__input {
   font: 400 26px/1 var(--font-heading); color: var(--color-text);
@@ -2070,8 +2006,6 @@ button.uni-head__name:focus-visible {
   /* Le minimum des deux plateformes. `min-height` explicite plutôt qu'un calcul
      de marges : une marge suffisante aujourd'hui cesse de l'être dès qu'on
      touche à la police, et personne ne le remarque. */
-  .bin-btn,
-  .board-switch__name,
   .home-global,
   .add-board,
   .add-board-submit,
@@ -2087,7 +2021,6 @@ button.uni-head__name:focus-visible {
   .btn-link,
   .sr-hit,
   .review-board,
-  .board-menu__item,
   .board-btn,
   .move-btn,
   .task-menu__action {
@@ -2096,12 +2029,10 @@ button.uni-head__name:focus-visible {
   /* Les entrées de menu sont des lignes : on les centre plutôt que de laisser le
      texte coller en haut d'une boîte devenue deux fois trop haute. */
   .task-menu__action,
-  .board-menu__item,
   .board-btn,
   .sr-hit,
   .review-board { display: flex; align-items: center; }
   .move-btn { display: inline-flex; align-items: center; justify-content: center; }
-  .board-switch__name,
   .btn-link,
   .bin-foot__link,
   .board-act,
@@ -2722,8 +2653,6 @@ button.uni-head__name:focus-visible {
   color: var(--band-text); font: 400 clamp(32px, 4.6vw, 54px)/1.05 var(--font-heading);
   border-radius: 12px;
 }
-.shero__title-chev { flex: none; color: var(--color-accent); transition: rotate 0.2s; }
-.shero__title-btn[aria-expanded='true'] .shero__title-chev { rotate: 180deg; }
 .shero__switch {
   width: 44px; height: 44px; flex: none; margin-top: 6px; display: grid; place-items: center;
   border: none; border-radius: 999px; background: transparent; color: var(--band-text); cursor: pointer;
@@ -2837,3 +2766,13 @@ button.uni-head__name:focus-visible {
   .axes .quad { border-radius: var(--radius-lg); }
   .tray { margin-left: 0; }
 }
+
+/* ── Vue globale : le titre EST le sélecteur de portée ───────────────────────
+   Un chevron posé à côté d'un titre se lit comme une décoration ; un titre qui
+   s'ouvre se lit comme une question — « où est-ce que je regarde ? ». */
+.shero__title-h { margin: 0; }
+.shero__title-chev { display: inline-flex; color: var(--color-accent); transition: rotate 0.2s; }
+.shero__title-btn[aria-expanded='true'] .shero__title-chev { rotate: 180deg; }
+/* Les portées en pastilles, sous le titre. */
+.shero__scopes { display: flex; gap: 6px; flex-wrap: wrap; }
+.shero__chip-n { font: 700 12px var(--font-body); opacity: 0.8; }
