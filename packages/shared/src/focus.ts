@@ -133,3 +133,82 @@ export function focusDayLabel(day: string): string {
     timeZone: 'UTC',
   });
 }
+
+/* ── Remplir les places libres ──────────────────────────────────────────────── */
+
+/** Ce qui désigne une candidate. Le mot est laissé à l'écran, qui sait dater. */
+export type FocusReason = 'overdue' | 'soon' | 'faire' | 'planifier';
+
+export interface FocusCandidate {
+  task: Task;
+  reason: FocusReason;
+}
+
+/** En deçà de quoi une échéance « arrive », en jours. */
+const SOON_DAYS = 3;
+
+/**
+ * Que proposer pour remplir les places restantes de `day` (#49).
+ *
+ * L'écran « Aujourd'hui » ne servait qu'à montrer ce qu'on avait déjà choisi :
+ * arrivé dessus les mains vides, il n'y avait qu'une phrase pour dire d'aller
+ * choisir ailleurs. Proposer n'est pas choisir à la place — la liste est courte,
+ * motivée, et rien n'y entre sans un clic.
+ *
+ * **Seulement « Faire » et « Planifier ».** Proposer une tâche de « Déléguer »
+ * serait se la refiler à soi-même, et une d'« Éliminer » contredirait la décision
+ * qu'on vient d'y prendre. « À trier » n'a pas encore été jugée : la proposer
+ * reviendrait à trancher par la bande.
+ *
+ * L'ordre dit le motif, du plus contraint au plus libre : ce qui est en retard,
+ * ce qui arrive, ce qui est urgent, ce qui est important. À motif égal,
+ * l'échéance la plus proche d'abord, puis le classement le plus ancien — la
+ * même convention que la revue.
+ *
+ * `now` est un paramètre, comme partout ici : « dans trois jours » ne se teste
+ * pas si la fonction lit l'horloge elle-même.
+ */
+export function focusCandidates({
+  tasks,
+  day,
+  now = Date.now(),
+  limit = 3,
+}: {
+  tasks: Task[];
+  day: string;
+  now?: number;
+  limit?: number;
+}): FocusCandidate[] {
+  const soonLimit = now + SOON_DAYS * 24 * 60 * 60 * 1000;
+
+  const reason = (t: Task): FocusReason => {
+    const due = t.due_at ? Date.parse(t.due_at) : NaN;
+    // Une date illisible ne vaut pas une alerte : la tâche retombe sur sa case.
+    if (Number.isFinite(due)) {
+      if (due < now) return 'overdue';
+      if (due <= soonLimit) return 'soon';
+    }
+    return t.quadrant === 'faire' ? 'faire' : 'planifier';
+  };
+  const RANK: Record<FocusReason, number> = { overdue: 0, soon: 1, faire: 2, planifier: 3 };
+
+  return tasks
+    .filter(
+      (t) =>
+        isOpenRow(t) &&
+        t.focus_day !== day &&
+        (t.quadrant === 'faire' || t.quadrant === 'planifier'),
+    )
+    .map((task) => ({ task, reason: reason(task) }))
+    .sort((a, b) => {
+      const r = RANK[a.reason] - RANK[b.reason];
+      if (r !== 0) return r;
+      // `Infinity` pour une tâche sans échéance : elle passe après toutes celles
+      // qui en ont une, au lieu de remonter sur un `NaN` qui ne compare rien.
+      const da = a.task.due_at ? Date.parse(a.task.due_at) : Infinity;
+      const db = b.task.due_at ? Date.parse(b.task.due_at) : Infinity;
+      if (da !== db) return da - db;
+      return Date.parse(a.task.quadrant_changed_at) - Date.parse(b.task.quadrant_changed_at);
+    })
+    .slice(0, limit);
+}
