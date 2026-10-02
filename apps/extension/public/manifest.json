@@ -25,7 +25,8 @@
   "permissions": [
     "storage",
     "contextMenus",
-    "sidePanel"
+    "sidePanel",
+    "tabs"
   ],
   "externally_connectable": {
     "matches": [
