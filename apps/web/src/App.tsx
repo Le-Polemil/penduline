@@ -350,7 +350,11 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           onScope={(scope) => setView({ kind: 'global', scope })}
         />
       ) : view.kind === 'focus' ? (
-        <FocusScreen store={store} />
+        <FocusScreen
+          store={store}
+          onHome={onHome}
+          onOpenBoard={(id) => setView({ kind: 'board', id })}
+        />
       ) : view.kind === 'review' ? (
         <ReviewScreen store={store} onOpenBoard={(id) => setView({ kind: 'board', id })} />
       ) : view.kind === 'stats' ? (
