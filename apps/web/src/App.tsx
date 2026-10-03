@@ -19,7 +19,7 @@ import { AuthorizeScreen } from './screens/Authorize';
 import { readInvitation } from './lib/partage';
 import { HOME, viewTitle, type View } from './lib/route';
 import { useDocumentTitle } from './lib/useDocumentTitle';
-import { sensEntre, transitionDeVue } from './lib/transitions';
+import { marquerCarte, sensEntre, transitionDeVue } from './lib/transitions';
 import { useRoute } from './lib/useRoute';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
@@ -255,6 +255,24 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
     transitionDeVue(sensEntre(view.kind, to), () => setView(cible));
   }
 
+  /**
+   * Ouvrir une matrice : la carte de l'accueil devient la page.
+   *
+   * La carte est désignée AVANT l'appel, donc avant l'instantané de départ —
+   * c'est la seule fenêtre où l'écran d'origine est encore à l'écran.
+   */
+  function ouvrirMatrice(id: string) {
+    marquerCarte(id);
+    transitionDeVue('fwd', () => setView({ kind: 'board', id }), { carte: true });
+  }
+
+  /** Revenir : la matrice se replie dans sa carte, à sa place dans le plateau. */
+  function fermerMatrice(id: string) {
+    // Ici la carte n'existe pas encore : elle naît avec l'accueil, d'où
+    // `apres`, joué juste après l'échange du DOM.
+    transitionDeVue('back', () => setView(HOME), { carte: true, apres: () => marquerCarte(id) });
+  }
+
   function allerA(hit: SearchHit) {
     setSearching(false);
     setView({ kind: 'board', id: hit.boardId, focusTask: hit.taskId, openBin: hit.inBin });
@@ -269,7 +287,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
   // Une matrice supprimée depuis un autre appareil laisserait la vue pointer
   // dans le vide : on retombe alors sur l'accueil.
   const board = view.kind === 'board' ? store.boards.find((r) => r.id === view.id) ?? null : null;
-  const onHome = () => setView(HOME);
+  const onHome = () => (board ? fermerMatrice(board.id) : setView(HOME));
 
   return (
     <>
@@ -294,7 +312,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           onHome={onHome}
           focusTask={view.kind === 'board' ? view.focusTask : undefined}
           openBin={view.kind === 'board' ? view.openBin : undefined}
-          onSwitch={(id) => setView({ kind: 'board', id })}
+          onSwitch={ouvrirMatrice}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
         />
       ) : view.kind === 'global' ? (
@@ -321,7 +339,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
       ) : (
         <Home
           store={store}
-          onOpen={(id) => setView({ kind: 'board', id })}
+          onOpen={ouvrirMatrice}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
           onReview={() => setView({ kind: 'bilan', tab: 'review' })}
         />

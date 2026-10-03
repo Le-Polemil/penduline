@@ -40,10 +40,42 @@ let courante: ViewTransition | null = null;
  * fonction. Laissée à la planification normale de React, elle prendrait
  * l'instantané « après » sur le DOM d'avant, et rien ne bougerait.
  */
-export function transitionDeVue(dir: Direction, fn: () => void): void {
+/** Ce qui s'ajoute au saut de base. */
+export interface Options {
+  /**
+   * Le saut est une OUVERTURE DE MATRICE : la carte de l'accueil devient la
+   * page, sa mini-grille devient les quatre cases. Un troisième jeton dans
+   * `data-vt`, parce que les noms de la carte ne doivent exister que là — sur
+   * un saut ordinaire, « À trier » morphrait vers une mini-case qui n'a pas de
+   * contrepartie, et l'on verrait une case naître de nulle part.
+   */
+  carte?: boolean;
+  /**
+   * Joué juste APRÈS l'échange du DOM, et avant l'instantané d'arrivée. C'est
+   * la seule fenêtre où l'on peut désigner un élément du nouvel écran — marquer
+   * la carte vers laquelle la matrice se replie, par exemple.
+   */
+  apres?: () => void;
+}
+
+/** Désigne la carte d'une matrice sur l'accueil, le temps du saut. */
+export function marquerCarte(boardId: string): void {
+  document.querySelector(`[data-board="${CSS.escape(boardId)}"]`)?.setAttribute('data-vt-board', '');
+}
+
+function oublierLesCartes(): void {
+  for (const el of document.querySelectorAll('[data-vt-board]')) el.removeAttribute('data-vt-board');
+}
+
+export function transitionDeVue(dir: Direction, fn: () => void, options: Options = {}): void {
   // `typeof` et non une simple vérité : la bibliothèque TypeScript déclare la
   // méthode comme toujours présente, alors que Safari et Firefox ne l'ont pas.
-  if (typeof document.startViewTransition !== 'function' || mouvementReduit()) return fn();
+  if (typeof document.startViewTransition !== 'function' || mouvementReduit()) {
+    fn();
+    options.apres?.();
+    oublierLesCartes();
+    return;
+  }
 
   // Une navigation rapide ne doit pas empiler deux transitions : la seconde
   // coupe la première, qui aurait de toute façon animé vers un écran périmé.
@@ -56,16 +88,24 @@ export function transitionDeVue(dir: Direction, fn: () => void): void {
   }
 
   const racine = document.documentElement;
-  racine.setAttribute(ATTR, `on ${dir}`);
+  racine.setAttribute(ATTR, `on ${dir}${options.carte ? ' carte' : ''}`);
 
   let vt: ViewTransition;
   try {
-    vt = document.startViewTransition(() => flushSync(fn));
+    vt = document.startViewTransition(() => {
+      flushSync(fn);
+      // APRÈS `flushSync`, et pas dans `fn` : c'est seulement ici que le DOM du
+      // nouvel écran existe.
+      options.apres?.();
+    });
   } catch {
     // Un navigateur qui annonce l'API mais la refuse (transition déjà en vol,
     // document caché) ne doit pas laisser l'écran sur place.
     racine.removeAttribute(ATTR);
-    return fn();
+    fn();
+    options.apres?.();
+    oublierLesCartes();
+    return;
   }
   courante = vt;
 
@@ -77,6 +117,7 @@ export function transitionDeVue(dir: Direction, fn: () => void): void {
     .then(() => {
       if (courante === vt) {
         racine.removeAttribute(ATTR);
+        oublierLesCartes();
         courante = null;
       }
       secouerLeNid(dir);
