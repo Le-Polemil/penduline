@@ -7,5 +7,6 @@ export * from './write';
 export * from './focus';
 export * from './review';
 export * from './stats';
+export * from './goals';
 export * from './extension-bridge';
 export * from './home';

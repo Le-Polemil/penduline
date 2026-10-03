@@ -105,34 +105,73 @@ titre, il ne peut donc pas vivre dessous, où il se lirait comme un filtre du co
 courant. Chaque onglet reste un écran autonome, avec son état et son bandeau ;
 `ScreenHero` prend un `tabs` et c'est tout le couplage.
 
-## ⛔ « Objectifs » ne se calcule pas avec le schéma d'aujourd'hui
+## « Objectifs » : la case bien utilisée, pas la tâche abattue
 
-Le barème du brief demande trois choses que la base ne sait pas rendre :
+Le barème d'origine du brief butait sur le schéma — « Déléguer +3 si validée quand Faire
+est vide » demande l'état de « Faire » à l'INSTANT de la validation, qu'aucune table ne
+conserve. Reformulé le 3 octobre : **chaque case a un usage optimal qui vaut plein tarif,
+et des usages dégradés qui valent moins.** Tout redevient calculable.
 
-| Règle | Ce qu'il faudrait |
-|---|---|
-| Faire +1 si fait en 7 jours | `quadrant_changed_at` → `completed_at` des tâches TERMINÉES. Le client ne charge que les ouvertes (#40), et `completion_stats` ne rend que des sommes. |
-| Planifier +2 à temps, −1 en retard | Comparer `completed_at` à `due_at`, même problème. |
-| Déléguer +3 si validée quand Faire est VIDE | L'état de « Faire » à l'INSTANT de la validation. **Aucune table ne le conserve** : ce n'est pas une requête manquante, c'est un fait non enregistré. |
-| Éliminer +1 sortie ou supprimée, −2 cochée | Distinguer « sortie d'Éliminer » de « cochée dans Éliminer » : il faut l'historique des changements de case, pas seulement le dernier. |
+| Case | Ce que la case promet | Mesure | Points |
+|---|---|---|---|
+| Faire | la traiter vite, soi-même | terminée ≤ 7 j après son entrée | +2 |
+| | | terminée au-delà | +1 |
+| | | encore ouverte, échéance passée | −1 |
+| Planifier | lui donner une date, puis la tenir | datée **et** tenue | +4 |
+| | | datée, en retard | +1 |
+| | | jamais datée — la case n'a pas servi | 0 |
+| Déléguer | qu'elle parte chez quelqu'un d'autre | cochée par quelqu'un d'autre | +5 |
+| | | passée en ≤ 3 j | +3 |
+| | | gardée plus longtemps | +1 |
+| | | ouverte depuis > 14 j | −1 |
+| Éliminer | qu'elle disparaisse | supprimée | +2 |
+| | | **cochée** | −2 |
+| À trier | qu'elle n'y reste pas | encore au parking après 14 j | −1 |
 
-Les trois premières lignes se règlent par une RPC de plus (une migration, sur le modèle
-de `completion_stats`). La quatrième — et le `+3` de Déléguer — demandent un **journal
-d'événements** sur les tâches, qui n'existe pas. À trancher avant de coder : barème
-relâché sur ce que la base sait, ou journal d'événements d'abord.
+**La bascule qui rend « Déléguer » mesurable.** En solo, la tâche dans Déléguer n'est
+presque jamais *le travail* : c'est **la passation**. « Appeler le plombier » n'est pas
+« réparer la fuite ». La cocher soi-même est donc le bon usage, pas le dégradé — ce que
+le premier barème prenait à l'envers. Le signal n'est pas *qui* a coché mais *combien de
+temps ça a traîné* : une passation prend des minutes. `completed_by` ≠ l'auteur reste un
+bonus, là où la délégation est constatée et plus seulement déclarée.
 
-## ⛔ Icônes : le tracé de l'en-tête n'existe qu'en 103 × 160
+⚠️ **`by_other` est EXCLUSIF des deux cas de durée.** Noter aussi la durée d'une tâche
+déléguée reviendrait à lui reprocher le temps passé chez son destinataire — exactement ce
+qu'on voulait. Un test verrouille ce point, c'est le plus facile à casser du fichier.
 
-`apps/web/public/logo.png` (le « P » : branche, deux feuilles, nid suspendu) et
-`apps/web/public/icon.svg` (le nid plein, qui sert de favicon et de source aux onze PNG
-dérivés) sont **deux dessins différents**. Le second est le seul vecteur du dépôt, et
-c'est l'ancien.
+⚠️ **Les pénalités sont affichées à part du total de période.** Elles viennent de tâches
+encore ouvertes AUJOURD'HUI, qui ne se rattachent à aucune fenêtre : les mêmes seraient
+recomptées à chaque période comparée, et la tendance deviendrait fausse. D'où
+`points` / `snapshot` / `total` dans `GoalScore`.
 
-Pour aligner favicon, icônes PWA et icônes d'extension sur le tracé de l'en-tête, il
-faut ce tracé en vecteur. Le canevas de design ne porte que le PNG, et 103 × 160 ne
-monte pas à 512 ni à 1024 sans bouillie. Retracer à la main une marque de marque n'est
-pas une décision de développement.
+### Deux trous de mesure, dits à l'écran
 
-Reste donc à fournir un SVG (ou un PNG ≥ 1024) du nouveau logo ; le script de
-régénération et le fond `#F5EAD8` des icônes PWA suivront — c'est l'issue #151, qui
-demande déjà ce script.
+- `quadrant_changed_at` date de la revue périodique : rien d'avant ne se mesure sur la
+  durée. Ces tâches sont comptées à part (`unmeasured`), pas notées zéro en silence.
+- Une tâche **purgée** de la corbeille disparaît pour de bon : le +2 d'Éliminer s'efface
+  avec elle, au bout de trente jours.
+
+### Où vivent les seuils
+
+Dans `packages/shared/src/goals.ts`, et nulle part ailleurs. `goal_stats` rend des faits
+— une durée en secondes, un booléen — et n'applique aucun seuil. C'est la règle posée par
+`review_boards` : les dupliquer en SQL serait deux vérités à tenir à jour, et celle des
+deux qui dérive est toujours celle qu'on ne relit pas.
+
+## Icônes : deux tracés, et lequel sert à quoi
+
+`logo.png` (le « P » de l'en-tête) et `icon.svg` (le nid plein) sont **deux dessins
+différents**, et c'est le second qui servait de favicon : l'onglet ne montrait pas ce que
+montre la barre du haut.
+
+`logo.svg` — vectorisation du tracé de l'en-tête, fournie le 3 octobre — prend le favicon
+et les quatre icônes d'extension. Trois corrections sur le fichier reçu : `viewBox`
+recadrée sur la boîte englobante (les tracés n'occupaient que 41 % de large d'un canevas
+carré, et à 16 px la marque se perdait dans le vide), les cinq teintes remises sur les
+jetons de `quadrants.ts`, et la ferraille de l'exporteur retirée.
+
+⚠️ **Les icônes PWA ne changent pas.** La vectorisation est fidèle en petite taille, pas
+assez pour les 192/512/1024 du manifeste : les régénérer depuis un tracé approximatif
+serait reculer. Elles restent sur l'ancien nid plein jusqu'à ce qu'un vecteur propre
+arrive — `scripts/icons.mjs` a déjà la forme qu'il faut pour les reprendre, une entrée de
+plus. L'issue #151 reste ouverte sur ce seul point.

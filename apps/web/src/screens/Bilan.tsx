@@ -1,24 +1,19 @@
 import type { Store } from '../data/store';
 import { ReviewScreen } from './Review';
 import { StatsScreen } from './Stats';
+import { GoalsScreen } from './Goals';
 
 /**
- * Les lectures du recul. L'ordre est celui de la bande d'onglets.
- *
- * ⚠️ `'goals'` — « Objectifs » — est DÉCLARÉ mais pas encore offert, et il est
- * volontairement absent d'`ONGLETS`. Le barème du brief (Faire +1 si fait en
- * 7 jours, Déléguer +3 si validée quand Faire est vide…) ne se calcule pas avec
- * le schéma d'aujourd'hui : il demande l'historique des complétions, que le
- * client ne charge pas (#40), et pour « Déléguer » l'état de « Faire » À
- * L'INSTANT de la validation, qu'aucune table ne conserve. Le type l'accepte
- * pour que la vue persistée d'un onglet futur ne casse rien ; l'aiguillage
- * retombe sur la rétrospective tant qu'il n'existe pas.
+ * Les trois lectures du recul. L'ordre est celui de la bande d'onglets, et il
+ * va du constat à la règle : ce qui s'est passé, ce qu'il faut décider, et ce
+ * que ça dit de la méthode.
  */
 export type BilanTab = 'retro' | 'review' | 'goals';
 
 const ONGLETS: { key: BilanTab; label: string }[] = [
   { key: 'retro', label: 'Rétrospective' },
   { key: 'review', label: 'Revue' },
+  { key: 'goals', label: 'Objectifs' },
 ];
 
 /**
@@ -58,7 +53,7 @@ export function BilanScreen({
           key={o.key}
           className="btabs__tab"
           role="tab"
-          aria-selected={o.key === tab || (tab === 'goals' && o.key === 'retro')}
+          aria-selected={o.key === tab}
           onClick={() => onTab(o.key)}
         >
           {o.label}
@@ -68,5 +63,6 @@ export function BilanScreen({
   );
 
   if (tab === 'review') return <ReviewScreen store={store} tabs={tabs} onOpenBoard={onOpenBoard} />;
+  if (tab === 'goals') return <GoalsScreen store={store} tabs={tabs} />;
   return <StatsScreen store={store} tabs={tabs} onReview={() => onTab('review')} />;
 }
