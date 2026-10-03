@@ -13,12 +13,14 @@
     "build": "npm run build -w @penduline/shared && npm run build -w @penduline/web && npm run build -w @penduline/extension",
     "build:ext": "npm run build -w @penduline/extension",
     "typecheck": "npm run typecheck --workspaces --if-present",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "icons": "node scripts/icons.mjs"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "vitest": "^4.1.10"
   }
 }

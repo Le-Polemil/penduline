@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="2551 1902 8308 8308">
+<!--
+  Penduline : le « P » — une branche, deux feuilles, et le nid de la rémiz
+  penduline qui y pend, avec la matrice 2×2 dedans.
+
+  ⚠️ CE FICHIER N'EST PAS `icon.svg`, ET LES DEUX NE DESSINENT PAS LA MÊME CHOSE.
+  `icon.svg` porte le nid plein, plus ancien : il reste la source des onze PNG
+  dérivés (manifeste PWA, apple-touch) tant qu'on n'a pas de vecteur propre pour
+  les grandes tailles. Celui-ci porte la marque de l'en-tête, et sert là où une
+  petite taille suffit : le favicon, et les icônes d'extension (16 → 128).
+  Voir `work/refonte-ecrans.md` et l'issue #151.
+
+  Vectorisé depuis `logo.png`, qui reste le fichier de l'en-tête — le tracé est
+  fidèle mais pas identique (les deux feuilles, l'ovale du nid).
+
+  `viewBox` RECADRÉE sur la boîte englobante réelle du dessin (mesurée au
+  `getBBox`) : les tracés n'occupaient que 5168 × 7988 d'un canevas de 12540, et
+  à 16 px la marque se perdait dans le vide. Carrée, dimensionnée par la hauteur
+  et centrée sur le dessin — elle remplit la tuile sans se déformer. Même
+  correctif que `icon.svg`, pour la même raison.
+
+  Les cinq teintes sont celles de `packages/shared/src/quadrants.ts` et du jeton
+  d'accent : le tracé les avait fait dériver d'un ou deux points, et un logo qui
+  n'est pas à la couleur du produit se voit en pastille à côté de l'application.
+-->
+  <!-- La branche, les feuilles et le nid -->
+  <path fill="#c67139" d="M4360 10034 c-30 -8 -80 -31 -110 -52 -44 -30 -62 -51 -90 -106 l-35 -69 -3 -2386 c-2 -2116 -1 -2400 13 -2511 29 -234 89 -426 186 -595 69 -120 119 -183 230 -290 145 -139 312 -241 539 -328 274 -106 485 -152 1472 -327 573 -102 731 -141 893 -222 100 -50 160 -94 223 -163 45 -48 54 -68 92 -183 83 -260 236 -441 479 -566 224 -116 547 -182 841 -174 l105 3 3 56 c6 119 -66 365 -169 574 -198 403 -466 582 -904 603 -149 8 -151 8 -229 47 l-79 40 154 10 c118 8 167 7 209 -2 122 -28 199 -35 325 -31 112 4 141 9 212 35 111 40 182 85 267 169 124 122 211 270 276 468 35 108 39 180 11 195 -62 34 -349 58 -496 42 -349 -37 -555 -179 -681 -472 -70 -161 -75 -164 -324 -163 -175 0 -234 6 -449 46 -94 17 -119 25 -147 50 -53 47 -58 75 -51 328 9 330 28 432 98 520 47 59 91 89 288 194 256 138 405 238 560 377 420 375 666 898 722 1530 14 165 6 512 -15 658 -81 542 -319 988 -686 1284 -434 350 -1019 499 -1620 411 -593 -86 -1077 -417 -1376 -941 -32 -56 -59 -101 -61 -100 -1 2 3 392 9 867 9 670 8 878 -1 921 -27 129 -121 224 -251 253 -91 21 -352 21 -430 0z m2051 -1998 c127 -27 218 -95 271 -204 l33 -67 3 -363 3 -363 -358 3 -358 3 -66 32 c-114 56 -195 164 -219 293 -15 79 -12 265 5 339 9 35 27 86 42 113 54 99 188 194 304 217 71 14 268 12 340 -3z m1252 -1 c37 -8 90 -26 117 -41 73 -40 155 -126 193 -203 l32 -66 0 -200 c0 -199 0 -200 -28 -257 -41 -84 -107 -152 -185 -190 l-67 -33 -367 -3 -368 -3 0 328 c0 354 6 405 55 488 54 93 160 168 262 185 81 13 283 11 356 -5z m-943 -1637 l0 -373 -28 -60 c-45 -95 -131 -162 -242 -191 -88 -22 -361 -15 -435 11 -110 39 -196 115 -253 223 -39 75 -52 140 -52 271 0 185 25 270 107 362 52 57 116 97 182 115 32 9 149 13 384 13 l337 1 0 -372z m1061 340 c79 -39 149 -110 190 -193 l34 -69 3 -168 c4 -192 -7 -248 -64 -336 -74 -113 -177 -182 -300 -202 -80 -13 -271 -13 -336 1 -128 27 -243 121 -290 236 -22 56 -23 68 -26 411 l-3 353 368 -3 368 -3 56 -27z m-2780 -473 c65 -321 205 -621 400 -860 69 -85 239 -251 334 -326 101 -80 233 -167 365 -242 63 -35 166 -93 229 -128 130 -73 189 -130 220 -215 45 -119 70 -529 36 -594 -23 -44 -51 -46 -187 -10 -178 48 -323 102 -493 185 -499 244 -794 590 -905 1060 -36 153 -41 266 -33 785 4 272 9 484 10 470 2 -14 13 -70 24 -125z"/>
+  <!-- déléguer -->
+  <path fill="#f2e0c4" d="M6041 8069 c-72 -14 -168 -65 -224 -118 -105 -99 -137 -196 -137 -417 0 -78 5 -166 10 -195 24 -128 112 -243 228 -297 l57 -27 388 -3 388 -3 -3 393 -3 393 -33 67 c-53 109 -144 177 -271 204 -73 15 -327 17 -400 3z"/>
+  <!-- éliminer -->
+  <path fill="#e3d8d4" d="M7277 8070 c-102 -17 -208 -92 -262 -185 -50 -84 -55 -131 -55 -518 l0 -358 398 3 397 3 67 33 c78 38 144 106 185 190 l28 57 0 230 0 230 -32 66 c-38 77 -120 163 -193 203 -76 41 -165 56 -335 55 -82 -1 -172 -5 -198 -9z"/>
+  <!-- faire -->
+  <path fill="#dbe3ce" d="M5969 6786 c-66 -18 -130 -58 -182 -115 -85 -96 -107 -175 -107 -392 0 -160 11 -222 52 -301 57 -108 143 -183 253 -223 74 -27 405 -34 495 -11 111 29 197 96 242 191 l28 60 0 403 0 402 -367 -1 c-258 0 -382 -4 -414 -13z"/>
+  <!-- planifier -->
+  <path fill="#dde7ef" d="M6962 6418 c3 -375 4 -384 26 -441 47 -115 162 -209 290 -236 65 -14 315 -14 396 -1 123 20 226 89 300 202 59 90 68 141 64 366 l-3 198 -34 69 c-41 83 -111 154 -190 193 l-56 27 -398 3 -398 3 3 -383z"/>
+</svg>
