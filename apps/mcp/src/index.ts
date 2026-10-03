@@ -95,7 +95,7 @@ async function servirMcp(req: IncomingMessage, res: ServerResponse) {
   // Un serveur et un transport NEUFS par requête. En mode sans session, deux
   // appels concurrents partageraient sinon leurs identifiants de requête.
   const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
-  const serveur = creerServeur({ db, quota });
+  const serveur = creerServeur({ db, quota, appUrl: env.WEB_APP_URL });
   res.on('close', () => {
     void transport.close();
     void serveur.close();

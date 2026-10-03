@@ -5,9 +5,12 @@ import type { Db } from '../db';
 import { DbError } from '../db';
 import { QuotaError, type Quota } from '../quota';
 import * as outils from './tools';
+import { enregistrerVisuel, metaVisuel } from './ui';
+import * as visuels from './visuels';
 
 /**
- * Le serveur MCP proprement dit : les neuf outils, et rien d'autre.
+ * Le serveur MCP proprement dit : les neuf outils, et la ressource d'interface
+ * de leurs visuels (`ui.ts`).
  *
  * Un `McpServer` neuf est fabriqué à CHAQUE requête (voir `index.ts`) : le
  * transport est sans session, chaque appel porte son propre jeton, et deux
@@ -37,6 +40,11 @@ const uuid = z.guid();
 export interface Deps {
   db: Db;
   quota: Quota;
+  /**
+   * L'application web (`WEB_APP_URL`), cible des liens « Ouvrir » et « Voir »
+   * des visuels. Facultative : sans elle, les visuels s'affichent sans lien.
+   */
+  appUrl?: string;
 }
 
 /** Ce que le middleware d'authentification a posé sur le jeton. */
@@ -51,7 +59,11 @@ function contexte(db: Db, authInfo: AuthInfo | undefined) {
   return { ctx: { db, userId: extra.userId }, grantId: extra.grantId };
 }
 
-type Resultat = { content: { type: 'text'; text: string }[]; isError?: boolean };
+type Resultat = {
+  content: { type: 'text'; text: string }[];
+  isError?: boolean;
+  structuredContent?: Record<string, unknown>;
+};
 
 const rendu = (valeur: unknown): Resultat => ({
   content: [{ type: 'text', text: JSON.stringify(valeur, null, 2) }],
@@ -73,7 +85,30 @@ async function protege(travail: () => Promise<Resultat>): Promise<Resultat> {
   }
 }
 
-export function creerServeur({ db, quota }: Deps): McpServer {
+/**
+ * Ajoute le visuel à un résultat — sans JAMAIS mettre ce résultat en danger.
+ *
+ * Le texte `content` est déjà calculé, et l'écriture déjà faite, quand ceci
+ * s'exécute. Le visuel demande parfois une lecture de plus (le nom de la
+ * matrice, son univers) : si elle échoue, l'outil rend son texte exactement
+ * comme avant, et l'hôte affiche simplement l'état « rien à afficher ». Un
+ * visuel raté ne doit pas transformer une écriture RÉUSSIE en erreur — l'agent
+ * la referait.
+ *
+ * `structuredContent` est le canal que l'extension MCP Apps prévoit pour les
+ * données de l'interface ; le texte reste celui que lit le modèle.
+ */
+async function avecVisuel(resultat: Resultat, fabrique: () => Promise<visuels.Vue>): Promise<Resultat> {
+  try {
+    const vue = await fabrique();
+    return { ...resultat, structuredContent: vue as unknown as Record<string, unknown> };
+  } catch (e) {
+    console.warn('[mcp] visuel indisponible :', e instanceof Error ? e.message : e);
+    return resultat;
+  }
+}
+
+export function creerServeur({ db, quota, appUrl }: Deps): McpServer {
   const serveur = new McpServer(
     { name: 'penduline', version: '1.0.0' },
     {
@@ -81,6 +116,15 @@ export function creerServeur({ db, quota }: Deps): McpServer {
         'Penduline range des tâches dans des matrices d’Eisenhower. Un univers regroupe des matrices, une matrice porte quatre cases plus un « parking » à trier. Une tâche peut avoir des étapes (un seul niveau).',
     },
   );
+
+  enregistrerVisuel(serveur);
+  const lien = visuels.lienApp(appUrl);
+
+  /** Où vit une matrice, pour les cartes : « Maison › Cuisine ». */
+  const emplacement = async (ctx: outils.Contexte, boardId: string) => {
+    const { board, universe } = await outils.emplacementMatrice(ctx, boardId);
+    return { matrice: board?.name ?? 'Matrice', univers: universe?.name ?? null };
+  };
 
   // ── Lectures ───────────────────────────────────────────────────────────────
 
@@ -108,11 +152,22 @@ export function creerServeur({ db, quota }: Deps): McpServer {
         universe_id: uuid.optional().describe('Restreindre à un univers.'),
       },
       annotations: { readOnlyHint: true },
+      _meta: metaVisuel(),
     },
     async (args, extra) =>
       protege(async () => {
         const { ctx } = contexte(db, extra.authInfo);
-        return rendu(await outils.listBoards(ctx, args));
+        const boards = await outils.listBoards(ctx, args);
+        return avecVisuel(rendu(boards), async () => {
+          const [universes, taches] = await Promise.all([
+            outils.listUniverses(ctx),
+            outils.tachesDesMatrices(
+              ctx,
+              boards.map((b) => b.id),
+            ),
+          ]);
+          return visuels.vueMatrices({ boards, universes, taches, lien });
+        });
       }),
   );
 
@@ -128,11 +183,22 @@ export function creerServeur({ db, quota }: Deps): McpServer {
         tout: z.boolean().optional(),
       },
       annotations: { readOnlyHint: true },
+      _meta: metaVisuel(),
     },
     async (args, extra) =>
       protege(async () => {
         const { ctx } = contexte(db, extra.authInfo);
-        return rendu(await outils.listTasks(ctx, args));
+        const taches = await outils.listTasks(ctx, args);
+        return avecVisuel(rendu(taches), async () => {
+          const { board, universe } = await outils.emplacementMatrice(ctx, args.board_id);
+          return visuels.vueMatrice({
+            board: { id: args.board_id, name: board?.name ?? 'Matrice' },
+            universe,
+            taches,
+            filtre: args.quadrant,
+            lien,
+          });
+        });
       }),
   );
 
@@ -184,12 +250,24 @@ export function creerServeur({ db, quota }: Deps): McpServer {
         parent_id: uuid.optional().describe('Rattacher comme étape d’une tâche existante.'),
         due_at: z.string().optional().describe('Échéance, en ISO 8601 UTC.'),
       },
+      _meta: metaVisuel(),
     },
     async (args, extra) =>
       protege(async () => {
         const { ctx, grantId } = contexte(db, extra.authInfo);
         quota.verifieEcriture(grantId);
-        return rendu(await outils.createTask(ctx, args));
+        const tache = await outils.createTask(ctx, args);
+        return avecVisuel(rendu(tache), async () => {
+          const [ou, parent] = await Promise.all([
+            emplacement(ctx, tache.board_id),
+            args.parent_id
+              ? outils
+                  .tachesDesMatrices(ctx, [tache.board_id])
+                  .then((ts) => ts.find((t) => t.id === args.parent_id) ?? null)
+              : null,
+          ]);
+          return visuels.vueAjout({ tache, ou, parent, lien });
+        });
       }),
   );
 
@@ -204,12 +282,16 @@ export function creerServeur({ db, quota }: Deps): McpServer {
         title: z.string().min(1).max(500).optional(),
         due_at: z.string().nullable().optional().describe('`null` retire l’échéance.'),
       },
+      _meta: metaVisuel(),
     },
     async (args, extra) =>
       protege(async () => {
         const { ctx, grantId } = contexte(db, extra.authInfo);
         quota.verifieEcriture(grantId);
-        return rendu(await outils.updateTask(ctx, args));
+        const tache = await outils.updateTask(ctx, args);
+        return avecVisuel(rendu(tache), async () =>
+          visuels.vueModification({ tache, ou: await emplacement(ctx, tache.board_id), lien }),
+        );
       }),
   );
 
@@ -224,12 +306,21 @@ export function creerServeur({ db, quota }: Deps): McpServer {
         quadrant: quadrant.optional(),
         board_id: uuid.optional(),
       },
+      _meta: metaVisuel(),
     },
     async (args, extra) =>
       protege(async () => {
         const { ctx, grantId } = contexte(db, extra.authInfo);
         quota.verifieEcriture(grantId);
-        return rendu({ writes: await outils.moveTask(ctx, args) });
+        const { writes, avant, taches } = await outils.deplacerTache(ctx, args);
+        return avecVisuel(rendu({ writes }), async () => {
+          const arrivee = args.board_id ?? avant.board_id;
+          const [ou, depart] = await Promise.all([
+            emplacement(ctx, arrivee),
+            arrivee !== avant.board_id ? emplacement(ctx, avant.board_id) : null,
+          ]);
+          return visuels.vueDeplacement({ avant, writes, taches, ou, depart, lien });
+        });
       }),
   );
 
@@ -240,12 +331,22 @@ export function creerServeur({ db, quota }: Deps): McpServer {
       description:
         'Coche et range la tâche : elle quitte la grille pour la corbeille « Terminées ». Si elle était appairée, le lien se défait.',
       inputSchema: { task_id: uuid },
+      _meta: metaVisuel(),
     },
     async (args, extra) =>
       protege(async () => {
         const { ctx, grantId } = contexte(db, extra.authInfo);
         quota.verifieEcriture(grantId);
-        return rendu({ writes: await outils.completeTask(ctx, args) });
+        const { writes, avant, taches } = await outils.terminerTache(ctx, args);
+        return avecVisuel(rendu({ writes }), async () =>
+          visuels.vueTerminee({
+            avant,
+            writes,
+            taches,
+            ou: await emplacement(ctx, avant.board_id),
+            lien,
+          }),
+        );
       }),
   );
 

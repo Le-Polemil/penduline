@@ -266,6 +266,21 @@ export interface MoveTaskArgs {
  * signaler une tâche qui stagne. L'écrire à la main le ferait mentir.
  */
 export async function moveTask(ctx: Contexte, args: MoveTaskArgs): Promise<TaskWrite[]> {
+  return (await deplacerTache(ctx, args)).writes;
+}
+
+/**
+ * Ce que fait `moveTask`, plus ce que le visuel doit savoir : la tâche AVANT le
+ * déplacement (d'où l'on part) et les lignes lues (pour nommer la partenaire).
+ *
+ * Une seule implémentation, deux sorties : l'outil ne rend que les writes, comme
+ * avant ; le visuel reçoit le reste. Relire la tâche après coup pour le visuel
+ * aurait coûté une requête — et surtout aurait lu l'ARRIVÉE, pas le départ.
+ */
+export async function deplacerTache(
+  ctx: Contexte,
+  args: MoveTaskArgs,
+): Promise<{ writes: TaskWrite[]; avant: Task; taches: Task[] }> {
   const tache = await laTache(ctx, args.task_id);
   if (tache.parent_id) {
     throw new ToolError("une étape suit son parent : déplacez le parent, pas l'étape.");
@@ -281,8 +296,12 @@ export async function moveTask(ctx: Contexte, args: MoveTaskArgs): Promise<TaskW
     { quadrant, board_id: boardId },
     endPosition(visibleTasks(taches, boardId, quadrant)),
   );
+  // Copie AVANT d'écrire : rien ne garantit qu'une couche d'accès ne rende pas
+  // la ligne qu'elle met à jour (la doublure de test le fait) — et « avant »
+  // doit rester le départ.
+  const avant = { ...tache };
   await appliquer(ctx, writes);
-  return writes;
+  return { writes, avant, taches };
 }
 
 /**
@@ -297,10 +316,63 @@ export async function moveTask(ctx: Contexte, args: MoveTaskArgs): Promise<TaskW
  * Le lien de paire se défait, des deux côtés : la partenaire reste, seule.
  */
 export async function completeTask(ctx: Contexte, args: { task_id: string }): Promise<TaskWrite[]> {
+  return (await terminerTache(ctx, args)).writes;
+}
+
+/** `completeTask`, avec ce que le visuel doit savoir — voir `deplacerTache`. */
+export async function terminerTache(
+  ctx: Contexte,
+  args: { task_id: string },
+): Promise<{ writes: TaskWrite[]; avant: Task; taches: Task[] }> {
   const tache = await laTache(ctx, args.task_id);
   const taches = await toutesLesTaches(ctx, [tache.board_id]);
 
   const writes = planPairDetach(taches, tache, { done: true, archived: true });
+  const avant = { ...tache };
   await appliquer(ctx, writes);
-  return writes;
+  return { writes, avant, taches };
+}
+
+// ── Lectures pour les visuels ────────────────────────────────────────────────
+//
+// Ce qui suit ne sert QU'AUX visuels MCP Apps (`visuels.ts`, `ui.ts`). Aucun
+// outil n'en a besoin pour son texte, et c'est voulu : si l'une de ces lectures
+// échoue, l'outil rend son résultat comme avant, simplement sans visuel (voir
+// `avecVisuel` dans `server.ts`).
+
+/** Les tâches de plusieurs matrices — `selectAll`, donc sans troncature (#40). */
+export async function tachesDesMatrices(ctx: Contexte, boardIds: string[]): Promise<Task[]> {
+  return toutesLesTaches(ctx, boardIds);
+}
+
+/**
+ * Où vit une matrice POUR CETTE PERSONNE : son nom, et l'univers dans lequel
+ * elle l'a rangée.
+ *
+ * Le rangement est personnel depuis #53 : on lit donc le placement de
+ * l'utilisateur courant, jamais celui du propriétaire. Une matrice invisible
+ * (RLS) rend `null`, et le visuel se contente alors de l'identifiant.
+ */
+export async function emplacementMatrice(
+  ctx: Contexte,
+  boardId: string,
+): Promise<{ board: Board | null; universe: Universe | null }> {
+  const rest = ctx.db.asUser(ctx.userId);
+  const [[board], [placement]] = await Promise.all([
+    rest.select<Board>('boards', { id: `eq.${boardId}`, select: '*', limit: '1' }),
+    rest.select<BoardPlacement>('board_placements', {
+      board_id: `eq.${boardId}`,
+      user_id: `eq.${ctx.userId}`,
+      select: '*',
+      limit: '1',
+    }),
+  ]);
+  if (!board) return { board: null, universe: null };
+  if (!placement?.universe_id) return { board, universe: null };
+  const [universe] = await rest.select<Universe>('universes', {
+    id: `eq.${placement.universe_id}`,
+    select: '*',
+    limit: '1',
+  });
+  return { board, universe: universe ?? null };
 }
