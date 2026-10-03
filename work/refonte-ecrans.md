@@ -213,6 +213,19 @@ suffisent, aucun historique à tenir.
   déjà réattribuée. Le clone est sorti du flux, les `id` retirés — sans ça deux
   éléments partagent une ancre et les `aria-labelledby` de la page se brisent.
 
+### Le nid a deux secousses, pas une
+
+Les planches en décrivent deux, et les confondre se voit. Un saut d'un écran à l'autre
+est un voyage : 640 ms, large (9° → −5° → 2°). Une carte qui s'ouvre ou un plateau qui
+se déplie reste sur place : 440 ms, plus serré (9° → −3,5° → 1°), pour que le nid
+s'apaise **avec** le bandeau. Unifier sur 640 ms faisait traîner le nid 200 ms après la
+fin des deux gestes courts.
+
+⚠️ **Elle part après la transition, pas avec elle** comme sur les planches. Le temps
+d'une view transition, le DOM réel est masqué au profit des pseudo-éléments : une
+animation posée sur le nid vivant ne se verrait pas. Les planches sont des pages
+isolées, sans cette contrainte.
+
 ### Les noms, posés en JS
 
 `pd-tray`, `pd-u-<board>-<case>`, `pd-card`… sont posés sur les éléments au moment du
