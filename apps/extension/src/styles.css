@@ -65,6 +65,95 @@
   --shadow-lg: 0 12px 32px color-mix(in srgb, #2e2b25 22%, transparent);
 
   --card-warm: #fdf6e9;
+  --color-divider: color-mix(in srgb, #201e1d 16%, transparent);
+
+  /* Le bandeau d'encre, repris du web : la seule surface sombre du panneau au
+     thème clair, et elle le reste au sombre. */
+  --band: #1d1a16;
+  --band-raised: #28231d;
+  --band-text: #f3e9d8;
+  --band-muted: #c2b6a2;
+
+  --color-danger: #a63d2a;
+  --color-danger-bg: #f6dcd3;
+  --today-bg: #f8e1c8;
+  --today-chip: color-mix(in srgb, #c67139 16%, transparent);
+  /* Texte posé SUR l'encre d'une case. Blanc au clair ; au sombre les encres
+     s'éclaircissent et le blanc n'y tiendrait plus. */
+  --q-on-ink: #fff;
+  --cta: #9a5228;
+  --on-cta: #fff;
+  --toast-bg: #2e2b25;
+  --toast-fg: #f3e9d8;
+  --scrim: rgb(29 26 22 / 0.42);
+
+  /* Les cases, par thème (voir `quads.ts`). Valeurs claires = celles de
+     `packages/shared/src/quadrants.ts`. */
+  --q-faire-ink: #5c6b45;     --q-faire-dark: #43502f;     --q-faire-bg: #dbe3ce;
+  --q-planifier-ink: #38607f; --q-planifier-dark: #27455c; --q-planifier-bg: #dde7ef;
+  --q-deleguer-ink: #8f6a14;  --q-deleguer-dark: #6b4f0e;  --q-deleguer-bg: #f2e0c4;
+  --q-eliminer-ink: #a63d2a;  --q-eliminer-dark: #7c2d1e;  --q-eliminer-bg: #e3d8d4;
+  --q-parking-ink: #7b756a;   --q-parking-dark: #5d5850;
+
+  /* Le navigateur peint ses propres contrôles (champs, listes déroulantes,
+     barres de défilement) dans le thème annoncé ici. */
+  color-scheme: light dark;
+}
+
+/* ── Thème sombre ─────────────────────────────────────────────────────────────
+   Suit le réglage du système, sans interrupteur — même règle que l'app web, et
+   mêmes valeurs : les deux surfaces doivent se ressembler quand on passe de
+   l'une à l'autre. La rampe des neutres est INVERSÉE et non recalculée : chaque
+   palier garde son rôle, seul le sens du contraste change. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #1d1a16;
+    --color-surface: #2f2922;
+    --color-text: #f3e9d8;
+    --color-accent: #e08a52;
+    --card-warm: #3d352c;
+    --color-divider: color-mix(in srgb, #f3e9d8 14%, transparent);
+
+    --color-neutral-100: #26211b;
+    --color-neutral-200: #2f2922;
+    --color-neutral-300: #463e34;
+    --color-neutral-400: #5a5146;
+    --color-neutral-500: #7d7262;
+    --color-neutral-600: #9c907e;
+    --color-neutral-700: #c2b6a2;
+    --color-neutral-900: #f3e9d8;
+    --color-accent-100: #3b2a1d;
+    --color-accent-300: #8c5634;
+    --color-accent-600: #e9a06e;
+    --color-accent-700: #f0a774;
+    --color-accent-800: #f6c39d;
+
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.35);
+    --shadow-md: 0 3px 10px rgb(0 0 0 / 0.4);
+    --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.5);
+
+    /* Le bandeau, déjà sombre au clair, descend d'un cran pour rester un
+       en-tête au-dessus d'une page elle-même sombre. */
+    --band: #110e0b;
+    --band-raised: #2f2922;
+
+    --color-danger: #f0b4a5;
+    --color-danger-bg: #3a2622;
+    --today-bg: #4b3626;
+    --today-chip: color-mix(in srgb, #e08a52 20%, transparent);
+    --q-on-ink: #1d1a16;
+    --cta: #e08a52;
+    --on-cta: #1d1a16;
+    --toast-bg: #4a4036;
+    --toast-fg: #f3e9d8;
+    --scrim: rgb(0 0 0 / 0.55);
+
+    --q-faire-ink: #a3b585;     --q-faire-dark: #c9d6b3;     --q-faire-bg: #2c3324;
+    --q-planifier-ink: #8db0cc; --q-planifier-dark: #bcd2e4; --q-planifier-bg: #23303b;
+    --q-deleguer-ink: #d9ae4c;  --q-deleguer-dark: #ecd29a;  --q-deleguer-bg: #3a2f1a;
+    --q-eliminer-ink: #e5826b;  --q-eliminer-dark: #f0b4a5;  --q-eliminer-bg: #3a2622;
+    --q-parking-ink: #9c907e;   --q-parking-dark: #c2b6a2;
+  }
 }
 
 * { box-sizing: border-box; }
@@ -90,14 +179,12 @@ input::placeholder { color: inherit; opacity: 0.55; }
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* `.capbar` et `.pswitch` se posent SUR le panneau : sans ancrage ici, ils
+     retomberaient sur le bloc englobant du document. */
+  position: relative;
 }
 
 /* ── Accueil ──────────────────────────────────────────────────────────────── */
-.home-head { display: flex; align-items: center; gap: 9px; padding: 16px 16px 8px; flex: none; animation: mm-in 0.25s ease backwards; }
-.home-brand { font: 400 20px var(--font-heading); color: var(--color-text); }
-.home-openapp { margin-left: auto; flex: none; white-space: nowrap; font: 600 11.5px var(--font-body); color: var(--color-accent-700); text-decoration: none; cursor: pointer; }
-.home-openapp:hover { color: var(--color-accent-800); }
-
 .logo { width: 26px; height: 26px; border-radius: 50%; background: var(--color-accent); display: flex; align-items: center; justify-content: center; flex: none; }
 .logo__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5px; }
 .logo__cell { width: 5px; height: 5px; border-radius: 1.5px; }
@@ -109,42 +196,8 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .logo__cell:nth-child(3) { border-top-right-radius: 0; }
 .logo__cell:nth-child(4) { border-top-left-radius: 0; }
 
-.home-list { flex: 1; overflow: auto; padding: 6px 12px; display: flex; flex-direction: column; gap: 6px; animation: mm-in 0.25s ease backwards; }
 .empty { font: 12.5px var(--font-body); color: var(--color-neutral-500); text-align: center; padding: 24px 8px; }
 
-.board {
-  display: flex; align-items: center; gap: 9px; width: 100%; text-align: left;
-  background: var(--card-warm); border: 1.5px solid transparent; border-radius: 12px;
-  box-shadow: var(--shadow-sm); padding: 10px 12px; cursor: pointer; transition: box-shadow 0.15s, transform 0.15s;
-}
-.board:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
-.board--calm { opacity: 0.75; }
-.board--calm:hover { opacity: 1; }
-/* Même règle que `.detail-board` : le nom est l'élastique de la ligne, les
-   compteurs et le chevron ne se compriment jamais. */
-.board__name {
-  font: 600 13.5px var(--font-body); color: var(--color-text);
-  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.board__meta { margin-left: auto; flex: none; font: 11px var(--font-body); color: var(--color-neutral-500); }
-.board__pills { margin-left: auto; flex: none; display: flex; gap: 4px; }
-.pill { color: #fff; border-radius: 999px; font: 700 10px/1 var(--font-body); padding: 4px 7px; }
-.board__chev { flex: none; color: var(--color-neutral-400); }
-/* Un en-tête par univers, discret : il situe, il ne concurrence pas les noms
-   de matrices. Sans aucun univers, aucun en-tête n'est rendu. */
-.uni { display: flex; flex-direction: column; gap: 6px; }
-.uni + .uni { margin-top: 10px; }
-.uni-head {
-  margin: 0 0 2px 4px;
-  font: 600 10.5px var(--font-body); color: var(--color-neutral-500);
-  letter-spacing: 0.08em; text-transform: uppercase;
-}
-
-/* ── Création d'une matrice ───────────────────────────────────────────────────
-   Même geste que l'accueil web (bouton au repos → champ à la saisie), resserré
-   pour 400 px : le formulaire web place « Créer » ET « Annuler » en toutes
-   lettres à côté du champ, ce qui ne laisserait ici presque rien pour le nom.
-   L'annulation passe donc par une croix. */
 .add-board {
   margin-top: 4px; align-self: flex-start;
   border: 1.5px dashed var(--color-accent); background: transparent;
@@ -161,7 +214,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
   border-radius: 999px; padding: 8px 13px; outline: none;
 }
 .add-board-submit {
-  flex: none; background: var(--color-accent); color: #fff; border: none;
+  flex: none; background: var(--color-accent); color: var(--on-cta); border: none;
   border-radius: 999px; padding: 8px 14px;
   font: 600 12px var(--font-body); cursor: pointer;
 }
@@ -174,91 +227,12 @@ input::placeholder { color: inherit; opacity: 0.55; }
 }
 .add-board-cancel:hover { background: var(--color-neutral-200); color: var(--color-text); }
 
-.home-foot { flex: none; border-top: 1.5px dotted var(--color-neutral-300); padding: 10px 12px; display: flex; gap: 10px; align-items: center; justify-content: center; }
 .icon-btn { display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; border: 1.5px solid var(--color-neutral-300); border-radius: 999px; color: var(--color-neutral-600); transition: background 0.15s, color 0.15s; }
 .icon-btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
-.bmc { display: flex; align-items: center; gap: 7px; background: var(--color-accent); color: #fff; border-radius: 999px; padding: 8px 16px; font: 700 12px var(--font-body); text-decoration: none; transition: background 0.15s; }
+.bmc { display: flex; align-items: center; gap: 7px; background: var(--color-accent); color: var(--on-cta); border-radius: 999px; padding: 8px 16px; font: 700 12px var(--font-body); text-decoration: none; transition: background 0.15s; }
 .bmc:hover { background: var(--color-accent-600); }
 
 /* ── Détail ───────────────────────────────────────────────────────────────── */
-.detail-head { display: flex; align-items: center; gap: 9px; padding: 14px 16px 8px; flex: none; animation: mm-in 0.25s ease backwards; }
-.back { font: 700 15px var(--font-body); color: var(--color-accent-700); cursor: pointer; padding: 2px 6px 2px 0; background: none; border: none; }
-/* Le nom cède la place aux pastilles plutôt que de les pousser dehors : dans un
-   panneau étroit, c'est lui le seul élément élastique de la ligne. */
-.detail-board {
-  font: 400 21px var(--font-heading); color: var(--color-text);
-  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-/* ── Sélecteur de case ────────────────────────────────────────────────────────
-   Les quatre tuiles doivent se lire comme UNE matrice : coins extérieurs
-   arrondis, coin tourné vers le centre laissé carré — la règle des tuiles du
-   logo. Le disque « À trier » occupe la jonction. */
-.squares { margin-left: auto; flex: none; position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
-.square { width: 16px; height: 16px; color: #fff; font: 700 9px/16px var(--font-body); text-align: center; cursor: pointer; border: none; padding: 0; outline-offset: 1px; transition: opacity 0.15s, font-size 0.18s ease; }
-.square--1 { border-radius: 4px 0 0 0; }
-.square--2 { border-radius: 0 4px 0 0; }
-.square--3 { border-radius: 0 0 0 4px; }
-.square--4 { border-radius: 0 0 4px 0; }
-
-.square--park {
-  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
-  border-radius: 999px;
-  /* Le disque chevauche quatre fonds de couleurs différentes : il lui faut un
-     détourage qui tienne sur les quatre, d'où l'anneau couleur de page. */
-  box-shadow: 0 0 0 1.5px var(--color-bg);
-  /* Il garde sa boîte pleine et n'est que mis à l'échelle : la grille ne bouge
-     jamais, seule la transformation s'anime. */
-  scale: 0.72;
-  transition: scale 0.18s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.15s;
-  /* Décalage plus large que celui des tuiles : à pleine taille le disque les
-     touche, et un anneau collé se lirait comme LEUR bordure, pas la sienne. */
-  outline-offset: 2px;
-}
-.square--park:hover, .square--park:focus-visible, .square--park-on { scale: 1; }
-
-/* Au repos le disque n'affiche qu'un caractère (deux chiffres n'y tiennent pas
-   à 72 %) ; agrandi, il livre le compte exact. */
-.square__full { display: none; }
-.square--park:hover .square__idle,
-.square--park:focus-visible .square__idle,
-.square--park-on .square__idle { display: none; }
-.square--park:hover .square__full,
-.square--park:focus-visible .square__full,
-.square--park-on .square__full { display: inline; }
-/* Le « + » est centré sur l'axe mathématique de la fonte, pas sur la hauteur des
-   chiffres : sans correction son encre tombe 0,818 px sous le centre de la boîte,
-   contre 0,404 px pour un chiffre (mesuré dans Figtree Bold à 9 px / 16 px de
-   ligne). On le remonte de l'écart exact, 0,046 em, pour qu'il s'aligne sur les
-   chiffres — et non sur le centre géométrique, sinon il flotterait plus haut
-   qu'eux.
-   À noter : ces 0,404 px communs viennent de l'asymétrie de la fonte (ascendante
-   9, descendante 2) que `line-height` ne compense pas. C'est uniforme sur les
-   cinq zones, donc cohérent — hors périmètre de ce lot. */
-.square__idle--plus { display: inline-block; translate: 0 -0.046em; }
-
-/* Les quatre compteurs reculent d'un cran quand le centre prend la parole — et
-   c'est ce recul qui dégage la place qu'occupe le disque agrandi.
-   Pas de variation d'opacité ici : les tuiles la portent en style inline, qui
-   l'emporterait sur cette règle. */
-.squares:is(:has(.square--park:hover), :has(.square--park:focus-visible), .squares--park-on)
-  :is(.square--1, .square--2, .square--3, .square--4) { font-size: 6px; }
-
-.filter-banner { flex: none; padding: 0 16px 6px; display: flex; align-items: center; gap: 8px; font: 11px var(--font-body); color: var(--color-neutral-600); }
-.filter-clear { font: 700 11px var(--font-body); color: var(--color-accent-700); cursor: pointer; background: none; border: none; }
-
-.detail-list { flex: 1; overflow: auto; padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 9px; animation: mm-in 0.25s ease backwards; }
-.quad { border: 2px dotted transparent; border-radius: 14px; padding: 9px 11px; transition: border-color 0.15s; }
-.quad-head { display: flex; align-items: baseline; gap: 7px; margin-bottom: 6px; }
-.quad-label { flex: none; font: 400 15px var(--font-heading); color: var(--q-dark); }
-/* C'est le sous-titre qui s'efface en premier quand la place manque : le titre
-   de la case et son compte sont l'information, lui n'est qu'un rappel. */
-.quad-sub {
-  font: 10.5px var(--font-body); color: var(--q-dark);
-  flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.quad-count { margin-left: auto; flex: none; background: var(--q-ink); color: #fff; border-radius: 999px; font: 700 10px/1 var(--font-body); padding: 3px 7px; }
-.quad-tasks { display: flex; flex-direction: column; }
-
 .gap { height: 6px; display: flex; align-items: center; transition: height 0.12s; }
 .gap--active { height: 16px; }
 .gap__line { flex: 1; border-top: 3px dotted transparent; }
@@ -303,7 +277,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
   background: var(--color-neutral-100); color: var(--color-neutral-700);
 }
 .due--soon { background: var(--color-accent-100); color: var(--color-accent-800); }
-.due--overdue { background: #f7e4e0; color: #a63d2a; }
+.due--overdue { background: var(--color-danger-bg); color: var(--color-danger); }
 
 /* « agent » (#23) — mêmes valeurs que le web. Les deux feuilles sont distinctes
    par construction (le popup n'hérite pas de celle du web) : les garder alignées
@@ -313,7 +287,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
   padding: 3px 7px; border-radius: 999px;
   background: #ece7f5; color: #5b4a86;
 }
-.task--overdue { border-color: #a63d2a; }
+.task--overdue { border-color: var(--color-danger); }
 
 .due-edit { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; padding: 5px 0 0 23px; }
 .due-edit__input {
@@ -325,8 +299,8 @@ input::placeholder { color: inherit; opacity: 0.55; }
   font: 600 10px/1 var(--font-body); border: none; border-radius: 999px;
   padding: 5px 10px; cursor: pointer;
 }
-.due-edit__ok { background: var(--color-accent); color: #fff; }
-.due-edit__del { background: none; color: #a63d2a; text-decoration: underline; padding-left: 3px; }
+.due-edit__ok { background: var(--color-accent); color: var(--on-cta); }
+.due-edit__del { background: none; color: var(--color-danger); text-decoration: underline; padding-left: 3px; }
 
 /* ── Menu d'actions d'une tâche ───────────────────────────────────────────────
    Le ⋯ ne s'affiche qu'au survol : la carte porte déjà la case à cocher, le titre
@@ -442,32 +416,13 @@ input::placeholder { color: inherit; opacity: 0.55; }
   padding: 1px 7px; outline: none;
 }
 
-.detail-foot { flex: none; border-top: 1.5px dotted var(--color-neutral-300); padding: 10px 12px 14px; display: flex; gap: 8px; align-items: center; }
-.add-input { flex: 1; min-width: 0; border: 1.5px dashed var(--color-accent); border-radius: 999px; background: transparent; padding: 9px 14px; font: 600 12px var(--font-body); color: var(--color-text); outline: none; transition: background 0.15s, border-style 0.15s; }
-.add-input:focus { background: var(--card-warm); border-style: solid; }
-/* Même figure que l'en-tête, géométrie seule : ces pastilles ne portent aucun
-   compteur, donc pas de mécanique de survol — elle n'aurait rien à révéler. */
-.add-squares { position: relative; display: grid; grid-template-columns: 1fr 1fr; gap: 2.5px; }
-.add-square { width: 15px; height: 15px; cursor: pointer; border: none; padding: 0; outline-offset: 1px; transition: transform 0.12s; }
-.add-square--1 { border-radius: 4px 0 0 0; }
-.add-square--2 { border-radius: 0 4px 0 0; }
-.add-square--3 { border-radius: 0 0 0 4px; }
-.add-square--4 { border-radius: 0 0 4px 0; }
-.add-square--park {
-  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
-  width: 13px; height: 13px; border-radius: 999px;
-  box-shadow: 0 0 0 1.5px var(--color-bg);
-  outline-offset: 2px;
-}
-.add-square:hover { transform: scale(1.15); }
-
 /* ── Connexion ────────────────────────────────────────────────────────────── */
 .signin { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 10px; padding: 28px 26px; animation: mm-in 0.25s ease backwards; }
 .signin-brand { display: flex; align-items: center; gap: 9px; }
 .signin-sub { margin: 0; font: 13px var(--font-body); color: var(--color-neutral-600); }
 .signin-input { font: 13px var(--font-body); padding: 9px 14px; border: 1.5px solid var(--color-neutral-300); border-radius: 999px; background: var(--card-warm); color: var(--color-text); outline: none; }
 .signin-input:focus { border-color: var(--color-accent); }
-.signin-btn { font: 600 13px var(--font-body); background: var(--color-accent); color: #fff; border: none; border-radius: 999px; padding: 10px; cursor: pointer; }
+.signin-btn { font: 600 13px var(--font-body); background: var(--color-accent); color: var(--on-cta); border: none; border-radius: 999px; padding: 10px; cursor: pointer; }
 .signin-btn:hover { background: var(--color-accent-600); }
 .signin-btn:disabled { opacity: 0.5; cursor: default; }
 .signin-link { background: none; border: none; color: var(--color-accent-700); font: 600 12px var(--font-body); cursor: pointer; }
@@ -475,7 +430,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
    pas une action de même rang que « créer un compte ». */
 .signin-forgot { color: var(--color-neutral-600); font: 11.5px var(--font-body); text-decoration: none; text-align: center; }
 .signin-forgot:hover { color: var(--color-accent-700); }
-.signin-error { margin: 0; color: #a63d2a; font: 12px var(--font-body); }
+.signin-error { margin: 0; color: var(--color-danger); font: 12px var(--font-body); }
 
 /* ── Écran de chargement ──────────────────────────────────────────────────────
    Même mécanique que le web : col et nid oscillent à des amplitudes différentes
@@ -503,7 +458,19 @@ input::placeholder { color: inherit; opacity: 0.55; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* ⚠️ Le nid de chargement garde son `rotate: 0deg` : un pendule arrêté en
+     biais se lit comme un défaut d'affichage, pas comme un chargement. */
   .loader__neck, .loader__nest { animation: none; rotate: 0deg; }
+  /* Puis le plancher : par défaut tout est instantané, et l'oubli devient
+     impossible parce qu'il n'y a plus rien à ne pas oublier. Même règle que
+     l'app web — `0.01ms` et non `none`, pour laisser jouer les états finaux. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 /* ── Toast ──────────────────────────────────────────────────────────────────
@@ -512,7 +479,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .toast {
   position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50;
   max-width: calc(100% - 24px);
-  background: var(--color-neutral-900); color: #fff; border-radius: 16px; box-shadow: var(--shadow-lg);
+  background: var(--toast-bg); color: var(--toast-fg); border-radius: 16px; box-shadow: var(--shadow-lg);
   padding: 10px 14px; display: flex; align-items: center; gap: 12px; font: 12.5px var(--font-body);
   animation: mm-in 0.25s ease both;
 }
@@ -521,7 +488,7 @@ input::placeholder { color: inherit; opacity: 0.55; }
 .toast--error { background: #7d2a19; }
 .toast__act { font-weight: 700; color: var(--color-accent-300); cursor: pointer; background: none; border: none; font-size: 12.5px; }
 .toast__close {
-  background: none; border: none; color: #fff; opacity: 0.65; cursor: pointer;
+  background: none; border: none; color: inherit; opacity: 0.65; cursor: pointer;
   font: 12px var(--font-body); padding: 0; line-height: 1;
 }
 .toast__close:hover { opacity: 1; }
@@ -539,8 +506,8 @@ input::placeholder { color: inherit; opacity: 0.55; }
 }
 .cap__area { resize: vertical; min-height: 44px; line-height: 1.4; }
 .cap__area:focus-visible, .cap__input:focus-visible { border-color: var(--color-accent); }
-.cap__input--bad { border-color: #a63d2a; }
-.cap__error { font: 11px var(--font-body); color: #a63d2a; margin-top: 3px; }
+.cap__input--bad { border-color: var(--color-danger); }
+.cap__error { font: 11px var(--font-body); color: var(--color-danger); margin-top: 3px; }
 .cap__hint { margin: 5px 0 0; font: 11.5px var(--font-body); color: var(--color-neutral-600); }
 .cap__actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .cap__btn {
@@ -548,26 +515,334 @@ input::placeholder { color: inherit; opacity: 0.55; }
   background: none; border: none; border-radius: 999px; padding: 7px 14px; cursor: pointer;
 }
 .cap__btn:hover { background: var(--color-neutral-200); }
-.cap__btn--go { background: var(--color-accent); color: #fff; }
+.cap__btn--go { background: var(--color-accent); color: var(--on-cta); }
 .cap__btn--go:hover { background: var(--color-accent-600); }
 .cap__btn--go:disabled { opacity: 0.45; cursor: default; background: var(--color-accent); }
 
 /* ── Bandeau « Aujourd'hui » (#49) ────────────────────────────────────────── */
 /* En tête de liste, encadré : c'est un engagement, pas une matrice de plus. */
-.today {
-  border: 1.5px solid var(--color-accent-300); border-radius: 12px;
-  padding: 8px 10px 6px; margin-bottom: 8px; background: var(--color-accent-100);
+
+/* ── Le bandeau d'encre du panneau ──────────────────────────────────────────
+   Le même qu'en haut de l'app web, à l'échelle de 400 px : nid en filigrane,
+   vague vers le fond de page. C'est ce qui fait reconnaître l'extension comme
+   la même application que le site, et non comme un satellite. */
+.phero {
+  position: relative; flex: none; z-index: 2;
+  background: var(--band); color: var(--band-text);
 }
-.today-head {
-  display: flex; align-items: baseline; gap: 8px; margin: 0 0 6px;
-  font: 700 10.5px var(--font-body); text-transform: uppercase; letter-spacing: 0.07em;
-  color: var(--color-accent-800);
+/* La couche de décor rogne seule : `overflow: hidden` sur le bandeau couperait
+   le sélecteur de matrice, qui descend sous la vague. */
+.phero__decor { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.phero__nest { position: absolute; top: -26px; right: -46px; width: 170px; height: 170px; opacity: 0.08; }
+.phero__branch, .phero__swing, .phero__nid { position: absolute; inset: 0; }
+.phero__branch, .phero__nid { background: var(--band-text); }
+.phero__branch {
+  -webkit-mask: url('/decor/nid-branche.png') center / contain no-repeat;
+  mask: url('/decor/nid-branche.png') center / contain no-repeat;
 }
-.today-count { margin-left: auto; font: 400 10.5px var(--font-body); text-transform: none; letter-spacing: 0; color: var(--color-neutral-700); }
-.today-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
-.today-check {
-  flex: none; width: 15px; height: 15px; border-radius: 999px; cursor: pointer;
-  border: 2px solid var(--color-accent-600); background: none; padding: 0;
+.phero__nid {
+  -webkit-mask: url('/decor/nid.png') center / contain no-repeat;
+  mask: url('/decor/nid.png') center / contain no-repeat;
 }
-.today-check:hover { background: var(--color-accent-300); }
-.today-title { font: 13px/1.35 var(--font-body); color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phero__swing { transform-origin: 54.6% 21%; animation: hero-sway 9s ease-in-out infinite; }
+@keyframes hero-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }
+.phero__inner { position: relative; z-index: 1; padding: 12px 12px 34px; display: flex; flex-direction: column; gap: 10px; }
+.phero__wave { position: absolute; left: 0; bottom: -1px; display: block; width: 100%; height: 24px; }
+.phero__wave path { fill: var(--color-bg); }
+
+.phero__brand { display: flex; align-items: center; gap: 10px; }
+.phero__brand img { display: block; flex: none; }
+.phero__name { flex: 1; min-width: 0; font: 400 23px var(--font-heading); }
+.phero__openapp {
+  flex: none; min-height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px;
+  border: 1.5px solid color-mix(in srgb, #f3e9d8 32%, transparent); border-radius: 999px;
+  color: var(--band-text); text-decoration: none; font: 700 12.5px var(--font-body);
+}
+.phero__icon {
+  width: 36px; height: 36px; flex: none; display: grid; place-items: center;
+  border-radius: 999px; color: var(--band-text);
+}
+@media (hover: hover) and (pointer: fine) {
+  .phero__openapp:hover, .phero__icon:hover { background: var(--band-raised); }
+}
+.phero__eyebrow {
+  margin: 0; font: 700 11px var(--font-body); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--band-muted);
+}
+
+/* L'en-tête de la vue matrice : retour, sélecteur, lien vers l'app. */
+.phero__bar { display: flex; align-items: center; gap: 4px; }
+.phero__back {
+  width: 40px; height: 44px; flex: none; display: grid; place-items: center;
+  border: none; border-radius: 12px; background: none; color: var(--band-text); cursor: pointer;
+}
+.phero__switch {
+  flex: 1; min-width: 0; min-height: 44px; display: flex; align-items: center; gap: 8px;
+  padding: 0 10px; border-radius: 14px; cursor: pointer; text-align: left;
+  border: 1.5px solid color-mix(in srgb, #f3e9d8 24%, transparent);
+  background: var(--band-raised); color: var(--band-text);
+}
+.phero__switch-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.phero__switch-uni {
+  font: 700 10.5px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--band-muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.phero__switch-name { font: 400 18px/1.15 var(--font-heading); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.phero__switch-chev { flex: none; display: inline-flex; transition: rotate 0.2s; }
+.phero__switch-chev--open { rotate: 180deg; }
+@media (hover: hover) and (pointer: fine) {
+  .phero__back:hover { background: var(--band-raised); }
+}
+
+/* Les deux coupes du bandeau : ce qui est en retard, ce qui est pour le jour. */
+.phero__pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill-band {
+  min-height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px 0 8px;
+  border-radius: 999px; cursor: pointer; font: 700 13px var(--font-body); border: 2px solid transparent;
+}
+.pill-band__n { font: 400 19px var(--font-heading); min-width: 18px; text-align: center; }
+.pill-band--late { background: #3a2622; color: #f0b4a5; }
+.pill-band--late .pill-band__n { color: #e5826b; }
+.pill-band--today { background: #4b3626; color: #f8d8bd; }
+.pill-band--today .pill-band__n { color: #f0a774; }
+.pill-band--on { border-color: var(--band-text); }
+
+/* ── Accueil ──────────────────────────────────────────────────────────────── */
+.plist {
+  flex: 1; min-height: 0; overflow: auto;
+  padding: 4px 12px 86px; display: flex; flex-direction: column; gap: 14px;
+  animation: mm-in 0.25s ease backwards;
+}
+
+/* Ce sur quoi on s'est engagé passe devant tout : dans 400 px, c'est la seule
+   chose dont on soit sûr qu'elle intéresse à la seconde où le panneau s'ouvre. */
+.ptoday {
+  border-radius: 22px; padding: 12px 10px 10px; background: var(--today-bg);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.ptoday__head { display: flex; align-items: center; gap: 8px; padding: 0 6px 2px; }
+.ptoday__title { margin: 0; font: 400 20px var(--font-heading); color: var(--color-text); }
+.ptoday__meta { flex: 1; min-width: 0; font: 500 12px var(--font-body); color: var(--color-neutral-700); }
+.ptoday__empty { margin: 0 6px 4px; font: 500 13px/1.45 var(--font-body); color: var(--color-neutral-700); }
+
+.pill-late {
+  flex: none; padding: 1px 8px; border-radius: 999px;
+  background: var(--color-danger-bg); color: var(--color-danger);
+  font: 700 11.5px/1.5 var(--font-body);
+}
+
+.prow {
+  display: flex; align-items: center; min-height: 48px;
+  border-radius: 14px; background: var(--card-warm); box-shadow: var(--shadow-sm);
+  border: 1.5px solid transparent;
+}
+.prow--late { border-color: var(--color-danger); }
+.prow__check {
+  width: 40px; height: 44px; flex: none; display: grid; place-items: center;
+  border: none; background: none; cursor: pointer; padding: 0;
+}
+.prow__check::before {
+  content: ''; width: 18px; height: 18px; box-sizing: border-box;
+  border: 2px solid var(--q-ink, var(--color-neutral-500)); border-radius: 999px;
+}
+.prow__body {
+  flex: 1; min-width: 0; min-height: 44px; display: flex; flex-direction: column; justify-content: center; gap: 3px;
+  padding: 6px 10px 6px 0; border: none; background: none; color: var(--color-text); text-align: left; cursor: pointer;
+}
+.prow__title {
+  font: 500 14px/1.3 var(--font-body);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.prow__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.prow__board {
+  display: inline-flex; align-items: center; gap: 5px;
+  font: 600 11.5px/1.4 var(--font-body); color: var(--color-neutral-700);
+}
+.prow__dot { width: 8px; height: 8px; flex: none; border-radius: 3px; }
+
+/* Une pastille d'information, dans la liste comme sur la carte. */
+.chip { padding: 1px 8px; border-radius: 999px; font: 700 11.5px/1.5 var(--font-body); }
+.chip--overdue { background: var(--color-danger-bg); color: var(--color-danger); }
+.chip--soon, .chip--neutral { background: var(--color-accent-100); color: var(--color-accent-800); }
+.chip--today { background: var(--today-chip); color: var(--color-accent-700); }
+
+.pgroup { display: flex; flex-direction: column; gap: 6px; }
+.pgroup__title {
+  margin: 0; padding: 0 6px 2px; font: 700 11px var(--font-body); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.pboard {
+  width: 100%; min-height: 62px; display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px 8px 9px; border-radius: 18px; cursor: pointer; text-align: left;
+  border: 2px solid transparent; background: var(--card-warm); box-shadow: var(--shadow-sm);
+  color: var(--color-text);
+}
+.pboard--on { border-color: var(--color-accent); }
+.pboard__text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.pboard__name { font: 600 15px var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pboard__sub {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+  font: 500 12px/1.4 var(--font-body); color: var(--color-neutral-700);
+}
+.pboard__open {
+  flex: none; padding: 2px 8px; border-radius: 999px;
+  background: var(--today-chip); color: var(--color-accent-700); font: 700 11px/1.4 var(--font-body);
+}
+.pboard__chev { flex: none; display: inline-flex; color: var(--color-neutral-500); }
+@media (hover: hover) and (pointer: fine) {
+  .pboard:hover { box-shadow: var(--shadow-md); }
+}
+
+/* La mini-grille : le compte de chaque case, dans sa couleur. Une case vide ne
+   montre pas « 0 » mais un creux — à cette taille, quatre zéros font du bruit
+   là où un trou se lit. */
+.mini { flex: none; display: grid; gap: 3px; }
+.mini--md { grid-template-columns: repeat(2, 22px); grid-template-rows: repeat(2, 22px); }
+.mini--sm { grid-template-columns: repeat(2, 16px); grid-template-rows: repeat(2, 16px); gap: 2px; }
+.mini__cell { display: grid; place-items: center; border-radius: 7px; font: 700 11px/1 var(--font-body); }
+.mini--sm .mini__cell { border-radius: 5px; font-size: 9px; }
+.mini__cell--faire     { background: var(--q-faire-bg); color: var(--q-faire-dark); }
+.mini__cell--planifier { background: var(--q-planifier-bg); color: var(--q-planifier-dark); }
+.mini__cell--deleguer  { background: var(--q-deleguer-bg); color: var(--q-deleguer-dark); }
+.mini__cell--eliminer  { background: var(--q-eliminer-bg); color: var(--q-eliminer-dark); }
+.mini__cell--empty { background: none; box-shadow: inset 0 0 0 1.5px var(--color-divider); }
+
+.plinks { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 6px 0 4px; }
+
+/* ── « Capturer cette page », toujours visible ──────────────────────────────
+   Posé au-dessus de la liste et non en pied de colonne : le panneau se lit en
+   défilant, et un bouton qui descend avec le contenu n'est plus là quand on en
+   a besoin. Le dégradé évite que le texte passe sous le bouton sans transition. */
+.capbar {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 10;
+  padding: 10px 12px 12px;
+  background: linear-gradient(to top, var(--color-bg) 75%, transparent);
+}
+.capbar__btn {
+  width: 100%; min-height: 52px; display: flex; align-items: center; gap: 12px;
+  padding: 0 18px 0 8px; border: none; border-radius: 999px; cursor: pointer; text-align: left;
+  background: var(--cta); color: var(--on-cta); box-shadow: var(--shadow-md);
+}
+.capbar__glyph {
+  width: 36px; height: 36px; flex: none; display: grid; place-items: center; border-radius: 999px;
+  background: color-mix(in srgb, currentColor 18%, transparent); font: 700 18px var(--font-body);
+}
+.capbar__text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.capbar__title { font: 700 14.5px var(--font-body); }
+.capbar__page { font: 500 12px var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0.85; }
+@media (hover: hover) and (pointer: fine) {
+  .capbar__btn:hover { filter: brightness(1.08); }
+}
+
+/* ── Le sélecteur de matrice, en feuille posée sur le panneau ───────────────── */
+.pscrim { position: absolute; inset: 0; z-index: 25; border: none; padding: 0; background: var(--scrim); cursor: default; }
+.pswitch {
+  position: absolute; top: 58px; left: 8px; right: 8px; z-index: 26;
+  max-height: calc(100% - 120px); overflow: auto;
+  padding: 8px 8px 12px; border-radius: 22px;
+  background: var(--card-warm); color: var(--color-text); box-shadow: var(--shadow-lg);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.pswitch__group {
+  margin: 0; padding: 10px 12px 4px; font: 700 11px var(--font-body);
+  letter-spacing: 0.1em; text-transform: uppercase; color: var(--color-neutral-700);
+}
+.pswitch__row {
+  width: 100%; min-height: 48px; display: flex; align-items: center; gap: 10px;
+  padding: 0 12px 0 8px; border: none; border-radius: 14px; background: none;
+  color: var(--color-text); text-align: left; cursor: pointer;
+}
+.pswitch__row[aria-current='true'] { background: var(--color-surface); }
+.pswitch__name { flex: 1; min-width: 0; font: 600 14px var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pswitch__meta { flex: none; font: 500 12px var(--font-body); color: var(--color-neutral-700); }
+@media (hover: hover) and (pointer: fine) {
+  .pswitch__row:hover { background: var(--color-accent-100); }
+}
+
+/* ── Vue matrice : quatre tuiles, un disque, une case ouverte ───────────────── */
+.pmatrix {
+  flex: 1; min-height: 0; overflow: auto;
+  padding: 4px 12px 86px; display: flex; flex-direction: column; gap: 12px;
+  animation: mm-in 0.25s ease backwards;
+}
+/* La gouttière des axes, à l'échelle du panneau : 14 px suffisent à un mot
+   debout, et c'est tout ce qu'on peut prendre sur 400 px. */
+.paxes {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: 14px auto auto; column-gap: 6px; row-gap: 4px;
+}
+.paxes__top, .paxes__side {
+  font: 700 10px/14px var(--font-body); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--color-neutral-700); text-align: center;
+}
+.paxes__side { writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1; grid-row: 2; }
+.paxes__side--2 { grid-row: 3; }
+/* Les quatre tuiles occupent les deux colonnes et les deux rangées : le disque
+   du parking s'ancre en leur centre, ce qui demande un conteneur positionné. */
+.ptiles {
+  grid-column: 2 / 4; grid-row: 2 / 4; position: relative;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 6px;
+}
+.ptile {
+  min-height: 112px; box-sizing: border-box; display: flex; flex-direction: column;
+  justify-content: space-between; gap: 6px; cursor: pointer;
+  background: var(--q-bg); border: 2.5px solid transparent; color: var(--q-dark);
+}
+.ptile--on { border-color: var(--q-ink); }
+/* Le coin central reste carré, et le rembourrage s'écarte du disque. */
+.ptile--0 { border-radius: 22px 22px 6px 22px; padding: 10px 34px 10px 12px; align-items: flex-start; text-align: left; }
+.ptile--1 { border-radius: 22px 22px 22px 6px; padding: 10px 12px 10px 34px; align-items: flex-end; text-align: right; }
+.ptile--2 { border-radius: 22px 6px 22px 22px; padding: 10px 34px 10px 12px; align-items: flex-start; text-align: left; }
+.ptile--3 { border-radius: 6px 22px 22px 22px; padding: 10px 12px 10px 34px; align-items: flex-end; text-align: right; }
+.ptile__head { width: 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.ptile--1 .ptile__head, .ptile--3 .ptile__head { flex-direction: row-reverse; }
+.ptile__label { font: 400 16px var(--font-heading); }
+.ptile__n { font: 400 28px/1 var(--font-heading); }
+.ptile__preview {
+  font: 500 12.5px/1.3 var(--font-body); color: var(--color-text);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ppark {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+  width: 64px; height: 64px; border-radius: 999px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border: 2px dashed var(--q-parking-ink); background: var(--color-bg); color: var(--q-parking-dark);
+  box-shadow: 0 0 0 5px var(--color-bg);
+}
+.ppark--on { border-style: solid; background: var(--color-surface); }
+.ppark__n { font: 400 21px/1 var(--font-heading); }
+.ppark__label { font: 700 10px var(--font-body); }
+
+/* La case ouverte, en pleine largeur. */
+.pslot {
+  border-radius: 22px; padding: 12px 10px 10px; display: flex; flex-direction: column; gap: 6px;
+  background: var(--q-bg); border: 2px dotted transparent;
+}
+.pslot--now { background: var(--color-surface); }
+.pslot__head { display: flex; align-items: baseline; gap: 8px; padding: 0 6px; }
+.pslot__title { margin: 0; font: 400 20px var(--font-heading); color: var(--q-dark, var(--color-text)); }
+.pslot__sub {
+  flex: 1; min-width: 0; font: 500 12px var(--font-body); color: var(--q-dark, var(--color-neutral-700));
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.pslot__back {
+  flex: none; min-height: 32px; padding: 0 10px; border: none; border-radius: 999px;
+  background: var(--card-warm); color: var(--color-accent-700); font: 700 12px var(--font-body); cursor: pointer;
+}
+.pslot__empty { margin: 0 6px 4px; font: 500 13.5px var(--font-body); color: var(--q-dark, var(--color-neutral-700)); }
+.padd {
+  display: flex; align-items: center; gap: 4px; min-height: 44px; padding: 0 6px 0 12px;
+  border-radius: 14px; border: 1.5px dashed var(--q-ink, var(--color-accent)); background: transparent;
+}
+.padd__plus { font: 700 15px var(--font-body); color: var(--q-dark, var(--color-accent-700)); }
+.padd__input {
+  flex: 1; min-width: 0; min-height: 40px; border: none; background: transparent;
+  color: var(--color-text); font: 500 13px var(--font-body); outline-offset: 0;
+}
+
+/* Réservé aux lecteurs d'écran : présent dans l'arbre d'accessibilité, absent
+   de l'écran. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0; padding: 0; margin: -1px;
+}

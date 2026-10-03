@@ -229,11 +229,31 @@ soumise — c'est donc une **nouvelle permission** pour la fiche en 1.4.0)*
 > panneau. Elle n'accorde aucun accès au contenu des pages et ne change rien aux
 > données manipulées.
 
+**Justification de la permission `tabs`** *(nouveau avec la refonte du panneau)*
+
+> Le panneau affiche un bouton « Capturer cette page », qui crée une tâche à
+> partir du titre et de l'adresse de l'onglet consulté. Cette permission sert
+> uniquement à lire ce titre et cette adresse, au moment où l'utilisateur appuie
+> sur le bouton et pour les afficher dans un formulaire qu'il peut corriger avant
+> d'enregistrer. Elle n'accorde aucun accès au CONTENU des pages.
+
+⚠️ **`tabs` est la première permission de la liste qui affiche un avertissement à
+l'installation** (« Lire votre historique de navigation »). Deux conséquences :
+la fiche change, donc la validation repart ; et les utilisateurs existants
+verront l'extension passer en **« mise à jour en attente »** jusqu'à ce qu'ils
+acceptent la nouvelle permission — Chrome désactive l'extension entre-temps.
+
+Pourquoi `activeTab` ne suffit pas : elle n'est accordée qu'au moment où
+l'utilisateur invoque l'extension, et le panneau reste ouvert pendant qu'on
+change d'onglet — c'est même tout son intérêt. Au moment où l'on appuie sur
+« Capturer cette page », l'onglet visé n'est presque jamais celui qui a ouvert le
+panneau.
+
 **Autorisation d'hôte** — il n'y en a toujours pas. Rien à justifier, et pas
 d'examen approfondi. L'extension joint son API par un `fetch` cross-origin
 classique, autorisé par les en-têtes CORS du serveur. À noter : ni `contextMenus`
-ni `sidePanel` n'affichent **d'avertissement à l'installation** — le manifeste
-reste sobre. La ligne à ne pas franchir est `host_permissions`, et elle seule.
+ni `sidePanel` n'affichent d'avertissement à l'installation ; `tabs`, lui, en
+affiche un (voir ci-dessus). La ligne à ne pas franchir reste `host_permissions`.
 
 **Code distant** — répondre non : le paquet ne charge ni script ni ressource
 externe.

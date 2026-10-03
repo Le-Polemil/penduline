@@ -350,9 +350,18 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           onScope={(scope) => setView({ kind: 'global', scope })}
         />
       ) : view.kind === 'focus' ? (
-        <FocusScreen store={store} />
+        <FocusScreen
+          store={store}
+          onHome={onHome}
+          onOpenBoard={(id) => setView({ kind: 'board', id })}
+        />
       ) : view.kind === 'review' ? (
-        <ReviewScreen store={store} onOpenBoard={(id) => setView({ kind: 'board', id })} />
+        <ReviewScreen
+          store={store}
+          // La tâche est mise en évidence à l'arrivée : la revue n'offre que des
+          // décisions, tout le reste se fait sur la matrice.
+          onOpenBoard={(id, taskId) => setView({ kind: 'board', id, focusTask: taskId })}
+        />
       ) : view.kind === 'stats' ? (
         <StatsScreen store={store} />
       ) : (

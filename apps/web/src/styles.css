@@ -495,52 +495,8 @@ button { font: inherit; }
   .board-row--fresh { animation: none; }
 }
 
-/* ── En-tête matrice ──────────────────────────────────────────────────────── */
-.matrix { max-width: 1060px; margin: 0 auto; padding: 28px 24px 60px; animation: mm-in 0.3s ease backwards; }
-/* `flex-wrap` et `min-width: 0` : sans les deux, l'en-tête DÉBORDAIT (#89).
-   `.board-switch__label` porte bien `text-overflow: ellipsis`, mais aucun de ses
-   parents ne pouvait rétrécir — un élément flex a `min-width: auto`, donc la
-   taille de son contenu pour plancher — et `.board-switch__name` est en
-   `white-space: nowrap`. À 390 px sur la vue globale, « Toutes les matrices »
-   poussait le compteur hors cadre et **le bouton corbeille entièrement hors
-   écran**, donc inatteignable : 471 px de large pour 390 de fenêtre.
-   Le `wrap` est le filet : si même l'ellipse ne suffit pas, la ligne casse au
-   lieu de sortir. */
-.matrix-head { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 0 2px 14px; }
-.board-switch { position: relative; flex: 1 1 auto; min-width: 0; }
-/* `nowrap` : sans lui, le chevron passe à la ligne dès que la largeur manque —
-   très visible sur mobile, où il se retrouvait sous le nom. */
-.board-switch__name {
-  font: 400 30px/1 var(--font-heading); color: var(--color-text);
-  cursor: pointer; background: none; border: none; padding: 0;
-  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
-  max-width: 100%;
-}
-/* Sans univers, la portée de la vue globale ne peut pas changer : le sélecteur
-   devient une étiquette, pas un bouton qui n'ouvrirait qu'une seule entrée. */
-.board-switch__name--static { cursor: default; }
-.board-switch__label { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.board-switch__caret { font-size: 24px; line-height: 1; color: var(--color-neutral-700); flex: none; }
-.board-menu {
-  position: absolute; left: 0; top: 110%; z-index: 30; background: var(--card-warm);
-  border-radius: var(--radius-lg); box-shadow: var(--shadow-lg); padding: 8px;
-  display: flex; flex-direction: column; gap: 2px; min-width: 200px;
-  animation: mm-pop 0.16s ease both; transform-origin: top left;
-}
-.board-menu__item { font: 400 14px var(--font-body); color: var(--color-text); padding: 8px 12px; border-radius: 999px; cursor: pointer; white-space: nowrap; background: none; border: none; text-align: left; }
-.board-menu__item--active { font-weight: 700; }
-@media (hover: hover) and (pointer: fine) {
-  .board-menu__item:hover { background: var(--color-accent-100); }
-}
-.matrix-total { margin-left: auto; font: 13px var(--font-body); color: var(--color-neutral-700); }
-.bin-btn {
-  display: flex; align-items: center; gap: 7px; border: 1.5px solid var(--color-neutral-300);
-  background: none; border-radius: 999px; padding: 7px 13px; cursor: pointer;
-  color: var(--color-neutral-700); font: 700 12px var(--font-body); transition: background 0.15s, color 0.15s;
-}
-@media (hover: hover) and (pointer: fine) {
-  .bin-btn:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
-}
+/* ── Écran matrice ────────────────────────────────────────────────────────── */
+.matrix { max-width: 1200px; margin: 0 auto; padding: 22px 24px 64px; animation: mm-in 0.3s ease backwards; }
 
 /* ── Grille des cases ─────────────────────────────────────────────────────── */
 /* ⚠️ `auto auto` et surtout PAS `1fr 1fr`.
@@ -553,21 +509,12 @@ button { font: inherit; }
    `auto` dimensionne chaque ligne sur son propre contenu. Les cases d'une MÊME
    ligne restent alignées (l'étirement par défaut de la grille s'en charge), ce
    qui préserve le 2×2 et son coin central carré. */
-.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto; gap: 14px; }
 .quad {
   min-width: 0; background: var(--q-bg); border: 2px dotted var(--q-outline, transparent);
   border-radius: var(--radius-lg); padding: 14px 16px 16px; display: flex; flex-direction: column;
   min-height: 180px; transition: border-color 0.18s;
 }
-/* Coin central carré : les 4 cases se referment sur le centre de la matrice,
-   comme les tuiles de l'icône. Uniquement pertinent en 2×2 — la règle est
-   annulée dans le média mobile, où la grille passe en colonne et n'a plus de
-   centre. `--park` est exclue : elle occupe toute la largeur. */
-.grid > .quad:nth-child(1) { border-bottom-right-radius: 0; }
-.grid > .quad:nth-child(2) { border-bottom-left-radius: 0; }
-.grid > .quad:nth-child(3) { border-top-right-radius: 0; }
-.grid > .quad:nth-child(4) { border-top-left-radius: 0; }
-.quad--park { grid-column: 1 / -1; min-height: 90px; }
+.quad--park { min-height: 90px; }
 .quad--drag { border-color: var(--q-ink); }
 .quad-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .quad-label { font: 400 19px var(--font-heading); color: var(--q-dark); }
@@ -1241,13 +1188,8 @@ button { font: inherit; }
 /* Retour à gauche, déconnexion à droite. `space-between` avec un `<span/>` vide
    quand il n'y a pas de retour, pour que « Déconnexion » ne se recentre pas. */
 
-/* ── Responsive : la grille 2×2 s'empile sur mobile ───────────────────────── */
+/* ── Responsive ───────────────────────────────────────────────────────────── */
 @media (max-width: 720px) {
-  .grid { grid-template-columns: 1fr; grid-template-rows: none; }
-  .quad--park { grid-column: auto; }
-  /* En colonne, plus de centre : on rend leur rayon aux quatre coins. */
-  .grid > .quad { border-radius: var(--radius-lg); }
-
   /* Le champ de renommage d'une matrice : 340 px de champ plus le bouton « OK »
      ne tiennent pas dans les 342 px disponibles à 390 px de fenêtre. Il prend la
      ligne entière et se laisse rétrécir (#89). */
@@ -1274,13 +1216,7 @@ button { font: inherit; }
   .card-row { flex-direction: column; gap: 10px; }
 }
 
-/* ── Renommage / suppression d'une matrice ────────────────────────────────── */
-.board-menu__sep { display: block; height: 1px; background: var(--color-neutral-200); margin: 6px 4px; }
-.board-menu__item--danger { color: var(--color-danger); }
-@media (hover: hover) and (pointer: fine) {
-  .board-menu__item--danger:hover { background: var(--color-danger-bg); }
-}
-
+/* ── Renommage d'une matrice ──────────────────────────────────────────────── */
 .board-rename { display: inline-flex; align-items: center; gap: 8px; }
 .board-rename__input {
   font: 400 26px/1 var(--font-heading); color: var(--color-text);
@@ -1612,87 +1548,231 @@ button.uni-head__name:focus-visible {
   .home-global--review:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
 }
 
-.review { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
-.review-head { margin-bottom: 26px; }
-.review-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
-.review-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-700); margin: 8px 0 10px; }
-.review-total { font: 600 12.5px var(--font-body); color: var(--color-neutral-700); }
-
-.review-signals { display: flex; flex-direction: column; gap: 14px; }
-
-.review-signal {
-  background: var(--card-warm); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm); padding: 14px 16px 12px;
+/* ── Revue : une décision à la fois ─────────────────────────────────────────
+   La pile des signaux se présente carte par carte. `--tone` / `--tone-soft` /
+   `--tone-ink` portent la teinte du signal courant : posées en style en ligne
+   par l'écran, elles habillent la carte, sa pastille et ses puces sans qu'aucune
+   règle n'ait à connaître les cinq signaux. */
+.review {
+  max-width: 1200px; margin: 0 auto; padding: 28px 24px 64px;
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(min(300px, 100%), 320px);
+  gap: 32px; align-items: start; animation: mm-in 0.3s ease backwards;
 }
-/* Un signal satisfait s'affiche, il ne se masque pas — mais il s'efface : le
-   regard doit tomber sur ce qui demande une décision. */
-.review-signal--clear { box-shadow: none; background: none; border: 1.5px dashed var(--color-neutral-300); }
+.rv-main { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
 
-.review-signal__head { display: flex; align-items: center; gap: 10px; }
-.review-signal__toggle {
-  flex: 1; display: flex; align-items: center; gap: 8px;
-  background: none; border: none; padding: 0; cursor: pointer; text-align: left;
-  font: 400 19px/1.25 var(--font-heading); color: var(--color-text);
-}
-/* 12 px donnaient un « ▾ » de 5,7 px de large, qui se lisait comme un point — or
-   c'est le seul indice qu'un signal se déplie (#92). */
-.review-signal__caret { flex: none; font-size: 17px; line-height: 1; color: var(--color-neutral-700); }
-.review-signal__count {
-  flex: none; font: 700 14px var(--font-body); color: var(--color-accent-800);
-  background: var(--color-accent-100); border-radius: 999px; padding: 2px 11px;
-}
-.review-signal--clear .review-signal__count { color: var(--color-neutral-700); background: var(--color-neutral-100); }
+/* Le compteur du bandeau. */
+.rv-counter { align-items: baseline; gap: 12px; }
+.rv-counter__n { font: 400 46px/1 var(--font-heading); color: var(--band-text); }
+.rv-counter__text { font: 600 14px/1.3 var(--font-body); color: #d8cdb9; }
 
-.review-signal__hint { font: 13px/1.45 var(--font-body); color: var(--color-neutral-700); margin: 4px 0 0 20px; }
-.review-signal__empty { font: 13.5px var(--font-body); color: var(--color-neutral-700); margin: 12px 0 0 20px; }
-.review-signal__empty--failed { color: var(--color-accent-700); }
-/* La réserve sur une mesure encore jeune. Discrète, mais dite : un signal vide
-   sans elle passerait pour un bilan. */
-.review-signal__note {
-  font: italic 12px/1.4 var(--font-body); color: var(--color-neutral-700);
-  margin: 12px 0 0 20px;
+/* La progression : un segment par carte, dans la teinte de son signal. */
+.rv-progress { display: flex; flex-direction: column; gap: 10px; }
+.rv-segments { display: flex; gap: 5px; }
+.rv-seg {
+  flex: 1; height: 10px; border-radius: 999px; box-sizing: border-box;
+  box-shadow: inset 0 0 0 1.5px var(--tone);
 }
-.review-signal__foot { margin: 12px 0 0 20px; }
-.review-signal__tune {
-  font: 600 12px var(--font-body); color: var(--color-neutral-700);
-  background: var(--color-neutral-100); border: none; border-radius: 999px;
-  padding: 4px 11px; cursor: pointer;
+.rv-seg--done { background: var(--tone); box-shadow: none; }
+.rv-seg--skip { opacity: 0.4; }
+.rv-legend { display: flex; gap: 6px 18px; flex-wrap: wrap; font: 600 12.5px var(--font-body); color: var(--band-muted); }
+.rv-legend__item { display: flex; align-items: center; gap: 7px; }
+.rv-legend__dot { width: 10px; height: 10px; flex: none; border-radius: 3px; background: var(--tone); }
+
+/* La pile a une épaisseur : deux ombres sous la carte disent ce qui reste. */
+.rv-deck { position: relative; padding-bottom: 14px; }
+.rv-ghost {
+  position: absolute; left: 0; right: 0; top: 0; bottom: 0;
+  border-radius: 30px; background: var(--color-surface); border: 1.5px solid var(--color-divider);
+}
+.rv-ghost--1 { transform: translateY(7px) scale(0.985); }
+.rv-ghost--2 { transform: translateY(14px) scale(0.97); opacity: 0.6; }
+
+.rv-card {
+  position: relative; z-index: 1; display: flex; flex-direction: column; gap: 18px;
+  padding: 26px 30px 22px; border-radius: 30px;
+  background: var(--tone-soft, var(--card-warm));
+  border: 2px solid var(--tone, transparent);
+  box-shadow: var(--shadow-md);
+}
+/* « À trier » n'a pas de fond propre : sa carte se tient en pointillé, comme sa
+   case sur la matrice. */
+.rv-card--parking { border-style: dashed; }
+.rv-card--calme, .rv-card--bilan { background: var(--color-surface); border: 1.5px solid var(--color-divider); }
+.rv-card__head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.rv-chip {
+  min-height: 30px; display: inline-flex; align-items: center; padding: 0 12px; border-radius: 999px;
+  background: var(--card-warm); color: var(--tone-ink, var(--color-text));
+  font: 700 12px var(--font-body); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.rv-card__place { font: 600 13px var(--font-body); color: var(--tone-ink, var(--color-neutral-700)); }
+.rv-card__body { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
+.rv-card__text { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.rv-card__title {
+  margin: 0; font: 400 clamp(26px, 3.2vw, 38px)/1.08 var(--font-heading);
+  color: var(--color-text); text-wrap: balance;
+}
+.rv-card__meta { margin: 0; font: 500 15px/1.45 var(--font-body); color: var(--tone-ink, var(--color-neutral-700)); }
+/* La mini-grille d'une carte de matrice : ce qu'elle contient, d'un coup d'œil. */
+.rv-mini { flex: none; display: grid; grid-template-columns: repeat(2, 42px); gap: 4px; }
+.rv-mini__cell {
+  height: 42px; border-radius: 12px; display: grid; place-items: center;
+  font: 400 18px var(--font-heading); background: var(--q-bg); color: var(--q-dark);
+}
+
+.rv-card__ask {
+  display: flex; flex-direction: column; gap: 12px;
+  padding-top: 16px; border-top: 1.5px solid var(--color-divider);
+}
+.rv-question { margin: 0; font: 400 21px var(--font-heading); color: var(--tone-ink, var(--color-text)); }
+.rv-question__why { font: 500 14px var(--font-body); color: var(--color-neutral-700); }
+
+.rv-decs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+/* Une décision : un bouton large, son raccourci, et ce qu'il veut dire. */
+.rv-dec {
+  min-height: 80px; display: flex; flex-direction: column; align-items: flex-start;
+  justify-content: space-between; gap: 6px; padding: 12px 14px 12px 16px;
+  border-radius: 22px; text-align: left; cursor: pointer;
+  background: var(--tone-soft); color: var(--tone-ink); border: 2px solid var(--tone);
 }
 @media (hover: hover) and (pointer: fine) {
-  .review-signal__tune:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+  .rv-dec:hover { background: var(--tone); color: var(--q-on-ink); }
+  .rv-dec:hover .rv-dec__key { border-color: currentColor; }
 }
-.review-tune { display: inline-flex; align-items: center; gap: 8px; font: 600 12px var(--font-body); color: var(--color-neutral-700); }
-.review-tune input {
-  width: 72px; font: 600 13px var(--font-body); padding: 4px 8px;
-  border: 1.5px solid var(--color-neutral-400); border-radius: 8px; background: var(--card-warm);
-  color: var(--color-text);
+.rv-dec__head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rv-dec__label { font: 700 17px var(--font-body); }
+.rv-dec__key {
+  min-width: 22px; height: 22px; box-sizing: border-box; display: grid; place-items: center;
+  border-radius: 6px; font: 700 12px var(--font-body); border: 1.5px solid currentColor; opacity: 0.8;
+}
+.rv-dec__hint { font: 500 12.5px/1.3 var(--font-body); opacity: 0.9; }
+/* Dans la grille à axes, les boutons prennent la hauteur d'une case. */
+.review .axes { gap: 10px; }
+.review .axes .rv-dec { min-height: 84px; }
+
+.rv-nav { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rv-nav__gap { flex: 1; }
+.rv-nav__prev, .rv-nav__open, .rv-nav__next, .rv-stop {
+  min-height: 44px; display: inline-flex; align-items: center; gap: 8px;
+  cursor: pointer; font: 700 14px var(--font-body);
+}
+.rv-nav__prev { padding: 0 14px; border: none; border-radius: 999px; background: transparent; color: var(--color-text); }
+.rv-nav__prev:disabled { opacity: 0.35; cursor: default; }
+.rv-nav__open {
+  padding: 0 12px; border: none; background: none; color: var(--color-accent-700); text-decoration: underline;
+}
+.rv-nav__next {
+  padding: 0 18px; border: 1.5px solid var(--color-divider); border-radius: 999px;
+  background: var(--card-warm); color: var(--color-text);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rv-nav__next:hover, .rv-nav__prev:not(:disabled):hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
+.rv-kbd {
+  font: 700 11.5px var(--font-body); border: 1.5px solid var(--color-divider);
+  border-radius: 5px; padding: 0 5px; color: inherit;
+}
+.rv-keys {
+  margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px 16px; flex-wrap: wrap;
+  font: 500 13px var(--font-body); color: var(--color-neutral-700);
 }
 
-.review-list { display: flex; flex-direction: column; gap: 8px; margin: 12px 0 0; }
-.review-card { display: flex; flex-direction: column; gap: 3px; }
-/* La matrice d'origine : la revue agrège, donc sans elle on ne sait pas de quel
-   contexte la tâche parle. */
-.review-card__board {
-  font: 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--color-neutral-700); padding-left: 2px;
+/* Le bilan, et les signaux au vert. */
+.rv-clear { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font: 500 14px var(--font-body); color: var(--color-neutral-700); }
+.rv-clear li { display: flex; align-items: center; gap: 10px; }
+.rv-bilan__group { display: flex; flex-direction: column; gap: 6px; }
+.rv-bilan__label {
+  margin: 0 0 4px; font: 700 12px var(--font-body); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.rv-bilan__row {
+  display: flex; align-items: center; gap: 6px 12px; flex-wrap: wrap;
+  padding: 6px 6px 6px 16px; border-radius: 20px; background: var(--card-warm);
+}
+.rv-bilan__row--left { background: none; border: 1.5px dashed var(--color-divider); }
+.rv-bilan__text { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 1px; padding: 4px 0; }
+.rv-bilan__title { font: 600 15px/1.3 var(--font-body); color: var(--color-text); }
+.rv-bilan__outcome { font: 500 12.5px var(--font-body); color: var(--color-neutral-700); }
+.rv-bilan__act {
+  min-height: 44px; padding: 0 14px; border: none; border-radius: 999px; background: none;
+  cursor: pointer; font: 700 13.5px var(--font-body); color: var(--color-accent-700); text-decoration: underline;
+}
+.rv-bilan__back { align-self: flex-start; }
+.rv-bilan__act--strong {
+  border: 1.5px solid var(--color-divider); background: var(--card-warm);
+  color: var(--color-text); text-decoration: none; padding: 0 16px;
 }
 
-.review-board {
-  display: flex; align-items: baseline; gap: 10px; width: 100%;
-  background: var(--color-neutral-100); border: none; border-radius: 10px;
-  padding: 11px 14px; cursor: pointer; text-align: left;
+/* ── La pile et les seuils, à droite ───────────────────────────────────────── */
+.rv-aside { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+.rv-pile {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px 16px 16px; border-radius: 30px; background: var(--color-surface);
+}
+.rv-pile__head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 0 6px; }
+.rv-pile__title { margin: 0; font: 400 22px var(--font-heading); color: var(--color-text); }
+.rv-pile__meta { font: 600 13px var(--font-body); color: var(--color-neutral-700); }
+.rv-pile__group { display: flex; flex-direction: column; gap: 2px; }
+.rv-pile__label {
+  margin: 6px 6px 2px; display: flex; align-items: center; gap: 8px;
+  font: 700 11.5px var(--font-body); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-neutral-700);
+}
+.rv-pile__row {
+  min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 10px;
+  border: none; border-radius: 16px; background: none; text-align: left; cursor: pointer;
   font: 600 14px var(--font-body); color: var(--color-text);
-  transition: background 0.15s;
 }
+.rv-pile__row--on { background: var(--card-warm); box-shadow: inset 0 0 0 1.5px var(--tone); }
+.rv-pile__row--done .rv-pile__name { text-decoration: line-through; color: var(--color-neutral-700); }
 @media (hover: hover) and (pointer: fine) {
-  .review-board:hover { background: var(--color-accent-100); }
+  .rv-pile__row:hover { background: var(--color-accent-100); }
 }
-.review-board__name { flex: 1; }
-.review-board__detail { flex: none; font: 400 12px var(--font-body); color: var(--color-neutral-700); }
+.rv-pile__mark {
+  width: 18px; height: 18px; flex: none; box-sizing: border-box; display: grid; place-items: center;
+  border-radius: 999px; font: 700 11px var(--font-body);
+  box-shadow: inset 0 0 0 1.5px var(--tone); color: var(--tone);
+}
+.rv-pile__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.rv-seuils { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; border-radius: 30px; border: 1.5px dashed var(--color-divider); }
+.rv-seuils__toggle {
+  min-height: 44px; display: flex; align-items: center; gap: 10px; padding: 0 8px;
+  border: none; background: none; color: var(--color-text); text-align: left; cursor: pointer;
+}
+.rv-seuils__label { flex: 1; font: 700 14.5px var(--font-body); }
+.rv-seuils__chev { display: inline-flex; transition: rotate 0.2s; }
+.rv-seuils__chev--open { rotate: 180deg; }
+.rv-seuils__body { display: flex; flex-direction: column; gap: 4px; padding: 0 4px 8px; }
+.rv-seuils__hint { margin: 0 4px 6px; font: 500 12.5px/1.4 var(--font-body); color: var(--color-neutral-700); }
+.rv-seuil { display: flex; align-items: center; gap: 8px; padding: 2px 4px; }
+.rv-seuil__label { flex: 1; min-width: 0; font: 600 13px/1.3 var(--font-body); color: var(--color-text); }
+.rv-seuil__field {
+  flex: none; display: flex; align-items: center; padding: 2px; border-radius: 999px;
+  background: var(--card-warm); border: 1.5px solid var(--color-divider);
+}
+.rv-seuil__step {
+  width: 36px; height: 36px; border: none; border-radius: 999px; background: none;
+  color: var(--color-text); font: 700 17px/1 var(--font-body); cursor: pointer;
+}
+.rv-seuil__step:disabled { opacity: 0.3; cursor: default; }
+@media (hover: hover) and (pointer: fine) {
+  .rv-seuil__step:not(:disabled):hover { background: var(--color-accent-100); }
+}
+.rv-seuil__value { min-width: 44px; text-align: center; font: 700 13px var(--font-body); color: var(--color-text); }
+
+.rv-stop {
+  align-self: flex-start; padding: 0 10px; border: none; background: none;
+  color: var(--color-accent-700); text-decoration: underline;
+}
+
 
 @media (max-width: 720px) {
-  .review { padding: 28px 16px 48px; }
-  .review-title { font-size: 28px; }
+  /* La pile passe SOUS la carte : à 390 px, une colonne de 300 px à côté d'une
+     autre n'existe pas. */
+  .review { grid-template-columns: 1fr; gap: 20px; padding: 20px 16px 48px; }
+  .rv-card { padding: 20px 18px 18px; border-radius: 26px; }
+  .rv-decs { grid-template-columns: 1fr; }
+  .rv-dec, .review .axes .rv-dec { min-height: 64px; }
+  .rv-counter { width: 100%; }
   /* Une seule colonne : deux boutons à 240px ne tiennent pas côte à côte, et un
      flex-wrap qui casse à mi-largeur est pire que l'empilement franc. */
   .home-lenses { flex-direction: column; }
@@ -1700,26 +1780,6 @@ button.uni-head__name:focus-visible {
      devient une HAUTEUR de 240px. Sans cette remise à zéro, chaque bouton
      mesurait 240px de haut et l'accueil était illisible en mobile. */
   .home-lenses .home-global { flex: 0 0 auto; }
-  /* Les retraits de 20px alignaient le texte sous le titre ; à cette largeur ils
-     ne coûtent que de la place. */
-  .review-signal__hint,
-  .review-signal__empty,
-  .review-signal__note,
-  .review-signal__foot { margin-left: 0; }
-}
-
-/* Cible tactile. `min-height` explicite plutôt qu'un calcul de marges : une
-   marge suffisante aujourd'hui cesse de l'être dès qu'on touche à la police, et
-   personne ne le remarque. 44px est le minimum des deux plateformes.
-
-   Ne couvre QUE les éléments propres à la revue. La case à cocher et le `⋯` des
-   cartes font 18px et sont partagés avec l'écran matrice et la vue globale :
-   c'est un défaut préexistant, et il appartient à #89. */
-@media (hover: none) {
-  .review-signal__toggle { min-height: 44px; }
-  .review-signal__tune { min-height: 44px; padding: 0 16px; }
-  .review-tune input { min-height: 44px; }
-  .review-board { min-height: 44px; padding: 12px 14px; }
 }
 
 /* ── Rétrospective (#48) ──────────────────────────────────────────────────── */
@@ -1839,32 +1899,175 @@ button.uni-head__name:focus-visible {
   .home-global--focus:hover { background: var(--color-accent-100); border-color: var(--color-accent-600); }
 }
 
-.focus { max-width: 620px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
-.focus-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 22px; }
-.focus-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
-.focus-count {
-  margin-left: auto; font: 600 15px var(--font-body); color: var(--color-neutral-700);
-  background: var(--color-neutral-100); border-radius: 999px; padding: 4px 12px;
+/* ── « Aujourd'hui » : une chose à la fois ──────────────────────────────────
+   Le bandeau prend toute la scène ; sous la vague ne restent que le bilan du
+   jour, les places libres et la limite. La maquette « piste B ». */
+.shero--focus .shero__inner { padding: 4px 24px 92px; gap: 34px; }
+.fx-stage {
+  width: 100%; max-width: 820px; margin: 0 auto;
+  display: flex; flex-direction: column; align-items: center; text-align: center; gap: 26px;
 }
+.fx-count { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.fx-eyebrow { justify-content: center; }
+/* Les œufs du nid, posés sur le bord d'une coupe. Décoratifs : le même compte
+   se lit en toutes lettres juste dessous. */
+.fx-eggs {
+  list-style: none; margin: 0; padding: 0 18px 8px;
+  display: flex; align-items: flex-end; gap: 14px;
+  border-bottom: 3px solid color-mix(in srgb, #f3e9d8 18%, transparent);
+  border-radius: 0 0 50% 50% / 0 0 18px 18px;
+}
+.fx-egg {
+  width: 30px; height: 38px; flex: none; box-sizing: border-box; display: block;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+}
+.fx-egg--done { background: var(--egg); }
+.fx-egg--next { border: 2.5px solid var(--egg); }
+.fx-egg--free { border: 2px dashed color-mix(in srgb, #f3e9d8 35%, transparent); }
+.fx-egg--now {
+  width: 38px; height: 48px; background: var(--egg);
+  border: 3px solid var(--color-accent);
+  box-shadow: 0 0 0 5px color-mix(in srgb, #e08a52 18%, transparent);
+}
+/* Hors du nid, l'œuf n'est plus qu'une puce. */
+.fx-queue__item > .fx-egg,
+.fx-row > .fx-egg { width: 14px; height: 18px; border-width: 2px; box-shadow: none; }
+
+.fx-now { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 20px; }
+.fx-tags { display: flex; align-items: center; justify-content: center; gap: 8px 10px; flex-wrap: wrap; }
+.fx-chip {
+  display: inline-flex; align-items: center; gap: 4px; padding: 4px 12px; border-radius: 999px;
+  font: 700 12.5px var(--font-body);
+}
+.fx-chip--quad { background: var(--egg); color: var(--band); }
+/* Hors bandeau, la pastille se porte en contour : un aplat d'encre sur une
+   carte claire pèserait plus que le titre qu'elle qualifie. */
+.fx-chip--ink { background: none; color: var(--egg); box-shadow: inset 0 0 0 1.5px var(--egg); }
+.fx-chip--overdue { background: var(--q-eliminer-bg); color: var(--q-eliminer-dark); }
+.fx-chip--soon,
+.fx-chip--neutral { background: var(--band-raised); color: var(--band-text); box-shadow: inset 0 0 0 1.5px var(--band-line); }
+.fx-place {
+  min-height: 24px; padding: 0; border: none; background: none; cursor: pointer; border-radius: 6px;
+  font: 600 13.5px var(--font-body); color: var(--band-muted);
+}
+@media (hover: hover) and (pointer: fine) {
+  .fx-place:hover { color: var(--band-text); }
+}
+.fx-title {
+  margin: 0; font: 400 clamp(38px, 7vw, 82px)/1 var(--font-heading); text-wrap: balance;
+  color: var(--band-text);
+}
+.fx-lead {
+  margin: 0; max-width: 56ch; font: 500 16.5px/1.55 var(--font-body); color: #d8cdb9;
+}
+.fx-link {
+  min-height: 44px; padding: 0 4px; border: none; background: none; cursor: pointer;
+  font: 700 15px var(--font-body); color: var(--color-accent-700); text-decoration: underline;
+}
+
+/* L'étape suivante, et elle seule : la tâche est à faire, pas à planifier. */
+.fx-step {
+  display: flex; align-items: center; justify-content: center; gap: 14px 18px; flex-wrap: wrap;
+  padding: 12px 12px 12px 22px; border-radius: 999px;
+  background: var(--band-raised); border: 1.5px solid color-mix(in srgb, #f3e9d8 16%, transparent);
+}
+.fx-step__text { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+.fx-step__eyebrow {
+  font: 700 11px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--band-muted);
+}
+.fx-step__title { font: 600 17px var(--font-body); color: var(--band-text); }
+.fx-step__bars { display: flex; gap: 4px; }
+.fx-bar { width: 22px; height: 7px; border-radius: 999px; box-shadow: inset 0 0 0 1.5px var(--egg); }
+.fx-bar--on { background: var(--egg); }
+.fx-step__go {
+  min-height: 44px; padding: 0 16px; border-radius: 999px; cursor: pointer; background: transparent;
+  border: 1.5px solid var(--egg); color: var(--egg); font: 700 13.5px var(--font-body);
+}
+@media (hover: hover) and (pointer: fine) {
+  .fx-step__go:hover { background: color-mix(in srgb, currentColor 14%, transparent); }
+}
+
+.fx-acts { display: flex; flex-direction: column; align-items: center; gap: 14px; margin-top: 6px; }
+/* Le seul bouton plein de l'écran : il n'y a qu'un geste à faire ici. */
+.fx-go {
+  min-height: 68px; display: inline-flex; align-items: center; gap: 12px; padding: 0 40px 0 30px;
+  border: none; border-radius: 999px; cursor: pointer;
+  background: var(--color-accent); color: #1d1a16; font: 700 21px var(--font-body);
+  box-shadow: 0 10px 30px color-mix(in srgb, #e08a52 22%, transparent);
+}
+@media (hover: hover) and (pointer: fine) {
+  .fx-go:hover { background: var(--color-accent-700); }
+}
+.fx-minors { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+.fx-queue {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;
+  margin-top: 8px; padding-top: 22px; border-top: 1px solid color-mix(in srgb, #f3e9d8 14%, transparent);
+}
+.fx-queue__list { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.fx-queue__item {
+  display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; border-radius: 999px;
+  background: var(--band-raised); border: 1.5px solid color-mix(in srgb, #f3e9d8 12%, transparent);
+}
+.fx-queue__item--free { background: none; border-style: dashed; border-color: color-mix(in srgb, #f3e9d8 32%, transparent); }
+.fx-queue__title { font: 600 14.5px var(--font-body); }
+.fx-queue__item--free .fx-queue__title { color: var(--band-muted); }
+
+/* Les candidates de l'état vide, dans le bandeau. */
+.fx-starters {
+  list-style: none; margin: 4px 0 0; padding: 0; width: 100%; max-width: 640px;
+  display: flex; flex-direction: column; gap: 8px; text-align: left;
+}
+.fx-starter {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 10px 10px 20px; border-radius: 22px;
+  background: var(--band-raised); border: 1.5px solid color-mix(in srgb, #f3e9d8 12%, transparent);
+}
+.fx-starter__text { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.fx-starter__title { font: 400 21px/1.15 var(--font-heading); color: var(--band-text); }
+.fx-starter__why {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font: 500 13px var(--font-body); color: var(--band-muted);
+}
+
+/* ── Sous la vague : ce qui est fait, ce qui pourrait entrer, la limite ────── */
+.focus {
+  max-width: 1200px; margin: 0 auto; padding: 24px 24px 56px;
+  display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px;
+  animation: mm-in 0.3s ease backwards;
+}
+.fx-panel {
+  flex: 1 1 300px; min-width: 0; display: flex; flex-direction: column; gap: 8px;
+  padding: 18px 20px; border-radius: 30px; background: var(--color-surface);
+}
+.fx-panel__title { margin: 0; font: 400 21px var(--font-heading); color: var(--color-text); }
+.fx-panel__empty { margin: 0; font: 500 13.5px/1.5 var(--font-body); color: var(--color-neutral-700); }
+.fx-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 8px 8px 8px 14px; border-radius: 18px; background: var(--card-warm);
+}
+.fx-row__text { flex: 1 1 180px; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fx-row__title { font: 600 14.5px var(--font-body); color: var(--color-text); }
+.fx-row__title--done { text-decoration: line-through; color: var(--color-neutral-700); }
+.fx-row__meta {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  font: 500 12.5px var(--font-body); color: var(--color-neutral-700);
+}
+.fx-row__act {
+  flex: none; min-height: 40px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  background: transparent; border: 1.5px solid var(--color-neutral-400);
+  color: var(--color-neutral-700); font: 700 12.5px var(--font-body);
+}
+@media (hover: hover) and (pointer: fine) {
+  .fx-row__act:hover { border-color: var(--color-accent); color: var(--color-accent-800); }
+}
+.fx-aside { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 18px; padding: 18px 8px; }
 
 .focus-empty { font: 15px/1.6 var(--font-body); color: var(--color-neutral-700); margin: 24px 0; }
 .focus-kbd {
   font: 600 13px var(--font-body); background: var(--color-neutral-200);
   border-radius: 5px; padding: 1px 6px;
 }
-.focus-room { font: 13.5px var(--font-body); color: var(--color-neutral-700); margin: 14px 0 0; }
-
-.focus-list { display: flex; flex-direction: column; gap: 12px; }
-.focus-item { display: flex; flex-direction: column; gap: 3px; }
-/* La matrice d'origine : la sélection agrège, donc sans elle on ne sait plus de
-   quel contexte on parle. */
-.focus-item__board {
-  font: 600 10.5px/1 var(--font-body); text-transform: uppercase; letter-spacing: 0.5px;
-  color: var(--color-neutral-700); padding-left: 2px;
-}
-/* Une tâche faite reste affichée, en retrait : la faire disparaître effacerait
-   la preuve de l'avancement, qui est la moitié de l'intérêt de l'écran. */
-.focus-item--done { opacity: 0.62; }
 
 /* ── La limite, assumée à l'écran ────────────────────────────────────────── */
 .focus-limit { margin: 26px 0 0; display: flex; flex-direction: column; gap: 6px; align-items: flex-start; }
@@ -1914,10 +2117,15 @@ button.uni-head__name:focus-visible {
 }
 
 @media (max-width: 720px) {
-  .focus { padding: 28px 16px 48px; }
-  .focus-title { font-size: 28px; }
-  /* `.home-lenses` passe en colonne dans le bloc de la revue (#47), qui porte
-     aussi la mise en garde sur `flex: 1 1 240px`. Pas de doublon. */
+  .focus { padding: 20px 16px 48px; }
+  .shero--focus .shero__inner { padding: 4px 16px 72px; gap: 24px; }
+  .fx-eggs { gap: 10px; padding: 0 10px 6px; }
+  .fx-egg { width: 24px; height: 30px; }
+  .fx-egg--now { width: 30px; height: 38px; }
+  /* Au doigt, le bouton principal garde sa place mais pas sa démesure. */
+  .fx-go { min-height: 60px; padding: 0 28px 0 22px; font-size: 18px; }
+  .fx-step { padding: 10px; border-radius: 26px; }
+  .fx-aside { padding: 0 4px; }
 }
 
 @media (hover: none) {
@@ -2067,11 +2275,10 @@ button.uni-head__name:focus-visible {
    téléphone tout en gonflant les icônes de l'iPad pour rien. */
 
 @media (pointer: coarse) {
+  .shero__ghost--small { min-height: 44px; }
   /* Le minimum des deux plateformes. `min-height` explicite plutôt qu'un calcul
      de marges : une marge suffisante aujourd'hui cesse de l'être dès qu'on
      touche à la police, et personne ne le remarque. */
-  .bin-btn,
-  .board-switch__name,
   .home-global,
   .add-board,
   .add-board-submit,
@@ -2086,8 +2293,7 @@ button.uni-head__name:focus-visible {
   .btn-primary,
   .btn-link,
   .sr-hit,
-  .review-board,
-  .board-menu__item,
+  .rv-pile__row,
   .board-btn,
   .move-btn,
   .task-menu__action {
@@ -2096,12 +2302,10 @@ button.uni-head__name:focus-visible {
   /* Les entrées de menu sont des lignes : on les centre plutôt que de laisser le
      texte coller en haut d'une boîte devenue deux fois trop haute. */
   .task-menu__action,
-  .board-menu__item,
   .board-btn,
   .sr-hit,
-  .review-board { display: flex; align-items: center; }
+  .rv-pile__row { display: flex; align-items: center; }
   .move-btn { display: inline-flex; align-items: center; justify-content: center; }
-  .board-switch__name,
   .btn-link,
   .bin-foot__link,
   .board-act,
@@ -2191,16 +2395,14 @@ button.uni-head__name:focus-visible {
   .task__rename-input,
   .auth-card input,
   .uni-head__input,
-  .review-tune input,
   .focus-limit__field input,
   .board-row__input,
   .board-rename__input,
   .sr-input {
     font-size: 16px;
   }
-  /* `.review-tune` et `.focus-limit__field` fixaient une largeur calibrée sur du
-     13 px : à 16 px le nombre n'y tenait plus. */
-  .review-tune input { width: 84px; }
+  /* `.focus-limit__field` fixait une largeur calibrée sur du 13 px : à 16 px le
+     nombre n'y tenait plus. */
   .focus-limit__field input { width: 78px; }
 }
 
@@ -2294,13 +2496,31 @@ button.uni-head__name:focus-visible {
    Les couleurs vivent dans des variables locales au bandeau : au clair, c'est la
    seule surface sombre de l'application, et elle ne doit rien imposer au reste.
    Au sombre, `--band-base` la fait descendre d'un cran sous la page. */
-.topbar, .hero {
+.topbar, .hero, .shero {
   --band: var(--band-base, #1d1a16);
   --band-raised: var(--band-raised-base, #28231d);
   --band-text: #f3e9d8;
   --band-muted: #c2b6a2;
   --band-line: color-mix(in srgb, #f3e9d8 22%, transparent);
   background: var(--band); color: var(--band-text);
+
+  /* ⚠️ LES CASES PARLENT ICI LEUR TEINTE SOMBRE, DANS LES DEUX THÈMES.
+     Le bandeau est la seule surface d'encre de l'application : au clair comme au
+     sombre, il est sombre. Les valeurs claires de `--q-*` (un vert #5c6b45 sur
+     un brun #1d1a16) y seraient illisibles.
+     On REDÉFINIT donc les mêmes variables plutôt que d'en inventer une seconde
+     famille : tout ce qui vit dans le bandeau peut alors écrire `var(--q-X-ink)`
+     sans savoir qu'il est dans le bandeau, et sans qu'un composant ait à choisir
+     sa palette selon l'endroit où il est monté. Ce sont exactement les valeurs du
+     thème sombre, déjà choisies pour l'extension et les widgets MCP.
+     Corollaire : un élément du bandeau qui retombe sur le fond de page — le menu
+     du sélecteur de matrice — hérite de ces teintes. Aucun n'utilise `--q-*`
+     aujourd'hui ; le jour où l'un le fera, il devra les remettre. */
+  --q-faire-ink: #a3b585;     --q-faire-dark: #c9d6b3;     --q-faire-bg: #2c3324;
+  --q-planifier-ink: #8db0cc; --q-planifier-dark: #bcd2e4; --q-planifier-bg: #23303b;
+  --q-deleguer-ink: #d9ae4c;  --q-deleguer-dark: #ecd29a;  --q-deleguer-bg: #3a2f1a;
+  --q-eliminer-ink: #e5826b;  --q-eliminer-dark: #f0b4a5;  --q-eliminer-bg: #3a2622;
+  --q-parking-ink: #9c907e;   --q-parking-dark: #c2b6a2;
 }
 .topbar__inner {
   max-width: 1200px; margin: 0 auto; padding: 14px 24px;
@@ -2360,7 +2580,7 @@ button.uni-head__name:focus-visible {
 @media (hover: hover) and (pointer: fine) {
   .topbar__menu-item:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
 }
-.topbar :focus-visible, .hero :focus-visible { outline-color: #f0a774; }
+.topbar :focus-visible, .hero :focus-visible, .shero :focus-visible { outline-color: #f0a774; }
 
 /* Au téléphone, la navigation passe sous le logo et défile à l'horizontale :
    cinq entrées ne tiennent pas, et les replier dans un menu cacherait
@@ -2401,18 +2621,18 @@ button.uni-head__name:focus-visible {
 .hero__count {
   min-height: 44px; display: inline-flex; align-items: center; gap: 10px;
   padding: 0 16px 0 10px; border-radius: 999px; border: none; cursor: pointer;
-  font: 600 14px var(--font-body);
+  font: 600 14px var(--font-body); text-decoration: none;
 }
 .hero__count-n { min-width: 24px; text-align: center; font: 400 22px var(--font-heading); }
-/* Les teintes sombres des cases, déjà choisies pour l'extension et les widgets MCP. */
-.hero__count--faire     { background: #2c3324; color: #c9d6b3; }
-.hero__count--faire .hero__count-n     { color: #a3b585; }
-.hero__count--planifier { background: #23303b; color: #bcd2e4; }
-.hero__count--planifier .hero__count-n { color: #8db0cc; }
-.hero__count--deleguer  { background: #3a2f1a; color: #ecd29a; }
-.hero__count--deleguer .hero__count-n  { color: #d9ae4c; }
-.hero__count--eliminer  { background: #3a2622; color: #f0b4a5; }
-.hero__count--eliminer .hero__count-n  { color: #e5826b; }
+/* Les teintes des cases telles que le bandeau les redéfinit, ci-dessus. */
+.hero__count--faire     { background: var(--q-faire-bg); color: var(--q-faire-dark); }
+.hero__count--faire .hero__count-n     { color: var(--q-faire-ink); }
+.hero__count--planifier { background: var(--q-planifier-bg); color: var(--q-planifier-dark); }
+.hero__count--planifier .hero__count-n { color: var(--q-planifier-ink); }
+.hero__count--deleguer  { background: var(--q-deleguer-bg); color: var(--q-deleguer-dark); }
+.hero__count--deleguer .hero__count-n  { color: var(--q-deleguer-ink); }
+.hero__count--eliminer  { background: var(--q-eliminer-bg); color: var(--q-eliminer-dark); }
+.hero__count--eliminer .hero__count-n  { color: var(--q-eliminer-ink); }
 .hero__count--parking {
   padding: 0 16px; background: none; color: var(--band-text);
   border: 1.5px dashed color-mix(in srgb, #f3e9d8 30%, transparent);
@@ -2674,3 +2894,177 @@ button.uni-head__name:focus-visible {
 @media (prefers-color-scheme: dark) {
   .auth::before { background: #f3e9d8; opacity: 0.07; }
 }
+
+/* ── Héros réduit des écrans intérieurs ──────────────────────────────────────
+   Même bandeau d'encre que `.topbar` et `.hero` (variables déclarées avec eux),
+   mais plus court : ces écrans ont du contenu à montrer, pas une phrase du jour
+   à poser. Le nid reprend les décalages de l'accueil dans une taille réduite —
+   à hauteur égale, celui de l'accueil déborderait du bandeau. */
+.shero { position: relative; z-index: 20; }
+/* La couche de décor, et elle seule, rogne ce qui dépasse. */
+.shero__decor { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.shero__inner {
+  position: relative; z-index: 1; max-width: 1200px; margin: 0 auto;
+  padding: 4px 24px 62px; display: flex; flex-direction: column; gap: 22px;
+}
+/* Une ligne du héros : ce qui identifie l'écran à gauche, ce qui le compte à droite. */
+.shero__row {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 16px 24px; flex-wrap: wrap;
+}
+.shero__lead { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.shero__side { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* Le petit titre de section — et le fil d'Ariane, qui en tient lieu sur la matrice. */
+.shero__eyebrow,
+.shero__crumb {
+  margin: 0; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  font: 700 12px var(--font-body); letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--band-muted);
+}
+.shero__crumb-link {
+  min-height: 24px; display: inline-flex; align-items: center; padding: 0;
+  border: none; background: none; cursor: pointer; color: inherit; font: inherit;
+  border-radius: 6px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .shero__crumb-link:hover { color: var(--band-text); }
+}
+.shero__titleline { position: relative; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.shero__title {
+  margin: 0; max-width: 20ch; font: 400 clamp(32px, 4.6vw, 54px)/1.05 var(--font-heading);
+  text-wrap: balance;
+}
+/* Le titre EST le sélecteur sur la vue globale : un bouton qui porte le titre,
+   plutôt qu'un chevron posé à côté. */
+.shero__title-btn {
+  min-height: 44px; display: flex; align-items: center; gap: 12px; padding: 0;
+  border: none; background: none; cursor: pointer; text-align: left;
+  color: var(--band-text); font: 400 clamp(32px, 4.6vw, 54px)/1.05 var(--font-heading);
+  border-radius: 12px;
+}
+.shero__switch {
+  width: 44px; height: 44px; flex: none; margin-top: 6px; display: grid; place-items: center;
+  border: none; border-radius: 999px; background: transparent; color: var(--band-text); cursor: pointer;
+}
+.shero__switch[aria-expanded='true'] { background: color-mix(in srgb, #f3e9d8 16%, transparent); }
+@media (hover: hover) and (pointer: fine) {
+  .shero__switch:hover { background: var(--band-raised); }
+}
+/* Le menu retombe sur la page, pas sur le bandeau : il appartient au contenu. */
+.shero__menu {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 30; min-width: 280px;
+  max-height: min(72vh, 560px); overflow: auto; padding: 8px;
+  display: flex; flex-direction: column; gap: 2px;
+  background: var(--card-warm); color: var(--color-text);
+  border-radius: 20px; box-shadow: var(--shadow-lg);
+}
+.shero__menu-group {
+  padding: 8px 12px 2px; font: 700 11px var(--font-body); letter-spacing: 0.1em;
+  text-transform: uppercase; color: var(--color-neutral-700);
+}
+.shero__menu-item {
+  min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 0 12px; border: none; border-radius: 12px; background: none; cursor: pointer;
+  text-align: left; color: var(--color-text); font: 500 14.5px var(--font-body);
+}
+.shero__menu-item[aria-current='page'] { background: var(--color-surface); font-weight: 700; }
+.shero__menu-item--danger { color: var(--color-danger); }
+.shero__menu-meta { flex: none; font: 600 12.5px var(--font-body); color: var(--color-neutral-700); }
+@media (hover: hover) and (pointer: fine) {
+  .shero__menu-item:hover { background: var(--color-accent-100); }
+}
+.shero__menu-sep { display: block; height: 1px; background: var(--color-divider); margin: 6px 8px; }
+.shero__pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.shero__meta { font: 600 14px var(--font-body); color: var(--band-muted); }
+.shero__meta-late { color: #f0b4a5; }
+/* Deux boutons de bandeau, même dessin : la corbeille et les portées de la vue globale. */
+.shero__ghost {
+  min-height: 44px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px;
+  border: 1.5px solid color-mix(in srgb, #f3e9d8 28%, transparent); border-radius: 999px;
+  background: transparent; color: var(--band-text); font: 600 14px var(--font-body); cursor: pointer;
+  text-decoration: none;
+}
+.shero__ghost--on { background: var(--band-text); color: var(--band); border-color: var(--band-text); font-weight: 700; }
+/* Dans une file de pastilles, le bouton ne doit pas peser plus que le titre
+   qu'il accompagne. La cible reste à 44 px au doigt (bloc `pointer: coarse`). */
+.shero__ghost--small { min-height: 36px; padding: 0 12px; font: 700 12.5px var(--font-body); }
+.shero__ghost--late { border-color: #e5826b; color: #f0b4a5; font-weight: 700; }
+@media (hover: hover) and (pointer: fine) {
+  .shero__ghost:not(.shero__ghost--on):hover { background: var(--band-raised); }
+}
+.shero__badge {
+  min-width: 22px; height: 22px; display: grid; place-items: center; border-radius: 999px;
+  background: color-mix(in srgb, #f3e9d8 14%, transparent); font: 700 12px var(--font-body);
+}
+.shero__ghost--on .shero__badge { background: color-mix(in srgb, #1d1a16 12%, transparent); }
+.shero__nest {
+  position: absolute; top: -40px; right: clamp(-120px, 2vw, 60px);
+  width: 310px; height: 312px; opacity: 0.08; pointer-events: none;
+}
+.shero__branch, .shero__swing, .shero__nid { position: absolute; inset: 0; }
+.shero__branch, .shero__nid { background: var(--band-text); }
+.shero__branch {
+  -webkit-mask: url('/decor/nid-branche.png') center / contain no-repeat;
+  mask: url('/decor/nid-branche.png') center / contain no-repeat;
+}
+.shero__nid {
+  -webkit-mask: url('/decor/nid.png') center / contain no-repeat;
+  mask: url('/decor/nid.png') center / contain no-repeat;
+}
+/* Les mêmes images-clés que l'accueil : un seul balancement dans la feuille. */
+.shero__swing { transform-origin: 54.6% 21%; animation: hero-sway 9s ease-in-out infinite; }
+.shero__wave { position: absolute; left: 0; bottom: -1px; display: block; width: 100%; height: 40px; }
+.shero__wave path { fill: var(--color-bg); }
+@media (max-width: 720px) {
+  .shero__inner { padding: 4px 16px 50px; gap: 16px; }
+  .shero__nest { width: 240px; height: 242px; top: -20px; right: -92px; }
+  .shero__title, .shero__title-btn { font-size: clamp(28px, 9vw, 38px); }
+  .shero__side { width: 100%; }
+}
+
+/* ── La grille et ses axes ───────────────────────────────────────────────────
+   Une gouttière de 20 px à gauche porte « Important » / « Pas important » à la
+   verticale, un bandeau de 18 px au-dessus porte « Urgent » / « Pas urgent ».
+   `--axes-gutter` sert aussi à décaler « À trier », qui vit sous la grille et
+   doit s'aligner sur les cases, pas sur les axes. */
+.axes {
+  --axes-gutter: 20px;
+  display: grid; grid-template-columns: var(--axes-gutter) repeat(2, minmax(0, 1fr));
+  grid-template-rows: 18px auto auto; gap: 14px;
+}
+.axes__top, .axes__side {
+  font: 700 11px/18px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--color-neutral-700); text-align: center;
+}
+/* `writing-mode` puis demi-tour : sans la rotation, le texte vertical se lit de
+   haut en bas mais les lettres regardent à droite — illisible de biais. */
+.axes__side { writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1; }
+/* Le coin central reste carré : les quatre cases se referment sur le milieu de
+   la matrice, comme les tuiles de l'icône. Par classe de case et non par
+   `nth-child` — avec les axes, les cases ne sont plus les quatre premiers
+   enfants, et un rang codé en dur casserait au premier libellé déplacé. */
+.axes .quad--faire { border-bottom-right-radius: 0; }
+.axes .quad--planifier { border-bottom-left-radius: 0; }
+.axes .quad--deleguer { border-top-right-radius: 0; }
+.axes .quad--eliminer { border-top-left-radius: 0; }
+/* « À trier » sous la grille, alignée sur les cases. */
+.tray { margin-left: calc(20px + 14px); }
+.tray.quad--park { grid-column: auto; }
+@media (max-width: 720px) {
+  /* En colonne, les axes n'ont plus de géométrie à décrire : ils disparaissent
+     avec leur gouttière, et chaque case retrouve ses quatre coins. */
+  .axes { grid-template-columns: 1fr; grid-template-rows: none; }
+  .axes__top, .axes__side, .axes__corner { display: none; }
+  .axes .quad { border-radius: var(--radius-lg); }
+  .tray { margin-left: 0; }
+}
+
+/* ── Vue globale : le titre EST le sélecteur de portée ───────────────────────
+   Un chevron posé à côté d'un titre se lit comme une décoration ; un titre qui
+   s'ouvre se lit comme une question — « où est-ce que je regarde ? ». */
+.shero__title-h { margin: 0; }
+.shero__title-chev { display: inline-flex; color: var(--color-accent); transition: rotate 0.2s; }
+.shero__title-btn[aria-expanded='true'] .shero__title-chev { rotate: 180deg; }
+/* Les portées en pastilles, sous le titre. */
+.shero__scopes { display: flex; gap: 6px; flex-wrap: wrap; }
+.shero__chip-n { font: 700 12px var(--font-body); opacity: 0.8; }

@@ -3,6 +3,7 @@ import { makeTask } from './test-fixtures';
 import {
   FOCUS_DEFAULT,
   focusBilan,
+  focusCandidates,
   focusDayLabel,
   focusRefusal,
   focusRemaining,
@@ -201,5 +202,91 @@ describe('focusDayLabel', () => {
   // fasse basculer le jour affiché.
   it('ne décale pas le jour selon le fuseau', () => {
     expect(focusDayLabel('2026-09-04')).toContain('4');
+  });
+});
+
+describe('focusCandidates', () => {
+  /** Midi, pour qu'« hier » et « dans deux jours » ne frôlent aucun bord de jour. */
+  const MIDI = Date.parse('2026-09-07T12:00:00.000Z');
+  const il_y_a = (h: number) => new Date(MIDI - h * 3600_000).toISOString();
+  const dans = (h: number) => new Date(MIDI + h * 3600_000).toISOString();
+
+  it('ne propose que « Faire » et « Planifier »', () => {
+    const tasks = [
+      makeTask({ id: 'f', quadrant: 'faire' }),
+      makeTask({ id: 'p', quadrant: 'planifier' }),
+      makeTask({ id: 'd', quadrant: 'deleguer' }),
+      makeTask({ id: 'e', quadrant: 'eliminer' }),
+      makeTask({ id: 'x', quadrant: 'parking' }),
+    ];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out.map((c) => c.task.id)).toEqual(['f', 'p']);
+  });
+
+  it('écarte ce qui est déjà choisi pour le jour, mais pas ce qui l’était hier', () => {
+    const tasks = [
+      makeTask({ id: 'deja', focus_day: AUJOURDHUI }),
+      makeTask({ id: 'hier', focus_day: HIER }),
+    ];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out.map((c) => c.task.id)).toEqual(['hier']);
+  });
+
+  it('écarte les terminées, les supprimées et les étapes', () => {
+    const tasks = [
+      makeTask({ id: 'ok' }),
+      makeTask({ id: 'faite', done: true }),
+      makeTask({ id: 'jetee', deleted: true }),
+      makeTask({ id: 'etape', parent_id: 'ok' }),
+    ];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out.map((c) => c.task.id)).toEqual(['ok']);
+  });
+
+  it('classe du plus contraint au plus libre', () => {
+    const tasks = [
+      makeTask({ id: 'planifier', quadrant: 'planifier' }),
+      makeTask({ id: 'faire', quadrant: 'faire' }),
+      makeTask({ id: 'bientot', quadrant: 'planifier', due_at: dans(48) }),
+      makeTask({ id: 'retard', quadrant: 'planifier', due_at: il_y_a(24) }),
+    ];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out.map((c) => c.task.id)).toEqual(['retard', 'bientot', 'faire', 'planifier']);
+    expect(out.map((c) => c.reason)).toEqual(['overdue', 'soon', 'faire', 'planifier']);
+  });
+
+  it('ne tient pas une échéance lointaine pour imminente', () => {
+    const tasks = [makeTask({ id: 'loin', quadrant: 'planifier', due_at: dans(24 * 10) })];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out[0].reason).toBe('planifier');
+  });
+
+  it('traite une date illisible comme une absence de date', () => {
+    const tasks = [makeTask({ id: 'cassee', quadrant: 'faire', due_at: 'pas-une-date' })];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out[0].reason).toBe('faire');
+  });
+
+  it('à motif égal, l’échéance la plus proche passe devant', () => {
+    const tasks = [
+      makeTask({ id: 'tard', quadrant: 'faire', due_at: il_y_a(1) }),
+      makeTask({ id: 'tot', quadrant: 'faire', due_at: il_y_a(72) }),
+    ];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out.map((c) => c.task.id)).toEqual(['tot', 'tard']);
+  });
+
+  it('sans échéance, le classement le plus ancien passe devant', () => {
+    const tasks = [
+      makeTask({ id: 'recent', quadrant: 'faire', quadrant_changed_at: il_y_a(2) }),
+      makeTask({ id: 'ancien', quadrant: 'faire', quadrant_changed_at: il_y_a(900) }),
+    ];
+    const out = focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 10 });
+    expect(out.map((c) => c.task.id)).toEqual(['ancien', 'recent']);
+  });
+
+  it('s’arrête à la limite demandée', () => {
+    const tasks = ['a', 'b', 'c', 'd'].map((id) => makeTask({ id, quadrant: 'faire' }));
+    expect(focusCandidates({ tasks, day: AUJOURDHUI, now: MIDI, limit: 2 })).toHaveLength(2);
   });
 });
