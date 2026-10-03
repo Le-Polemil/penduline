@@ -625,7 +625,7 @@ rebuild.
 
 | Variable | Valeur |
 |---|---|
-| `SUPABASE_URL` | `https://api.penduline.zozios.app:8000` |
+| `SUPABASE_URL` | `https://api.penduline.zozios.app` — **sans port**, voir l'encadré |
 | `SUPABASE_ANON_KEY` | la clé anon (Kong exige l'en-tête `apikey`) |
 | `SUPABASE_JWT_SECRET` | 🔒 celui de l'instance Supabase |
 | `MCP_TOKEN_SECRET` | 🔒 **à générer, DISTINCT du précédent** |
@@ -634,6 +634,32 @@ rebuild.
 | `PORT` | `8787` (celui repris dans le domaine) |
 | `MCP_QUOTA_CALLS_PER_MINUTE` | facultatif, 60 par défaut |
 | `MCP_QUOTA_WRITES_PER_DAY` | facultatif, 500 par défaut |
+
+⚠️ **Le `:8000` du champ « domaine » n'a RIEN à faire dans `SUPABASE_URL`.**
+Cette table a porté l'erreur jusqu'au premier déploiement, et elle coûte une
+panne entière : `POST /register` répondait `500 {"error":"server_error"}`, le
+client MCP échouait sur « Dynamic Client Registration rejected », et les routes
+de découverte marchaient parfaitement — parce qu'elles sont les seules à ne pas
+toucher la base.
+
+Les deux `:8000` ne désignent pas la même chose :
+
+| Où | Forme | Qui la lit |
+|---|---|---|
+| Champ **domaine** de la ressource Supabase | `https://api.penduline.zozios.app:8000` | Coolify, syntaxe `fqdn:port`, pour dire à Traefik vers quel port du CONTENEUR router |
+| Variable **`SUPABASE_URL`** du MCP | `https://api.penduline.zozios.app` | le code, qui appelle une URL PUBLIQUE — servie en 443 par Traefik |
+
+Le symptôme ne ment pas, encore faut-il lire les journaux du conteneur :
+
+```
+TypeError: fetch failed
+  [cause]: ERR_SSL_WRONG_VERSION_NUMBER — SSL routines:wrong version number
+```
+
+Du HTTPS parlé à un port qui répond en clair. Le repère qui tranche, et qui ne
+demande aucun diagnostic : **l'app web consomme la même instance**, et son
+`VITE_SUPABASE_URL` n'a jamais porté de port. Toute variable qui pointe sur Kong
+depuis l'extérieur doit s'écrire comme la sienne.
 
 **Les deux secrets DOIVENT différer**, et le serveur refuse de démarrer sinon.
 Ce n'est pas une précaution de style : un jeton d'accès MCP signé avec le secret
@@ -657,6 +683,63 @@ strictement à rien : c'est exactement ce qui s'est passé avec `VITE_EXTENSION_
 Son absence ne casse rien : l'application reste entière, seul l'écran de
 consentement dit qu'il ne peut pas travailler. Ce qui la rend, elle aussi, facile
 à oublier.
+
+### ⚠️ Le healthcheck ne doit PAS viser `/`
+
+Le serveur n'expose que **sept routes fixes**, et `GET /` n'en fait pas partie —
+il répond 404. Un healthcheck laissé sur la racine marquerait donc la ressource
+en échec alors qu'elle tourne. Viser une route publique qui ne demande pas de
+jeton :
+
+```
+GET /.well-known/oauth-protected-resource
+```
+
+C'est aussi le meilleur contrôle manuel après démarrage, avec celui-ci :
+
+```bash
+curl -si -X POST https://mcp.penduline.zozios.app/mcp | grep -i 'HTTP/\|www-authenticate'
+```
+
+Il doit répondre **401** porteur de
+`WWW-Authenticate: Bearer resource_metadata="…"`. C'est ce 401 qui déclenche
+toute la découverte côté client : il lit les métadonnées, s'enregistre, et ouvre
+l'écran de consentement. Un 200 ou un 404 ici signifie que la route n'est pas
+celle qu'on croit.
+
+### Les variables Actions ont dérivé — constat du 2026-10-02
+
+À la préparation du déploiement MCP, les variables de build du dépôt
+(Settings › Secrets and variables › Actions › Variables) ne contenaient que :
+
+```
+VITE_SUPABASE_ANON_KEY   ✓ identique à celle du bundle en ligne
+VITE_SUPABASE_URL        ✗ https://api.penduline.polemil.dev — l'ANCIEN domaine
+```
+
+`VITE_MCP_URL` et `VITE_EXTENSION_ID` étaient **absentes**, alors que le job
+`image` de la CI les passe toutes deux en build arg. Et `api.penduline.polemil.dev`
+répond désormais **503** : la bascule de zone (#167) n'a pas suivi jusqu'ici.
+
+**Sans effet aujourd'hui**, et c'est ce qui rend la chose sournoise : l'app web
+est encore une ressource en source git, donc c'est Coolify qui fournit les build
+args — et les siens sont justes (vérifié : le bundle servi porte bien
+`api.penduline.zozios.app` et l'ID d'extension). L'image `penduline-web` de GHCR,
+elle, est construite depuis des mois avec une URL morte et deux variables vides.
+
+Le jour où la ressource web basculera en « Docker Image » — ce que la section
+« CI et image GHCR » recommande — elle démarrerait sur une API injoignable.
+**À corriger avant cette bascule, pas pendant.**
+
+| Variable | Valeur attendue |
+|---|---|
+| `VITE_SUPABASE_URL` | `https://api.penduline.zozios.app` |
+| `VITE_MCP_URL` | `https://mcp.penduline.zozios.app` |
+| `VITE_EXTENSION_ID` | `bloodkencammifmhmogffodjalepoime` |
+
+Leçon générale : **une bascule de domaine doit balayer les variables de build du
+dépôt autant que celles de Coolify.** Les secondes se voient — l'application
+tombe. Les premières ne se voient pas, parce que rien ne les consomme encore.
 
 ### Mémoire
 
