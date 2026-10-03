@@ -21,6 +21,7 @@ import { readInvitation } from './lib/partage';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
 import { TopBar } from './components/TopBar';
+import { TabBar } from './components/TabBar';
 import { Icon } from './components/Icons';
 
 /**
@@ -291,6 +292,21 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.kind, view.kind === 'board' ? view.id : null]);
 
+  /**
+   * Changer de vue. Partagée par la barre du haut et la barre d'onglets du
+   * téléphone : deux écritures de la même règle finiraient par diverger sur la
+   * portée par défaut de la vue globale.
+   */
+  function naviguer(to: 'home' | 'focus' | 'global' | 'review' | 'stats') {
+    setView(
+      to === 'home'
+        ? HOME
+        : to === 'global'
+          ? { kind: 'global', scope: { kind: 'all' } }
+          : { kind: to },
+    );
+  }
+
   function allerA(hit: SearchHit) {
     setSearching(false);
     setView({ kind: 'board', id: hit.boardId, focusTask: hit.taskId, openBin: hit.inBin });
@@ -318,13 +334,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
       <TopBar
         view={view.kind}
         email={email}
-        onNavigate={(to) =>
-          setView(
-            to === 'home' ? HOME
-              : to === 'global' ? { kind: 'global', scope: { kind: 'all' } }
-              : { kind: to },
-          )
-        }
+        onNavigate={naviguer}
         onSearch={() => setSearching(true)}
         onApps={() => setApps(true)}
         onSignOut={() => void supabase.auth.signOut()}
@@ -372,6 +382,10 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           onReview={() => setView({ kind: 'review' })}
         />
       )}
+      {/* Après l'écran, et non avant : elle flotte au-dessus de lui, et l'ordre
+          du document est celui du parcours au clavier — la navigation
+          secondaire vient en dernier. Masquée au-delà de 720 px. */}
+      <TabBar view={view.kind} onNavigate={naviguer} />
     </>
   );
 }

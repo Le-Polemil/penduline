@@ -2582,21 +2582,14 @@ button.uni-head__name:focus-visible {
 }
 .topbar :focus-visible, .hero :focus-visible, .shero :focus-visible { outline-color: #f0a774; }
 
-/* Au téléphone, la navigation passe sous le logo et défile à l'horizontale :
-   cinq entrées ne tiennent pas, et les replier dans un menu cacherait
-   « Aujourd'hui » — la plus utilisée au doigt. */
+/* Au téléphone, la barre du haut ne garde que le logo, la recherche et le
+   compte : sa navigation descend en barre d'onglets (voir `.tabbar` en fin de
+   feuille), qui ne défile pas et reste sous le pouce. */
 @media (max-width: 720px) {
   .topbar__inner { padding: 10px 16px; gap: 10px; }
   .topbar__name { font-size: 21px; }
-  .topbar__right { order: 2; }
   .topbar__search { min-width: 0; width: 44px; padding: 0; justify-content: center; }
   .topbar__search-label, .topbar__kbd { display: none; }
-  .topbar__nav {
-    order: 3; flex-basis: 100%; margin: 0 -16px; padding: 0 16px 2px;
-    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
-  }
-  .topbar__nav::-webkit-scrollbar { display: none; }
-  .topbar__link { flex: none; }
 }
 
 /* ── Héros de l'accueil ──────────────────────────────────────────────────────
@@ -3068,3 +3061,67 @@ button.uni-head__name:focus-visible {
 /* Les portées en pastilles, sous le titre. */
 .shero__scopes { display: flex; gap: 6px; flex-wrap: wrap; }
 .shero__chip-n { font: 700 12px var(--font-body); opacity: 0.8; }
+
+/* ── La barre d'onglets du téléphone ────────────────────────────────────────
+   Cinq vues en bas, fixes, toujours à portée de pouce. Elle remplace la ligne
+   de pastilles défilante de la barre du haut : celle-ci faisait NAÎTRE « Revue »
+   et « Rétrospective » hors champ — il fallait deviner qu'on pouvait faire
+   défiler pour apprendre qu'elles existent — et elle remontait avec la page,
+   donc elle n'était plus là au moment où l'on voulait aller ailleurs.
+
+   `--tabbar-h` sert trois fois : ici, pour dégager le bas des écrans, et pour
+   relever les notifications. Une valeur, pas trois constantes à tenir d'accord. */
+.tabbar { display: none; }
+@media (max-width: 720px) {
+  :root { --tabbar-h: 62px; }
+  /* La barre du haut garde le logo, la recherche et le compte ; sa navigation
+     descend. */
+  .topbar__nav { display: none; }
+
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
+    display: block; background: var(--band-base, #1d1a16);
+    border-radius: 22px 22px 0 0;
+    /* `max()` et non une addition : sur un écran sans barre gestuelle l'inset
+       vaut zéro, et additionner doublerait une marge déjà suffisante. */
+    padding: 6px 6px max(8px, env(safe-area-inset-bottom));
+  }
+  .tabbar__list { display: flex; margin: 0; padding: 0; list-style: none; }
+  .tabbar__item { flex: 1; min-width: 0; }
+  .tabbar__link {
+    width: 100%; min-height: var(--tabbar-h); padding: 0 2px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border: none; background: none; cursor: pointer;
+    color: #c2b6a2; font: 600 11.5px var(--font-body);
+  }
+  .tabbar__link[aria-current='page'] { color: #f3e9d8; font-weight: 700; }
+  /* La pastille se remplit sur la vue courante : un repère de forme en plus de
+     la graisse, pour qui ne distingue pas deux beiges. */
+  .tabbar__pill {
+    width: 52px; height: 30px; display: grid; place-items: center;
+    border-radius: 999px; background: transparent; color: #f3e9d8;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tabbar__link[aria-current='page'] .tabbar__pill { background: #f3e9d8; color: #1d1a16; }
+  /* Cinq mots dans 390 px : « Aujourd'hui » est le plus long, et il doit tenir
+     sur une ligne plutôt que de pousser la barre à deux étages. */
+  .tabbar__label {
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tabbar :focus-visible { outline-color: #f0a774; }
+
+  /* Les écrans dégagent la hauteur de la barre : sans ça, la dernière carte de
+     chaque liste finit dessous, et l'ajout en bas de case devient inatteignable. */
+  .home,
+  .matrix,
+  .review,
+  .stats,
+  .focus {
+    padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 28px);
+  }
+  /* Les notifications remontent d'autant : ancrées au bas de l'écran, elles
+     seraient sinon rendues sous la barre — et leur « Annuler » avec. */
+  .toast-stack {
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
+  }
+}
