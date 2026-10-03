@@ -5,7 +5,7 @@ import { useStore, type Store } from './data/store';
 import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
-import { GlobalScreen, type Scope } from './screens/Global';
+import { GlobalScreen } from './screens/Global';
 import { FocusScreen } from './screens/Focus';
 import { ReviewScreen } from './screens/Review';
 import { StatsScreen } from './screens/Stats';
@@ -18,6 +18,9 @@ import { shareSession, shareSignOut } from './lib/extension-bridge';
 import { readAuthorizeRequest } from './lib/mcp';
 import { AuthorizeScreen } from './screens/Authorize';
 import { readInvitation } from './lib/partage';
+import { HOME, viewTitle, type View } from './lib/route';
+import { useDocumentTitle } from './lib/useDocumentTitle';
+import { useRoute } from './lib/useRoute';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
 import { TopBar } from './components/TopBar';
@@ -132,68 +135,6 @@ export function App() {
 }
 
 /**
- * Ce que l'application affiche.
- *
- * Naguère un `boardId: string | null` — un booléen déguisé, qui ne pouvait pas
- * exprimer un troisième écran. La vue globale porte sa portée avec elle : elle
- * survit ainsi à un aller-retour vers l'accueil.
- */
-type View =
-  | { kind: 'home' }
-  /**
-   * `focusTask` : la tâche à mettre en évidence à l'arrivée, venue de la
-   * recherche. `openBin` quand elle est terminée ou supprimée — ouvrir sur une
-   * grille où la tâche n'est pas serait pire que ne rien faire.
-   */
-  | { kind: 'board'; id: string; focusTask?: string; openBin?: boolean }
-  | { kind: 'global'; scope: Scope }
-  /** Le mode « aujourd'hui » (#49). Sans portée : il regarde tout le compte. */
-  | { kind: 'focus' }
-  /** La revue périodique (#47). Sans portée : elle regarde tout le compte. */
-  | { kind: 'review' }
-  /** La rétrospective (#48). Sans portée : elle regarde tout le compte. */
-  | { kind: 'stats' };
-
-const HOME: View = { kind: 'home' };
-
-/**
- * `sessionStorage` et non `localStorage` : la vue est un état d'onglet, pas une
- * préférence. Deux onglets ouverts sur deux matrices doivent le rester.
- */
-const VIEW_KEY = 'penduline:view';
-
-/**
- * Relit la vue de l'onglet.
- *
- * Elle est persistée pour une raison précise : une session expirée renvoie à
- * l'écran de connexion, et sans ça l'utilisateur repartait de l'accueil après
- * s'être reconnecté — il perdait l'écran sur lequel il travaillait, en plus de
- * son geste.
- *
- * Pure, comme `readAuthHash` : elle sert d'initialiseur à `useState`. Tout ce
- * qui ne se relit pas retombe sur l'accueil, y compris un JSON valide mais de
- * forme inconnue (une version antérieure du type `View`).
- */
-function readView(): View {
-  try {
-    const raw = window.sessionStorage.getItem(VIEW_KEY);
-    if (!raw) return HOME;
-    const v = JSON.parse(raw) as View;
-    if (v.kind === 'board' && typeof v.id === 'string') return v;
-    if (v.kind === 'global' && (v.scope?.kind === 'all' || typeof v.scope?.id === 'string')) return v;
-    if (v.kind === 'focus') return v;
-    if (v.kind === 'review') return v;
-    if (v.kind === 'stats') return v;
-    return HOME;
-  } catch {
-    // `sessionStorage` peut lever (navigation privée verrouillée), et le JSON
-    // stocké peut être corrompu. Ni l'un ni l'autre n'est une raison de ne pas
-    // afficher l'application.
-    return HOME;
-  }
-}
-
-/**
  * Les fournisseurs transverses, et rien d'autre.
  *
  * Ils sont montés **au-dessus** de l'espace de travail parce que `useStore` y
@@ -275,12 +216,12 @@ function useSearchShortcut(setOpen: (open: boolean) => void) {
 
 function Workspace({ userId, email }: { userId: string; email: string | null }) {
   const store = useStore(userId);
-  const [view, setView] = useState<View>(readView);
+  const [view, setView, replaceView] = useRoute();
   const [searching, setSearching] = useState(false);
   const [apps, setApps] = useState(false);
   useUndoShortcut(store);
   useSearchShortcut(setSearching);
-  useMatriceDisparue(store, view, setView);
+  useMatriceDisparue(store, view, replaceView);
 
   // Changer d'écran change le contexte : une entrée d'annulation viserait des
   // états qu'on ne voit plus. Vider est plus sûr que deviner (#46).
@@ -296,13 +237,9 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
     setView({ kind: 'board', id: hit.boardId, focusTask: hit.taskId, openBin: hit.inBin });
   }
 
-  useEffect(() => {
-    try {
-      window.sessionStorage.setItem(VIEW_KEY, JSON.stringify(view));
-    } catch {
-      // Perdre la mémoire de la vue est un désagrément, pas une panne.
-    }
-  }, [view]);
+  // Le titre suit la vue ; le nom d'une matrice se lit dans le store, donc tant qu'il charge on garde le nom seul.
+  const boardName = view.kind === 'board' ? store.boards.find((r) => r.id === view.id)?.name : undefined;
+  useDocumentTitle(viewTitle(view, boardName));
 
   if (!store.ready) return <Loader label="Chargement de vos matrices…" />;
 
@@ -416,6 +353,7 @@ function SignIn({
    */
   invitation?: boolean;
 }) {
+  useDocumentTitle(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<Mode>('signin');
@@ -652,6 +590,7 @@ function LoginNest() {
  * qui fait foi.
  */
 function NewPassword({ onDone }: { onDone: () => void }) {
+  useDocumentTitle('Nouveau mot de passe');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
