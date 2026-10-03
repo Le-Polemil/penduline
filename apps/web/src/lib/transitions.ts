@@ -188,3 +188,74 @@ export function sensEntre(de: string, vers: string): Direction {
 }
 
 export { ORDRE };
+
+/* ── Le nid comme destination ───────────────────────────────────────────────
+   Planches « Aujourd'hui — C : la tâche monte au nid » et « Revue — D : le tri
+   au nid ». Les deux gestes sont le même : quelque chose qu'on vient de régler
+   quitte l'écran en direction du nid, qui encaisse le choc.
+
+   C'est la seule transition du lot qui ne passe PAS par l'API View Transitions,
+   et pour une raison de fond : elle ne change pas d'écran. Un instantané de
+   page entière pour faire voler une carte coûterait le gel de tout le reste, et
+   l'arc dépend de positions réelles qu'un pseudo-élément ne connaît pas. */
+
+/**
+ * Envoie un fantôme de `source` se poser dans le nid.
+ *
+ * ⚠️ UN CLONE, et pas l'élément lui-même. L'élément d'origine disparaît dans la
+ * foulée — c'est tout l'intérêt du geste — et React le démonte quand il veut :
+ * l'animer reviendrait à courir après un nœud qui peut s'évaporer en plein vol.
+ * Le clone vit dans une couche fixe, ne reçoit aucun clic, et se retire tout
+ * seul.
+ *
+ * L'arc passe par un point haut (−70 px à mi-parcours) : une trajectoire droite
+ * se lit comme un glissement, une trajectoire courbe comme un lancer.
+ */
+export function envoyerAuNid(source: Element | null | undefined): void {
+  if (!source || mouvementReduit()) return;
+  const nid = document.querySelector('.hero__nest, .shero__nest');
+  if (!nid) return;
+
+  const depart = source.getBoundingClientRect();
+  const cible = nid.getBoundingClientRect();
+  if (depart.width === 0 || depart.height === 0) return;
+  const dx = cible.left + cible.width / 2 - (depart.left + depart.width / 2);
+  const dy = cible.top + cible.height / 2 - (depart.top + depart.height / 2);
+
+  const fantome = source.cloneNode(true) as HTMLElement;
+  // Un clone porte les identifiants de son modèle : deux `id` identiques dans
+  // le document casseraient `aria-labelledby` et les étiquettes de formulaire
+  // le temps du vol.
+  fantome.removeAttribute('id');
+  for (const el of fantome.querySelectorAll('[id]')) el.removeAttribute('id');
+  fantome.setAttribute('aria-hidden', 'true');
+  fantome.style.cssText = `position:fixed;left:${depart.left}px;top:${depart.top}px;width:${depart.width}px;height:${depart.height}px;margin:0;pointer-events:none;z-index:45`;
+  document.body.append(fantome);
+
+  const vol = fantome.animate(
+    [
+      { transform: 'none', opacity: 1 },
+      {
+        transform: `translate(${dx * 0.42}px, ${dy * 0.42 - 70}px) scale(0.38) rotate(-5deg)`,
+        opacity: 1,
+        offset: 0.45,
+      },
+      { transform: `translate(${dx}px, ${dy}px) scale(0.03) rotate(9deg)`, opacity: 0 },
+    ],
+    { duration: 400, easing: 'cubic-bezier(.45,0,.35,1)' },
+  );
+  void vol.finished.catch(() => undefined).then(() => fantome.remove());
+
+  // Le nid encaisse, 250 ms plus tard — quand le fantôme y arrive, pas quand il
+  // part. Un nid qui tressaille au décollage raconterait l'inverse du geste.
+  for (const pivot of document.querySelectorAll('.hero__swing, .shero__swing')) {
+    pivot.animate(
+      [
+        { transform: 'none' },
+        { transform: 'rotate(-5deg) scale(1.05)', offset: 0.45 },
+        { transform: 'none' },
+      ],
+      { duration: 200, delay: 250, easing: 'ease-out' },
+    );
+  }
+}

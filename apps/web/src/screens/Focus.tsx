@@ -21,6 +21,7 @@ import { useCompletion } from '../data/useCompletion';
 import { useFocus } from '../data/useFocus';
 import { useNow } from '../data/useNow';
 import { useAnnounce } from '../a11y/announce';
+import { envoyerAuNid } from '../lib/transitions';
 import { readFocusLimit, writeFocusLimit } from '../data/focusPrefs';
 
 /**
@@ -150,6 +151,9 @@ export function FocusScreen({
 
   // ── Les gestes ─────────────────────────────────────────────────────────────
   function terminer(t: Task) {
+    // Avant l'écriture : le titre est encore à l'écran, et c'est de lui que
+    // part le fantôme.
+    envoyerAuNid(document.querySelector('.fx-title'));
     onCheck(t);
     refresh();
   }
@@ -272,7 +276,7 @@ export function FocusScreen({
               répondu.
             </p>
           ) : courante ? (
-            <div className="fx-now">
+            <div className="fx-now" key={courante.id}>
               <div className="fx-tags">
                 <span
                   className="fx-chip fx-chip--quad"

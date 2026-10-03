@@ -3573,3 +3573,24 @@ button.uni-head__name:focus-visible {
 :root[data-vt~='carte']::view-transition-group(pd-qc-3) { z-index: 8; animation: none; }
 :root[data-vt~='carte']::view-transition-new(pd-qc-3) { animation: vt-rise 240ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both; }
 :root[data-vt~='carte']::view-transition-old(pd-qc-3) { animation: vt-out 100ms ease both; }
+
+/* ── Ce qui arrive après un geste « au nid » ────────────────────────────────
+   La pièce réglée part vers le nid (`envoyerAuNid`), et la suivante prend sa
+   place en se présentant plutôt qu'en apparaissant. Les deux animations
+   rejouent parce que React remonte l'élément — `key` sur la tâche courante et
+   sur la carte de revue : sans remontage, une animation CSS ne redémarre pas
+   sur un élément qui n'a fait que changer de contenu. */
+@keyframes fx-dangle {
+  0% { opacity: 0; transform: rotate(-9deg) translateY(-10px); }
+  40% { opacity: 1; transform: rotate(5deg); }
+  70% { transform: rotate(-2deg); }
+  100% { transform: none; }
+}
+/* Le pivot est AU-DESSUS du titre : la tâche pend du nid, elle ne tourne pas
+   sur elle-même. */
+.fx-title { animation: fx-dangle 440ms ease-out 30ms both; transform-origin: 50% -24px; }
+
+@keyframes rv-deal { from { opacity: 0; transform: translateY(-14px) rotate(-1.5deg); } }
+.rv-card { animation: rv-deal 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* Le bilan n'est pas distribué : il conclut. */
+.rv-card--bilan, .rv-card--calme { animation: none; }
