@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   ageInDays,
   countOpen,
@@ -145,9 +145,12 @@ interface Item {
  */
 export function ReviewScreen({
   store,
+  tabs,
   onOpenBoard,
 }: {
   store: Store;
+  /** La bande d'onglets du Bilan, posée en tête du bandeau. */
+  tabs?: ReactNode;
   onOpenBoard: (boardId: string, taskId?: string) => void;
 }) {
   const { tasks, patchTask } = store;
@@ -590,7 +593,7 @@ export function ReviewScreen({
 
   return (
     <>
-      <ScreenHero>
+      <ScreenHero tabs={tabs}>
         <div className="shero__row">
           <div className="shero__lead">
             <p className="shero__eyebrow">

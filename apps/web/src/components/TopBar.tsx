@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 /** Les vues que la barre sait désigner — un sous-ensemble de `View`, sans ses paramètres. */
-export type TopBarView = 'home' | 'board' | 'focus' | 'global' | 'review' | 'stats';
+export type TopBarView = 'home' | 'board' | 'focus' | 'global' | 'bilan';
 
 /**
  * La barre du haut, la même sur tous les écrans.
@@ -25,7 +25,7 @@ export function TopBar({
 }: {
   view: TopBarView;
   email: string | null;
-  onNavigate: (to: 'home' | 'focus' | 'global' | 'review' | 'stats') => void;
+  onNavigate: (to: 'home' | 'focus' | 'global' | 'bilan') => void;
   onSearch: () => void;
   onApps: () => void;
   onSignOut: () => void;
@@ -55,12 +55,13 @@ export function TopBar({
     };
   }, [menu]);
 
-  const items: { to: 'home' | 'focus' | 'global' | 'review' | 'stats'; label: string; current: boolean }[] = [
+  const items: { to: 'home' | 'focus' | 'global' | 'bilan'; label: string; current: boolean }[] = [
     { to: 'home', label: 'Matrices', current: view === 'home' || view === 'board' },
     { to: 'focus', label: 'Aujourd’hui', current: view === 'focus' },
     { to: 'global', label: 'Vue globale', current: view === 'global' },
-    { to: 'review', label: 'Revue', current: view === 'review' },
-    { to: 'stats', label: 'Rétrospective', current: view === 'stats' },
+    // Rétrospective, revue et objectifs vivent sous une seule entrée : on ne va
+    // pas « à la Revue », on va regarder en arrière et on choisit avec quoi.
+    { to: 'bilan', label: 'Bilan', current: view === 'bilan' },
   ];
   const initial = (email?.trim()[0] ?? '?').toUpperCase();
 

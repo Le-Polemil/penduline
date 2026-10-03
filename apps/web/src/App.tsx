@@ -7,8 +7,7 @@ import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
 import { GlobalScreen, type Scope } from './screens/Global';
 import { FocusScreen } from './screens/Focus';
-import { ReviewScreen } from './screens/Review';
-import { StatsScreen } from './screens/Stats';
+import { BilanScreen, type BilanTab } from './screens/Bilan';
 import { AnnounceProvider, useAnnounce } from './a11y/announce';
 import { ToastProvider, useToast } from './components/Toast';
 import { Search, type SearchHit } from './components/Search';
@@ -150,12 +149,16 @@ type View =
   | { kind: 'global'; scope: Scope }
   /** Le mode « aujourd'hui » (#49). Sans portée : il regarde tout le compte. */
   | { kind: 'focus' }
-  /** La revue périodique (#47). Sans portée : elle regarde tout le compte. */
-  | { kind: 'review' }
-  /** La rétrospective (#48). Sans portée : elle regarde tout le compte. */
-  | { kind: 'stats' };
+  /**
+   * Le recul : rétrospective (#48), revue (#47) et objectifs, sous une seule
+   * entrée de navigation. Sans portée — les trois regardent tout le compte.
+   */
+  | { kind: 'bilan'; tab: BilanTab };
 
 const HOME: View = { kind: 'home' };
+
+/** Les onglets que `readView` accepte. Un onglet inconnu retombe sur l'accueil. */
+const TABS_BILAN = new Set<BilanTab>(['retro', 'review', 'goals']);
 
 /**
  * `sessionStorage` et non `localStorage` : la vue est un état d'onglet, pas une
@@ -183,8 +186,11 @@ function readView(): View {
     if (v.kind === 'board' && typeof v.id === 'string') return v;
     if (v.kind === 'global' && (v.scope?.kind === 'all' || typeof v.scope?.id === 'string')) return v;
     if (v.kind === 'focus') return v;
-    if (v.kind === 'review') return v;
-    if (v.kind === 'stats') return v;
+    if (v.kind === 'bilan' && TABS_BILAN.has(v.tab)) return v;
+    // Les deux vues d'avant le regroupement, relues telles qu'elles ont été
+    // écrites : un onglet rouvert la veille ne doit pas retomber sur l'accueil.
+    if ((v as { kind?: string }).kind === 'review') return { kind: 'bilan', tab: 'review' };
+    if ((v as { kind?: string }).kind === 'stats') return { kind: 'bilan', tab: 'retro' };
     return HOME;
   } catch {
     // `sessionStorage` peut lever (navigation privée verrouillée), et le JSON
@@ -297,13 +303,17 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
    * téléphone : deux écritures de la même règle finiraient par diverger sur la
    * portée par défaut de la vue globale.
    */
-  function naviguer(to: 'home' | 'focus' | 'global' | 'review' | 'stats') {
+  function naviguer(to: 'home' | 'focus' | 'global' | 'bilan') {
     setView(
       to === 'home'
         ? HOME
         : to === 'global'
           ? { kind: 'global', scope: { kind: 'all' } }
-          : { kind: to },
+          : to === 'bilan'
+            // La rétrospective ouvre le Bilan : c'est le récit, celui par quoi
+            // on commence quand on vient regarder en arrière.
+            ? { kind: 'bilan', tab: 'retro' }
+            : { kind: to },
     );
   }
 
@@ -365,21 +375,21 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           onHome={onHome}
           onOpenBoard={(id) => setView({ kind: 'board', id })}
         />
-      ) : view.kind === 'review' ? (
-        <ReviewScreen
+      ) : view.kind === 'bilan' ? (
+        <BilanScreen
           store={store}
+          tab={view.tab}
+          onTab={(tab) => setView({ kind: 'bilan', tab })}
           // La tâche est mise en évidence à l'arrivée : la revue n'offre que des
           // décisions, tout le reste se fait sur la matrice.
           onOpenBoard={(id, taskId) => setView({ kind: 'board', id, focusTask: taskId })}
         />
-      ) : view.kind === 'stats' ? (
-        <StatsScreen store={store} />
       ) : (
         <Home
           store={store}
           onOpen={(id) => setView({ kind: 'board', id })}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
-          onReview={() => setView({ kind: 'review' })}
+          onReview={() => setView({ kind: 'bilan', tab: 'review' })}
         />
       )}
       {/* Après l'écran, et non avant : elle flotte au-dessus de lui, et l'ordre

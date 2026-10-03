@@ -1,6 +1,7 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   PERIODS,
+  QUADS,
   statsReadings,
   statsSentence,
   type StatsPeriod,
@@ -9,7 +10,17 @@ import {
 } from '@penduline/shared';
 import { quadrant } from '../lib/quads';
 import type { Store } from '../data/store';
+import { ScreenHero } from '../components/ScreenHero';
 import { useStats } from '../data/useStats';
+
+/** Les chapitres, dans l'ordre du récit. Le sommaire et les ancres en dérivent. */
+const CHAPITRES = [
+  { id: 'par-case', label: 'Par case' },
+  { id: 'semaines', label: 'Semaine après semaine' },
+  { id: 'delais', label: 'Délais' },
+  { id: 'matrices', label: 'Par matrice' },
+  { id: 'bilan', label: 'Le bilan' },
+];
 
 /**
  * Les statistiques rétrospectives (#48).
@@ -35,7 +46,16 @@ import { useStats } from '../data/useStats';
  * rappeler la case. Garder la palette de l'application valait mieux qu'inventer
  * une seconde langue de couleurs pour les mêmes quatre concepts.
  */
-export function StatsScreen({ store }: { store: Store }) {
+export function StatsScreen({
+  store,
+  tabs,
+  onReview,
+}: {
+  store: Store;
+  tabs?: ReactNode;
+  /** « Ouvrir la Revue » : la fin du récit renvoie à l'onglet qui agit. */
+  onReview?: () => void;
+}) {
   const [period, setPeriod] = useState<StatsPeriod>('30j');
   const { stats, loading, failed } = useStats(period);
 
@@ -44,30 +64,66 @@ export function StatsScreen({ store }: { store: Store }) {
     [stats, store.boards],
   );
   const sentence = readings ? statsSentence(readings) : null;
+  const periode = PERIODS.find((p) => p.key === period);
+  /**
+   * Le titre dit la DURÉE OBSERVÉE, pas le nombre de semaines qui portent des
+   * données : « vos 4 semaines » sur une période de 30 jours reste vrai un lundi
+   * matin, là où compter les semaines non vides ferait rétrécir le titre à
+   * chaque semaine creuse.
+   */
+  const spanLabel = periode
+    ? period === '30j'
+      ? '4 semaines'
+      : period === '3m'
+        ? '3 mois'
+        : '12 mois'
+    : '';
 
   return (
-    <div className="stats">
-      <div className="stats-head">
-        <h1 className="stats-title">Rétrospective</h1>
-        <p className="stats-sub">
-          Ce que vous avez terminé, et depuis quelle case. Les tâches supprimées définitivement
-          n'y figurent pas.
-        </p>
-        {/* Un groupe à état, pas des liens : on choisit une vue, on ne navigue pas. */}
-        <div className="stats-periods" role="group" aria-label="Période observée">
-          {PERIODS.map((p) => (
-            <button
-              key={p.key}
-              className={`stats-period${period === p.key ? ' stats-period--on' : ''}`}
-              aria-pressed={period === p.key}
-              onClick={() => setPeriod(p.key)}
-            >
-              {p.label}
-            </button>
-          ))}
+    <>
+      <ScreenHero tabs={tabs}>
+        <div className="shero__lead retro-lead">
+          <p className="shero__eyebrow">Rétrospective · {periode?.label}</p>
+          <h1 className="shero__title retro-title">Ce que racontent vos {spanLabel}</h1>
+          <p className="retro-lede">
+            {sentence ?? 'Ce que vous avez terminé, et depuis quelle case.'}
+          </p>
+          <div className="retro-controls">
+            {/* Un groupe à état, pas des liens : on choisit une vue, on ne navigue pas. */}
+            <div className="retro-periods" role="group" aria-label="Période observée">
+              {PERIODS.map((p) => (
+                <button
+                  key={p.key}
+                  className={`shero__ghost${period === p.key ? ' shero__ghost--on' : ''}`}
+                  aria-pressed={period === p.key}
+                  onClick={() => setPeriod(p.key)}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <span className="retro-caveat">
+              Les tâches supprimées définitivement n’y figurent pas.
+            </span>
+          </div>
+          {/* Le sommaire : un récit se parcourt, et sept écrans de défilement
+              sans table des matières se lisent comme un mur. */}
+          {readings && readings.total > 0 && (
+            <ol className="retro-toc" aria-label="Sommaire">
+              {CHAPITRES.map((c, i) => (
+                <li key={c.id}>
+                  <a className="retro-toc__link" href={`#${c.id}`}>
+                    <span className="retro-toc__n" aria-hidden="true">{i + 1}</span>
+                    {c.label}
+                  </a>
+                </li>
+              ))}
+            </ol>
+          )}
         </div>
-      </div>
+      </ScreenHero>
 
+      <div className="stats">
       {failed ? (
         <p className="stats-empty">
           Les statistiques n'ont pas pu être chargées. Elles se calculent sur le serveur, qui
@@ -83,14 +139,114 @@ export function StatsScreen({ store }: { store: Store }) {
         </p>
       ) : (
         <>
-          {sentence && <p className="stats-sentence">{sentence}</p>}
           <Repartition readings={readings} />
           <Tendance readings={readings} />
           <Delais readings={readings} />
           <ParMatrice readings={readings} />
+          <Bilan readings={readings} />
+          <section className="retro-fin">
+            <p className="retro-fin__text">Fin de la rétrospective.</p>
+            {/* Le récit dit ce qui s'est passé ; la revue est l'endroit où l'on
+                en fait quelque chose. L'un appelle l'autre. */}
+            {onReview && (
+              <button className="retro-fin__go" onClick={onReview}>
+                Ouvrir la Revue ›
+              </button>
+            )}
+          </section>
         </>
       )}
-    </div>
+      </div>
+    </>
+  );
+}
+
+/**
+ * « Le bilan » : un point par tâche terminée, dans la couleur de sa case.
+ *
+ * La seule figure de l'écran qui ne compare rien. Elle donne une MASSE — la
+ * quantité de travail abattu sur la période, d'un seul regard — là où les
+ * quatre précédentes découpent. C'est la grille des contributions, appliquée à
+ * ce qu'on a fini plutôt qu'à ce qu'on a poussé.
+ *
+ * Les points sont groupés par semaine, parce que c'est la maille que le serveur
+ * rend (`by_week`). Un point par jour demanderait une autre agrégation, et la
+ * semaine suffit à la lecture qu'on cherche ici.
+ *
+ * ⚠️ Borné à 600 points. Au-delà, le navigateur peine et l'œil ne compte plus :
+ * la masse est déjà dite. Le compte exact reste en toutes lettres au-dessus, et
+ * dans le tableau.
+ */
+const MAX_POINTS = 600;
+
+function Bilan({ readings }: { readings: StatsReadings }) {
+  const { weeks } = readings;
+  if (weeks.length === 0) return null;
+  const tronque = readings.total > MAX_POINTS;
+
+  return (
+    <Figure
+      id="bilan"
+      title="Le bilan"
+      hint="un point par tâche terminée, dans la couleur de sa case"
+      table={
+        <table>
+          <caption>Tâches terminées par semaine et par case</caption>
+          <thead>
+            <tr>
+              <th>Semaine du</th>
+              {QUADS.map((q) => (
+                <th key={q.key}>{q.label}</th>
+              ))}
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {weeks.map((w) => (
+              <tr key={w.week}>
+                <td>{weekLabel(w.week)}</td>
+                {QUADS.map((q) => (
+                  <td key={q.key}>{w.byQuadrant[q.key]}</td>
+                ))}
+                <td>{w.total}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      }
+    >
+      <div className="retro-grid" aria-hidden="true">
+        {weeks.map((w) => (
+          <div className="retro-grid__week" key={w.week} title={`Semaine du ${weekLabel(w.week)} — ${w.total}`}>
+            <span className="retro-grid__dots">
+              {QUADS.flatMap((q) =>
+                Array.from(
+                  // Proportionnel quand on tronque : une case ne doit pas
+                  // disparaître parce qu'elle vient après dans la boucle.
+                  { length: tronque
+                      ? Math.round((w.byQuadrant[q.key] / readings.total) * MAX_POINTS)
+                      : w.byQuadrant[q.key] },
+                  (_, i) => (
+                    <span
+                      key={`${q.key}-${i}`}
+                      className="retro-grid__dot"
+                      style={{ background: quadrant(q.key).ink } as CSSProperties}
+                    />
+                  ),
+                ),
+              )}
+            </span>
+            <span className="retro-grid__label">{weekLabel(w.week)}</span>
+          </div>
+        ))}
+      </div>
+      {tronque && (
+        <p className="stats-note">
+          Au-delà de {MAX_POINTS} points, la grille échantillonne : les proportions tiennent, le
+          compte exact est au-dessus.
+        </p>
+      )}
+    </Figure>
   );
 }
 
@@ -112,18 +268,21 @@ function weekLabel(iso: string): string {
  * politesse : c'est la seule lecture disponible au lecteur d'écran.
  */
 function Figure({
+  id,
   title,
   hint,
   children,
   table,
 }: {
+  /** L'ancre du chapitre, celle que vise le sommaire du bandeau. */
+  id: string;
   title: string;
   hint?: string;
   children: React.ReactNode;
   table: React.ReactNode;
 }) {
   return (
-    <figure className="stats-fig">
+    <figure className="stats-fig" id={id}>
       <figcaption className="stats-fig__head">
         <span className="stats-fig__title">{title}</span>
         {hint && <span className="stats-fig__hint">{hint}</span>}
@@ -141,6 +300,7 @@ function Repartition({ readings }: { readings: StatsReadings }) {
 
   return (
     <Figure
+      id="par-case"
       title="Par case"
       hint={`${readings.total} ${readings.total > 1 ? 'tâches terminées' : 'tâche terminée'}`}
       table={
@@ -205,6 +365,7 @@ function Tendance({ readings }: { readings: StatsReadings }) {
 
   return (
     <Figure
+      id="semaines"
       title="Semaine après semaine"
       hint={`${weeks.length} semaines · échelle commune, maximum ${max}`}
       table={
@@ -293,6 +454,7 @@ function Delais({ readings }: { readings: StatsReadings }) {
 
   return (
     <Figure
+      id="delais"
       title="Délai moyen avant complétion"
       hint={readings.avgDays !== null ? `${fr(readings.avgDays)} jours toutes cases confondues` : undefined}
       table={
@@ -346,6 +508,7 @@ function ParMatrice({ readings }: { readings: StatsReadings }) {
 
   return (
     <Figure
+      id="matrices"
       title="Par matrice"
       hint="quel contexte a réellement consommé le temps"
       table={

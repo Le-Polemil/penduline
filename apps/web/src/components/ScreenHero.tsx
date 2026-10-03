@@ -24,9 +24,18 @@ export function ScreenHero({
   children,
   /** Ajoute une classe au bandeau — « Aujourd'hui » s'en sert pour centrer et respirer. */
   variant,
+  /**
+   * La bande d'onglets de la section, posée en TÊTE du bandeau.
+   *
+   * Un onglet change de contenu sans changer de section : il doit donc vivre
+   * au-dessus du titre, que ce titre change avec lui. En dessous, il se lirait
+   * comme un filtre du contenu courant.
+   */
+  tabs,
 }: {
   children: ReactNode;
   variant?: string;
+  tabs?: ReactNode;
 }) {
   return (
     <section className={`shero${variant ? ` shero--${variant}` : ''}`}>
@@ -41,7 +50,10 @@ export function ScreenHero({
           </span>
         </span>
       </span>
-      <div className="shero__inner">{children}</div>
+      <div className="shero__inner">
+        {tabs}
+        {children}
+      </div>
       {/* Le même tracé que le héros de l'accueil : les deux bandeaux se
           terminent de la même main, sinon on les lit comme deux gabarits. */}
       <svg className="shero__wave" viewBox="0 0 1280 40" preserveAspectRatio="none" aria-hidden="true">

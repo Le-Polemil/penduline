@@ -1792,34 +1792,9 @@ button.uni-head__name:focus-visible {
   .home-global--stats:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
 }
 
-.stats { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
-.stats-head { margin-bottom: 22px; }
-.stats-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
-.stats-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-700); margin: 8px 0 14px; }
-
-.stats-periods { display: flex; gap: 6px; flex-wrap: wrap; }
-.stats-period {
-  font: 600 13px var(--font-body); color: var(--color-neutral-700);
-  background: none; border: 1.5px solid var(--color-neutral-400); border-radius: 999px;
-  padding: 6px 14px; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-@media (hover: hover) and (pointer: fine) {
-  .stats-period:hover { background: var(--color-accent-100); }
-}
-.stats-period--on {
-  color: var(--color-accent-800); background: var(--color-accent-100);
-  border-color: var(--color-accent-600);
-}
+.stats { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; animation: mm-in 0.3s ease backwards; }
 
 .stats-empty { font: 15px/1.6 var(--font-body); color: var(--color-neutral-700); margin: 24px 0; }
-
-/* La phrase avant les graphiques : c'est elle qu'on retient, et elle doit être
-   lue avant ce qui la fonde. */
-.stats-sentence {
-  font: 400 19px/1.5 var(--font-heading); color: var(--color-text);
-  background: var(--card-warm); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm); padding: 18px 20px; margin: 0 0 20px;
-}
 
 .stats-fig {
   margin: 0 0 18px; padding: 16px 18px 14px;
@@ -1870,9 +1845,7 @@ button.uni-head__name:focus-visible {
 }
 
 @media (max-width: 720px) {
-  .stats { padding: 28px 16px 48px; }
-  .stats-title { font-size: 28px; }
-  .stats-sentence { font-size: 17px; padding: 15px 16px; }
+  .stats { padding: 20px 16px 48px; }
   /* `.home-lenses` passe en colonne dans le bloc de la revue (#47) plus haut,
      qui porte aussi la mise en garde sur `flex: 1 1 240px`. Pas de doublon. */
   /* Les libellés passent au-dessus de leur barre : à 390 px, 5,5 rem de gouttière
@@ -1883,10 +1856,6 @@ button.uni-head__name:focus-visible {
   .bar__track { grid-area: track; }
   .spark { grid-template-columns: 1fr; align-items: stretch; }
   .spark-axis { margin-left: 0; }
-}
-
-@media (hover: none) {
-  .stats-period { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; }
 }
 
 /* ── Mode « aujourd'hui » (#49) ───────────────────────────────────────────── */
@@ -3124,4 +3093,78 @@ button.uni-head__name:focus-visible {
   .toast-stack {
     bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
   }
+}
+
+/* ── « Bilan » : la bande d'onglets de la section ───────────────────────────
+   Posée en tête du bandeau d'encre, au-dessus du titre : un onglet change le
+   titre, il ne peut donc pas vivre dessous — il s'y lirait comme un filtre du
+   contenu courant. */
+.btabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin: 0 0 -6px; padding: 2px; border-radius: 999px;
+  background: color-mix(in srgb, #f3e9d8 10%, transparent); align-self: flex-start;
+}
+.btabs__tab {
+  min-height: 40px; padding: 0 18px; border: none; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--band-muted); font: 600 14px var(--font-body);
+  transition: background 0.15s, color 0.15s;
+}
+.btabs__tab[aria-selected='true'] { background: var(--band-text); color: var(--band); font-weight: 700; }
+@media (hover: hover) and (pointer: fine) {
+  .btabs__tab:not([aria-selected='true']):hover { color: var(--band-text); }
+}
+
+/* ── Rétrospective : le récit ───────────────────────────────────────────────
+   Tout ce qui précède les chapitres vit dans le bandeau — période comprise :
+   on change de période à n'importe quel endroit du récit, et le réglage doit
+   rester là où on l'a laissé, pas remonter de six écrans. */
+.retro-lead { gap: 16px; max-width: 900px; }
+.retro-title { max-width: 860px; font-size: clamp(34px, 5.4vw, 62px); }
+.retro-lede { margin: 0; max-width: 72ch; font: 500 17px/1.5 var(--font-body); color: #d8cdb9; }
+.retro-controls { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; padding-top: 4px; }
+.retro-periods { display: flex; gap: 6px; flex-wrap: wrap; }
+.retro-caveat { font: 600 13.5px var(--font-body); color: var(--band-muted); }
+.retro-toc { list-style: none; margin: 6px 0 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.retro-toc__link {
+  min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 8px;
+  border-radius: 999px; background: color-mix(in srgb, #f3e9d8 10%, transparent);
+  color: var(--band-text); text-decoration: none; font: 600 13.5px var(--font-body);
+}
+.retro-toc__n {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px;
+  background: color-mix(in srgb, #f3e9d8 16%, transparent); font: 400 14px var(--font-heading);
+}
+@media (hover: hover) and (pointer: fine) {
+  .retro-toc__link:hover { background: var(--band-raised); }
+}
+
+/* « Le bilan » : la masse du travail abattu, une colonne par semaine. */
+.retro-grid { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.retro-grid__week { flex: 0 0 auto; width: 76px; display: flex; flex-direction: column; gap: 6px; }
+.retro-grid__dots {
+  flex: 1; display: flex; flex-wrap: wrap; align-content: flex-end; gap: 3px;
+  min-height: 28px; padding: 6px 4px; border-radius: 10px; background: var(--color-neutral-100);
+}
+.retro-grid__dot { width: 7px; height: 7px; border-radius: 2px; }
+.retro-grid__label {
+  font: 600 10.5px var(--font-body); color: var(--color-neutral-700); text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.retro-fin {
+  margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--color-divider);
+  display: flex; align-items: center; gap: 12px 18px; flex-wrap: wrap;
+}
+.retro-fin__text { margin: 0; font: 400 21px var(--font-heading); color: var(--color-text); }
+.retro-fin__go {
+  min-height: 44px; padding: 0 18px; border: 1.5px solid var(--color-divider); border-radius: 999px;
+  background: var(--card-warm); color: var(--color-accent-700); cursor: pointer;
+  font: 700 14px var(--font-body);
+}
+@media (hover: hover) and (pointer: fine) {
+  .retro-fin__go:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
+@media (max-width: 720px) {
+  .retro-toc { gap: 6px; }
+  .retro-toc__link { font-size: 12.5px; padding: 0 12px 0 6px; }
 }
