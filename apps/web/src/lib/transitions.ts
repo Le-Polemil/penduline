@@ -131,7 +131,7 @@ export function transitionDeVue(dir: Direction, fn: () => void, options: Options
         oublierLesCartes();
         courante = null;
       }
-      secouerLeNid(dir);
+      secouerLeNid(dir, options.carte || options.univers);
     });
 }
 
@@ -150,28 +150,43 @@ export function transitionDeVue(dir: Direction, fn: () => void, options: Options
  * de composition que celles déclarées en feuille de styles. Le balancement
  * normal reprend tout seul à la fin, sans qu'on ait à le relancer.
  */
-function secouerLeNid(dir: Direction): void {
+/**
+ * La secousse du nid, qui ponctue les cinq transitions retenues.
+ *
+ * ⚠️ DEUX secousses, et c'est la planche qui le veut. Un saut d'un écran à
+ * l'autre est un voyage : 640 ms, large (9° → −5° → 2°). Une carte qui s'ouvre
+ * ou un plateau qui se déplie reste sur place : 440 ms, plus serré
+ * (9° → −3,5° → 1°), pour que le nid s'apaise avec le bandeau et non après lui.
+ * Les unifier ferait traîner le nid de 200 ms sur les deux gestes courts.
+ *
+ * ⚠️ Elle part APRÈS la transition, pas avec elle comme sur les planches : le
+ * temps d'une view transition le DOM réel est masqué au profit des
+ * pseudo-éléments, et une animation posée sur le nid vivant ne se verrait pas.
+ */
+function secouerLeNid(dir: Direction, bref = false): void {
   if (mouvementReduit()) return;
   const sens = dir === 'fwd' ? 1 : -1;
   const souple = 'cubic-bezier(.22,1,.36,1)';
+  const duree = bref ? 440 : 640;
+  const [haut, bas] = bref ? [-3.5, 1] : [-5, 2];
 
   for (const pivot of document.querySelectorAll('.hero__swing, .shero__swing')) {
     pivot.animate(
       [
         { transform: 'rotate(0deg)', easing: souple },
         { transform: `rotate(${9 * sens}deg)`, offset: 0.22, easing: souple },
-        { transform: `rotate(${-5 * sens}deg)`, offset: 0.52, easing: souple },
-        { transform: `rotate(${2 * sens}deg)`, offset: 0.78, easing: souple },
+        { transform: `rotate(${haut * sens}deg)`, offset: 0.52, easing: souple },
+        { transform: `rotate(${bas * sens}deg)`, offset: 0.78, easing: souple },
         { transform: 'rotate(0deg)' },
       ],
-      { duration: 640 },
+      { duration: duree },
     );
   }
   // Le nid s'éclaire au premier balancement : à 8 % d'opacité, une variation de
   // luminosité ne se verrait pas. C'est l'opacité qui porte l'éclat.
   for (const nid of document.querySelectorAll('.hero__nest, .shero__nest')) {
     nid.animate([{ opacity: 0.08 }, { opacity: 0.22, offset: 0.25 }, { opacity: 0.08 }], {
-      duration: 640,
+      duration: duree,
       easing: 'ease-out',
     });
   }
