@@ -16,6 +16,15 @@
 # Installation, une fois :
 #   sudo install -m 0755 penduline-migrate.sh /usr/local/bin/penduline-migrate.sh
 #   # puis la ligne ci-dessus dans ~/.ssh/authorized_keys de l'utilisateur visé
+#
+# ⚠️ L'ORDRE COMPTE : le script D'ABORD, la clé ENSUITE. Une clé déposée avant
+# que sa commande forcée n'existe donne, l'intervalle durant, un shell complet
+# sur la production.
+#
+# Sans `sudo`, le home fait l'affaire — la commande forcée accepte n'importe quel
+# chemin absolu, et `authorized_keys` vit déjà là. C'est le cas en production
+# depuis le 2026-09-15 : le script est en `/home/bekansabo/penduline-migrate.sh`.
+# Voir work/coolify-deploy.md.
 
 set -euo pipefail
 
