@@ -51,6 +51,13 @@ export interface Options {
    */
   carte?: boolean;
   /**
+   * Le saut est une OUVERTURE D'UNIVERS : le plateau devient la page, et ses
+   * mini-cases volent vers les groupes de la grande grille. Jeton distinct de
+   * `carte` — les deux posent des noms différents, et les mélanger ferait
+   * morpher une case de matrice vers un groupe de vue globale.
+   */
+  univers?: boolean;
+  /**
    * Joué juste APRÈS l'échange du DOM, et avant l'instantané d'arrivée. C'est
    * la seule fenêtre où l'on peut désigner un élément du nouvel écran — marquer
    * la carte vers laquelle la matrice se replie, par exemple.
@@ -65,6 +72,7 @@ export function marquerCarte(boardId: string): void {
 
 function oublierLesCartes(): void {
   for (const el of document.querySelectorAll('[data-vt-board]')) el.removeAttribute('data-vt-board');
+  oublierLesNoms();
 }
 
 export function transitionDeVue(dir: Direction, fn: () => void, options: Options = {}): void {
@@ -88,7 +96,10 @@ export function transitionDeVue(dir: Direction, fn: () => void, options: Options
   }
 
   const racine = document.documentElement;
-  racine.setAttribute(ATTR, `on ${dir}${options.carte ? ' carte' : ''}`);
+  racine.setAttribute(
+    ATTR,
+    `on ${dir}${options.carte ? ' carte' : ''}${options.univers ? ' univers' : ''}`,
+  );
 
   let vt: ViewTransition;
   try {
@@ -257,5 +268,65 @@ export function envoyerAuNid(source: Element | null | undefined): void {
       ],
       { duration: 200, delay: 250, easing: 'ease-out' },
     );
+  }
+}
+
+/* ── Univers → Vue globale ──────────────────────────────────────────────────
+   Planche « G : le plateau se déplie + le nid ». Le plateau d'un univers
+   devient la page, et chaque mini-case de chaque matrice vole vers le groupe
+   qui lui correspond dans la grande grille.
+
+   ⚠️ LES NOMS SONT POSÉS EN JAVASCRIPT, pas en feuille de styles — contrairement
+   à l'ouverture d'une matrice. Il en faut un par COUPLE (matrice, case), et leur
+   nombre dépend des données : une règle CSS devrait énumérer des matrices qu'on
+   ne connaît qu'à l'exécution. L'identifiant de la matrice entre dans le nom, ce
+   qui garantit l'unicité sans avoir à compter les rangs — et les rangs ne
+   coïncideraient pas, la vue globale sautant les matrices vides d'une case. */
+
+const CASES = ['faire', 'planifier', 'deleguer', 'eliminer'] as const;
+
+/** Les éléments qui portent un nom posé à la main, pour savoir quoi effacer. */
+const MARQUE = 'data-vt-nom';
+
+function nommer(el: Element, nom: string): void {
+  (el as HTMLElement).style.viewTransitionName = nom;
+  el.setAttribute(MARQUE, '');
+}
+
+/** Le plateau d'un univers, côté accueil : le plateau, et ses mini-cases pleines. */
+export function marquerUnivers(universeId: string): void {
+  const plateau = document.querySelector(`[data-universe="${CSS.escape(universeId)}"]`);
+  if (!plateau) return;
+  nommer(plateau, 'pd-tray');
+  for (const ligne of plateau.querySelectorAll('[data-board]')) {
+    const board = ligne.getAttribute('data-board');
+    if (!board) continue;
+    for (const q of CASES) {
+      // Une mini-case VIDE n'a pas de groupe en face : la nommer la ferait
+      // voler vers nulle part. Elle se contente du fondu général.
+      const cell = ligne.querySelector(`.mini-grid__cell--${q}:not(.mini-grid__cell--empty)`);
+      if (cell) nommer(cell, `pd-u-${board}-${q}`);
+    }
+  }
+}
+
+/** La vue globale : la page, et un groupe par couple (matrice, case). */
+export function marquerVueGlobale(): void {
+  const page = document.querySelector('.matrix');
+  if (page) nommer(page, 'pd-tray');
+  for (const groupe of document.querySelectorAll('.bgroup[data-board]')) {
+    const board = groupe.getAttribute('data-board');
+    const q = groupe.closest('[id^="q-"]')?.id.slice(2);
+    if (board && q && (CASES as readonly string[]).includes(q)) {
+      nommer(groupe, `pd-u-${board}-${q}`);
+    }
+  }
+}
+
+/** Efface les noms posés à la main. Appelé avec le nettoyage général. */
+function oublierLesNoms(): void {
+  for (const el of document.querySelectorAll(`[${MARQUE}]`)) {
+    (el as HTMLElement).style.viewTransitionName = '';
+    el.removeAttribute(MARQUE);
   }
 }

@@ -175,3 +175,61 @@ assez pour les 192/512/1024 du manifeste : les régénérer depuis un tracé app
 serait reculer. Elles restent sur l'ancien nid plein jusqu'à ce qu'un vecteur propre
 arrive — `scripts/icons.mjs` a déjà la forme qu'il faut pour les reprendre, une entrée de
 plus. L'issue #151 reste ouverte sur ce seul point.
+
+## Transitions : cinq gestes, et le nid qui répond
+
+Les cinq familles retenues sur la planche de design (artifact `391jneVz9…`), dans
+l'ordre où elles ont été livrées. Tout passe par `apps/web/src/lib/transitions.ts`.
+
+| Famille | Planche | Le geste |
+| --- | --- | --- |
+| Navigation entre vues | E | le bandeau s'étire, le corps glisse dans le sens du voyage |
+| Accueil → Matrice | E | la carte s'ouvre, les quatre cases montent en décalé |
+| Aujourd'hui, « Terminer » | C | la tâche monte au nid |
+| Revue, « Régler » | D | la carte part au nid, la pile se resserre |
+| Univers → Vue globale | G | le plateau se déplie |
+
+Les cinq finissent au nid : il se secoue quand on arrive quelque part, il encaisse
+quand on règle quelque chose. C'est le fil qui tient l'ensemble, pas un ornement
+répété.
+
+### Le sens du voyage est une donnée, pas une devinette
+
+`data-vt` sur `<html>` porte `on <dir>[ carte][ univers]` le temps de la transition,
+et tout le CSS s'y accroche. `sensEntre(de, vers)` le déduit d'un rang fixe
+(`home/board 0, focus 1, global 2, bilan 3`) : l'écran de départ et celui d'arrivée
+suffisent, aucun historique à tenir.
+
+### Trois mécaniques, et pourquoi pas une seule
+
+- **View Transitions** pour ce qui existe des deux côtés du changement d'écran.
+- **Web Animations** pour la secousse du nid : elle doit se déclencher APRÈS le
+  `startViewTransition`, sur un élément qui ne bouge pas. Une animation CSS aurait
+  demandé une classe à poser puis à retirer, et deux arrivées rapprochées se
+  seraient marché dessus — `element.animate()` rejoue proprement.
+- **Un fantôme cloné** (`envoyerAuNid`) pour ce qui part au nid. ⚠️ Pas une view
+  transition : l'élément DISPARAÎT du DOM et la liste se resserre dans le même
+  geste. Lui donner un `view-transition-name` l'aurait fait voler depuis une place
+  déjà réattribuée. Le clone est sorti du flux, les `id` retirés — sans ça deux
+  éléments partagent une ancre et les `aria-labelledby` de la page se brisent.
+
+### Les noms, posés en JS
+
+`pd-tray`, `pd-u-<board>-<case>`, `pd-card`… sont posés sur les éléments au moment du
+clic et retirés à la fin (`oublierLesNoms`). Ils dépendent des données — quel univers,
+quelles matrices non vides — et un `view-transition-name` doit être UNIQUE dans le
+document : le laisser en CSS reviendrait à le poser sur chaque carte de l'accueil,
+donc à en avoir douze identiques.
+
+⚠️ **Le plateau garde ses deux instantanés.** Première version : escamoter old et new
+pour peindre le groupe (rectangle qui grandit, couleur qui change). Les quatre cases
+restaient alors VIDES toute la transition — les groupes de matrices volaient vers des
+cadres invisibles, puisque les cases sont dans l'instantané d'arrivée. Le groupe anime
+la géométrie, le croisement des instantanés fait le reste.
+
+### Le garde de mouvement réduit est en double
+
+Le plancher CSS de `styles.css` ne couvre pas les `::view-transition-*` : ils vivent
+hors de l'arbre. `mouvementReduit()` (exporté depuis `viewTransition.ts`) coupe donc
+en JS — `transitionDeVue` applique le changement sans transition, `envoyerAuNid` ne
+clone rien. Même partage qu'en #91.

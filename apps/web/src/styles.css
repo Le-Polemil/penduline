@@ -3594,3 +3594,26 @@ button.uni-head__name:focus-visible {
 .rv-card { animation: rv-deal 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 /* Le bilan n'est pas distribué : il conclut. */
 .rv-card--bilan, .rv-card--calme { animation: none; }
+
+/* ── Univers → Vue globale (planche « G : le plateau se déplie + le nid ») ───
+   Le plateau d'un univers devient la page, et chaque mini-case de chaque
+   matrice vole vers le groupe qui lui correspond dans la grande grille. C'est
+   la seule transition dont les noms sont posés en JavaScript : il en faut un
+   par couple (matrice, case), et leur nombre ne se connaît qu'à l'exécution.
+   Voir `marquerUnivers` dans `lib/transitions.ts`. */
+:root[data-vt~='univers']::view-transition-group(pd-tray) {
+  z-index: 4; animation-duration: 420ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='univers']::view-transition-old(pd-tray) { animation: vt-out 180ms ease both; }
+:root[data-vt~='univers']::view-transition-new(pd-tray) { animation: vt-in 260ms ease 120ms both; }
+/* Les groupes volent. Un seul sélecteur les couvre tous : leurs noms sont
+   nombreux et inconnus d'avance, mais ils partagent le même préfixe — et
+   `::view-transition-group(.pd-vol)` prend une CLASSE de transition, pas un
+   nom. C'est ce que `view-transition-class` sert à déclarer. */
+:root[data-vt~='univers'] .bgroup[data-vt-nom],
+:root[data-vt~='univers'] .mini-grid__cell[data-vt-nom] { view-transition-class: pd-vol; }
+:root[data-vt~='univers']::view-transition-group(.pd-vol) {
+  z-index: 7; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='univers']::view-transition-old(.pd-vol) { animation: vt-out 160ms ease both; }
+:root[data-vt~='univers']::view-transition-new(.pd-vol) { animation: vt-in 220ms ease 100ms both; }

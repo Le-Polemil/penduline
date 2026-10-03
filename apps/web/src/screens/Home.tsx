@@ -421,6 +421,9 @@ export function Home({
 
             return (
               <section
+                // La transition d'ouverture d'un univers désigne SON plateau par
+                // là : c'est lui qui devient la page.
+                data-universe={group.universe?.id}
                 className={[
                   'uni',
                   // Un plateau par univers ; « Sans univers » reste un cadre en

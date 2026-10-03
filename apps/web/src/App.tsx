@@ -5,7 +5,7 @@ import { useStore, type Store } from './data/store';
 import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
-import { GlobalScreen } from './screens/Global';
+import { GlobalScreen, type Scope } from './screens/Global';
 import { FocusScreen } from './screens/Focus';
 import { BilanScreen } from './screens/Bilan';
 import { AnnounceProvider, useAnnounce } from './a11y/announce';
@@ -19,7 +19,13 @@ import { AuthorizeScreen } from './screens/Authorize';
 import { readInvitation } from './lib/partage';
 import { HOME, viewTitle, type View } from './lib/route';
 import { useDocumentTitle } from './lib/useDocumentTitle';
-import { marquerCarte, sensEntre, transitionDeVue } from './lib/transitions';
+import {
+  marquerCarte,
+  marquerUnivers,
+  marquerVueGlobale,
+  sensEntre,
+  transitionDeVue,
+} from './lib/transitions';
 import { useRoute } from './lib/useRoute';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
@@ -273,6 +279,22 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
     transitionDeVue('back', () => setView(HOME), { carte: true, apres: () => marquerCarte(id) });
   }
 
+  /**
+   * Ouvrir la vue globale. Depuis le plateau d'un univers, le plateau se déplie :
+   * chaque mini-case de chaque matrice vole vers son groupe dans la grande
+   * grille. Depuis ailleurs (les compteurs du héros), c'est un saut ordinaire.
+   */
+  function ouvrirGlobale(scope: Scope) {
+    const plateau = scope.kind === 'universe' && view.kind === 'home';
+    if (plateau) marquerUnivers(scope.id);
+    transitionDeVue(sensEntre(view.kind, 'global'), () => setView({ kind: 'global', scope }), {
+      univers: plateau,
+      // Les groupes naissent avec la vue globale : on ne peut les désigner
+      // qu'après l'échange du DOM.
+      apres: plateau ? marquerVueGlobale : undefined,
+    });
+  }
+
   function allerA(hit: SearchHit) {
     setSearching(false);
     setView({ kind: 'board', id: hit.boardId, focusTask: hit.taskId, openBin: hit.inBin });
@@ -313,7 +335,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           focusTask={view.kind === 'board' ? view.focusTask : undefined}
           openBin={view.kind === 'board' ? view.openBin : undefined}
           onSwitch={ouvrirMatrice}
-          onGlobal={(scope) => setView({ kind: 'global', scope })}
+          onGlobal={ouvrirGlobale}
         />
       ) : view.kind === 'global' ? (
         <GlobalScreen
@@ -340,7 +362,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
         <Home
           store={store}
           onOpen={ouvrirMatrice}
-          onGlobal={(scope) => setView({ kind: 'global', scope })}
+          onGlobal={ouvrirGlobale}
           onReview={() => setView({ kind: 'bilan', tab: 'review' })}
         />
       )}
