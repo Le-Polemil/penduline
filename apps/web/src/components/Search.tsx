@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { quadrant, type Board, type Task } from '@penduline/shared';
+import {
+  type Board,
+  type Task,
+} from '@penduline/shared';
+import { quadrant } from '../lib/quads';
 import { useDialog } from '../a11y/useDialog';
 import { useSearch } from '../data/useSearch';
 

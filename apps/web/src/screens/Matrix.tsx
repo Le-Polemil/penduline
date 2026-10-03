@@ -1,7 +1,6 @@
 import { useEffect, useState, type CSSProperties, type DragEvent } from 'react';
 import {
   binOrder,
-  ALL,
   buildRows,
   countOpen,
   deleteLabel,
@@ -16,7 +15,6 @@ import {
   planPairMove,
   planReorder,
   planRestore,
-  quadrant,
   splitOverdue,
   subtasksOf,
   visibleTasks,
@@ -26,6 +24,7 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
+import { ALL, quadrant } from '../lib/quads';
 import { withVT } from '../lib/viewTransition';
 import type { Store } from '../data/store';
 import { readFocusLimit } from '../data/focusPrefs';

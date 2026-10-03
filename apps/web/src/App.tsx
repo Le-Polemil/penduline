@@ -20,6 +20,8 @@ import { AuthorizeScreen } from './screens/Authorize';
 import { readInvitation } from './lib/partage';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
+import { TopBar } from './components/TopBar';
+import { Icon } from './components/Icons';
 
 /**
  * Les événements qui valent la peine d'être poussés vers l'extension.
@@ -126,7 +128,7 @@ export function App() {
   // s'inscrit d'abord et retombe ici, l'URL n'ayant pas bougé. C'est ce qui fait
   // tenir « invitation d'une adresse sans compte » sans un chemin de plus.
   if (invitation) return <InvitationScreen jeton={invitation} />;
-  return <AppRoot userId={session.user.id} />;
+  return <AppRoot userId={session.user.id} email={session.user.email ?? null} />;
 }
 
 /**
@@ -237,24 +239,47 @@ function useMatriceDisparue(store: Store, view: View, setView: (v: View) => void
   }, [disparue, id, toast, announce, setView]);
 }
 
-function AppRoot({ userId }: { userId: string }) {
+function AppRoot({ userId, email }: { userId: string; email: string | null }) {
   return (
     // Une seule région d'annonce pour toute l'application : plusieurs zones
     // `aria-live` concurrentes sont mal restituées par les lecteurs d'écran.
     <AnnounceProvider>
       <ToastProvider>
-        <Workspace userId={userId} />
+        <Workspace userId={userId} email={email} />
       </ToastProvider>
     </AnnounceProvider>
   );
 }
 
-function Workspace({ userId }: { userId: string }) {
+/**
+ * « / » ouvre la recherche, comme dans la plupart des outils du genre.
+ *
+ * Inerte dans un champ de saisie et derrière une modale — mêmes gardes que
+ * `useUndoShortcut`, pour les mêmes raisons : on y tape un « / », on n'y cherche
+ * pas.
+ */
+function useSearchShortcut(setOpen: (open: boolean) => void) {
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return;
+      const cible = e.target as HTMLElement | null;
+      if (cible?.tagName === 'INPUT' || cible?.tagName === 'TEXTAREA' || cible?.isContentEditable) return;
+      if (document.querySelector('[role="dialog"]')) return;
+      e.preventDefault();
+      setOpen(true);
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [setOpen]);
+}
+
+function Workspace({ userId, email }: { userId: string; email: string | null }) {
   const store = useStore(userId);
   const [view, setView] = useState<View>(readView);
   const [searching, setSearching] = useState(false);
   const [apps, setApps] = useState(false);
   useUndoShortcut(store);
+  useSearchShortcut(setSearching);
   useMatriceDisparue(store, view, setView);
 
   // Changer d'écran change le contexte : une entrée d'annulation viserait des
@@ -288,36 +313,22 @@ function Workspace({ userId }: { userId: string }) {
 
   return (
     <>
-      {/* Le retour vit dans la barre du haut, face à « Déconnexion » — et non
-          dans l'en-tête de la matrice, où il était mêlé à son titre. */}
-      <div className="userbar">
-        {view.kind !== 'home' ? (
-          <button className="crumb" onClick={onHome}>
-            ‹ Retour
-          </button>
-        ) : (
-          <span />
-        )}
-        <span className="userbar__right">
-          {/* Dans la barre plutôt que dans un écran : la recherche est ainsi
-              atteignable depuis les trois, sans qu'aucun n'ait à la porter. */}
-          <button className="searchbtn" onClick={() => setSearching(true)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" width="14" height="14" aria-hidden="true">
-              <circle cx="11" cy="11" r="7" />
-              <path d="m20 20-3.5-3.5" />
-            </svg>
-            Rechercher
-          </button>
-          {/* À côté de « Déconnexion » : c'est le même registre — ce qui
-              concerne le compte, pas les matrices. */}
-          <button className="signout" onClick={() => setApps(true)}>
-            Applications
-          </button>
-          <button className="signout" onClick={() => supabase.auth.signOut()}>
-            Déconnexion
-          </button>
-        </span>
-      </div>
+      {/* La barre du haut, la même partout : elle remplace la `userbar` et son
+          « ‹ Retour » — c'est « Matrices » qui ramène à l'accueil. */}
+      <TopBar
+        view={view.kind}
+        email={email}
+        onNavigate={(to) =>
+          setView(
+            to === 'home' ? HOME
+              : to === 'global' ? { kind: 'global', scope: { kind: 'all' } }
+              : { kind: to },
+          )
+        }
+        onSearch={() => setSearching(true)}
+        onApps={() => setApps(true)}
+        onSignOut={() => void supabase.auth.signOut()}
+      />
       {searching && (
         <Search boards={store.boards} tasks={store.tasks} onClose={() => setSearching(false)} onPick={allerA} />
       )}
@@ -349,9 +360,7 @@ function Workspace({ userId }: { userId: string }) {
           store={store}
           onOpen={(id) => setView({ kind: 'board', id })}
           onGlobal={(scope) => setView({ kind: 'global', scope })}
-          onFocus={() => setView({ kind: 'focus' })}
           onReview={() => setView({ kind: 'review' })}
-          onStats={() => setView({ kind: 'stats' })}
         />
       )}
     </>
@@ -364,6 +373,17 @@ const TITLES: Record<Mode, string> = {
   signin: 'Connexion à votre compte',
   signup: 'Créer un compte',
   forgot: 'Réinitialiser le mot de passe',
+};
+
+/**
+ * L'accroche de chaque mode. Le nom fonctionnel (« Connexion à votre compte »…)
+ * reste celui du formulaire (`aria-label`) : l'accroche donne le ton, pas
+ * l'information.
+ */
+const HEADLINES: Record<Mode, string> = {
+  signin: 'Qu’est-ce qui compte, là\u00a0?',
+  signup: 'Une matrice, et on s’y met.',
+  forgot: 'Un lien, et on repart.',
 };
 
 const SUBMITS: Record<Mode, string> = {
@@ -390,6 +410,7 @@ function SignIn({
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [mode, setMode] = useState<Mode>('signin');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Initialiseur paresseux : `readSessionNotice` est pure, mais l'appeler à
   // chaque rendu pour rien n'a pas d'intérêt.
@@ -467,70 +488,152 @@ function SignIn({
   }
 
   return (
-    <main className="auth">
-      <form className="auth-card" onSubmit={submit}>
-        <h1>Penduline</h1>
-        <p className="muted">{TITLES[mode]}</p>
+    <main className="login">
+      <LoginNest />
+      <header className="login__brand">
+        <img src="/logo.png" alt="" width={26} height={40} />
+        <span>Penduline</span>
+      </header>
+
+      <div className="login__body">
+        <h1 className="login__title">{HEADLINES[mode]}</h1>
         {invitation && (
-          <p className="muted">
+          <p className="login__lead">
             Une matrice vous attend. Connectez-vous ou créez un compte, et vous y serez ramené.
           </p>
         )}
-        <label>
-          Email
-          <input
-            type="email"
-            name="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-        </label>
-        {/* En mode « oublié », seule l'adresse est demandée. */}
-        {mode !== 'forgot' && (
-          <label>
-            Mot de passe
-            <input
-              type="password"
-              name="password"
-              // `new-password` en inscription, sinon le gestionnaire propose un mot
-              // de passe existant là où il faut en créer un.
-              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </label>
-        )}
-        {error && <p className="error">{error}</p>}
-        {notice && <p className="notice">{notice}</p>}
-        <button className="btn-primary" type="submit" disabled={busy}>
-          {busy ? '…' : SUBMITS[mode]}
-        </button>
-        {mode === 'forgot' ? (
-          <button type="button" className="btn-link" onClick={() => switchMode('signin')}>
-            ‹ Retour à la connexion
-          </button>
-        ) : (
-          <>
-            <button
-              type="button"
-              className="btn-link"
-              onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
-            >
-              {mode === 'signin' ? 'Pas de compte ? Créer' : 'Déjà un compte ? Se connecter'}
-            </button>
-            {mode === 'signin' && (
-              <button type="button" className="btn-link" onClick={() => switchMode('forgot')}>
-                Mot de passe oublié ?
-              </button>
+        <div className="login__stack">
+          {/* Le titre visible est une accroche ; le nom du formulaire dit ce
+              qu'il fait, pour qui le parcourt au lecteur d'écran. */}
+          <form
+            className={`login__form${mode === 'forgot' ? ' login__form--short' : ''}`}
+            onSubmit={submit}
+            aria-label={TITLES[mode]}
+          >
+            <div className="login__field">
+              <label htmlFor="login-email">E-mail</label>
+              <input
+                id="login-email"
+                type="email"
+                name="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            {/* En mode « oublié », seule l'adresse est demandée. */}
+            {mode !== 'forgot' && (
+              <div className="login__field">
+                <label htmlFor="login-password">Mot de passe</label>
+                <div className="login__secret">
+                  <input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    name="password"
+                    // `new-password` en inscription, sinon le gestionnaire propose un mot
+                    // de passe existant là où il faut en créer un.
+                    autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className="login__eye"
+                    aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    aria-pressed={showPassword}
+                    onClick={() => setShowPassword((v) => !v)}
+                  >
+                    <Icon size={20}>
+                      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" />
+                      <circle cx="12" cy="12" r="3" />
+                      {showPassword && <path d="M4 4l16 16" />}
+                    </Icon>
+                  </button>
+                </div>
+              </div>
             )}
-          </>
-        )}
-      </form>
+            <button className="login__submit" type="submit" disabled={busy}>
+              {busy ? '…' : SUBMITS[mode]}
+            </button>
+          </form>
+          {(error || notice) && (
+            <div className="login__messages" aria-live="polite">
+              {error && <p className="error">{error}</p>}
+              {notice && <p className="notice">{notice}</p>}
+            </div>
+          )}
+          <div className="login__links">
+            {mode === 'forgot' ? (
+              <button type="button" className="login__link" onClick={() => switchMode('signin')}>
+                ‹ Retour à la connexion
+              </button>
+            ) : mode === 'signin' ? (
+              <>
+                <span>
+                  Pas encore de compte ?{' '}
+                  <button type="button" className="login__link login__link--strong" onClick={() => switchMode('signup')}>
+                    Créer un compte
+                  </button>
+                </span>
+                <button type="button" className="login__link" onClick={() => switchMode('forgot')}>
+                  Mot de passe oublié ?
+                </button>
+              </>
+            ) : (
+              <span>
+                Déjà un compte ?{' '}
+                <button type="button" className="login__link login__link--strong" onClick={() => switchMode('signin')}>
+                  Se connecter
+                </button>
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <ul className="login__features" aria-label="Penduline en bref">
+        <li>
+          <Icon size={18}>
+            <rect x="4" y="4" width="7" height="7" rx="2" />
+            <rect x="13" y="4" width="7" height="7" rx="2" />
+            <rect x="4" y="13" width="7" height="7" rx="2" />
+            <rect x="13" y="13" width="7" height="7" rx="2" />
+          </Icon>
+          Triez en quatre cases
+        </li>
+        <li>
+          <Icon size={18}>
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
+          </Icon>
+          Engagez-vous pour la journée
+        </li>
+        <li>
+          <Icon size={18}>
+            <rect x="3" y="4" width="18" height="16" rx="3" />
+            <path d="M3 9h18M12 13v4M10 15h4" />
+          </Icon>
+          Capturez depuis le navigateur
+        </li>
+      </ul>
     </main>
+  );
+}
+
+/**
+ * Le nid en filigrane des écrans de connexion : la branche fixe, le nid qui se
+ * balance — les deux mêmes masques que le héros de l'accueil, pour que l'oiseau
+ * « habite » le même nid de la porte d'entrée jusqu'à la maison.
+ */
+function LoginNest() {
+  return (
+    <span className="login__nest" aria-hidden="true">
+      <span className="login__branch" />
+      <span className="login__swing"><span className="login__nid" /></span>
+    </span>
   );
 }
 

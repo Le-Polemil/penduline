@@ -6,18 +6,18 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 import {
-  ageInDays,
   countOpen,
   isOpenRow,
   groupByUniverse,
   planBoardReorder,
-  QUADS,
   summarizeUniverse,
   type Universe,
   type UniverseSummary,
 } from '@penduline/shared';
+import { QUADS } from '../lib/quads';
 import type { Store } from '../data/store';
-import { readLastReview } from '../data/reviewPrefs';
+import { HomeHero } from '../components/HomeHero';
+import { Suggestions } from '../components/Suggestions';
 import { BoardMenu } from '../components/BoardMenu';
 import { Confirm } from '../components/Confirm';
 import { dropTarget, gapIndexAt } from '../dnd/gap';
@@ -108,16 +108,12 @@ export function Home({
   store,
   onOpen,
   onGlobal,
-  onFocus,
   onReview,
-  onStats,
 }: {
   store: Store;
   onOpen: (boardId: string) => void;
   onGlobal: (scope: Scope) => void;
-  onFocus: () => void;
   onReview: () => void;
-  onStats: () => void;
 }) {
   // `null` = bouton au repos ; une chaîne (même vide) = champ de saisie ouvert.
   const [draft, setDraft] = useState<string | null>(null);
@@ -176,21 +172,6 @@ export function Home({
    * comptes au lendemain de la migration — il doit rester impeccable.
    */
   const grouped = store.universes.length > 0;
-  /**
-   * Le repère « dernière revue ». Calculé au rendu et non mémorisé : il change
-   * de jour en jour, et l'accueil se re-rend bien plus souvent que ça.
-   *
-   * Arrondi au jour plein, et « aujourd'hui » plutôt que « il y a 0 jour ».
-   */
-  const reviewHint = (() => {
-    const last = readLastReview();
-    if (!last) return 'ce qui stagne, ce qui n’a jamais bougé';
-    const days = ageInDays(last, Date.now());
-    if (days === null) return 'ce qui stagne, ce qui n’a jamais bougé';
-    const d = Math.floor(days);
-    if (d <= 0) return 'consultée aujourd’hui';
-    return `dernière consultation il y a ${d} jour${d > 1 ? 's' : ''}`;
-  })();
   /**
    * Les univers dans l'ordre affiché — la liste que le glisser réordonne.
    *
@@ -388,42 +369,18 @@ export function Home({
   const doomedUniCount = doomedUni ? boardsOf(doomedUni.id).length : 0;
 
   return (
+    <>
+    {/* Le héros prolonge la barre du haut : il vit HORS de `.home`, qui borne
+        la largeur de la liste, pour que son bandeau d'encre aille d'un bord à
+        l'autre. */}
+    <HomeHero tasks={store.tasks} onGlobal={() => onGlobal({ kind: 'all' })} />
     <div className="home">
-      <h1 className="home-title">Penduline</h1>
-      <p className="home-sub">
-        Urgent n'est pas important. En croisant ces deux axes, on voit d'un coup d'œil
-        quoi faire tout de suite, quoi planifier, quoi déléguer — et quoi laisser tomber.
-      </p>
+      {/* Les lentilles (Vue globale, Aujourd'hui, Revue, Rétrospective) ont
+          quitté l'accueil pour la barre du haut : elles y sont atteignables de
+          partout. Reste ici ce que la revue a de plus actionnable. */}
+      <Suggestions store={store} onOpenBoard={onOpen} onReview={onReview} />
 
-      {/* Au-dessus de la liste, parce que c'est une façon de la lire — pas une
-          matrice de plus. Masquée tant qu'aucune matrice n'existe : il n'y
-          aurait rien à voir d'ensemble. */}
-      {store.boards.length > 0 && (
-        <div className="home-lenses">
-          <button className="home-global" onClick={() => onGlobal({ kind: 'all' })}>
-            Vue globale
-            <span className="home-global__hint">toutes vos tâches dans une seule grille</span>
-          </button>
-          {/* La lentille tournée vers le jour même : ce sur quoi on s'est
-              engagé, par opposition à tout ce qu'il y aurait à faire (#49). */}
-          <button className="home-global home-global--focus" onClick={onFocus}>
-            Aujourd'hui
-            <span className="home-global__hint">ce sur quoi vous vous engagez</span>
-          </button>
-          {/* Le seul rappel du produit, et il est passif : un repère, pas une
-              relance. Un outil qui harcèle finit désinstallé (#47). */}
-          <button className="home-global home-global--review" onClick={onReview}>
-            Revue
-            <span className="home-global__hint">{reviewHint}</span>
-          </button>
-          {/* Quatrième lentille, et la seule tournée vers le passé : la revue
-              dit ce qui stagne, la rétrospective où le temps est passé (#48). */}
-          <button className="home-global home-global--stats" onClick={onStats}>
-            Rétrospective
-            <span className="home-global__hint">dans quelle case passe votre temps</span>
-          </button>
-        </div>
-      )}
+      <h2 className="home-section">Vos matrices</h2>
 
       {store.boards.length === 0 && !grouped ? (
         <p className="home-empty">
@@ -464,9 +421,15 @@ export function Home({
 
             return (
               <section
-                className={`uni${
-                  drag?.kind === 'universe' && drag.id === universeId ? ' uni--dragging' : ''
-                }`}
+                className={[
+                  'uni',
+                  // Un plateau par univers ; « Sans univers » reste un cadre en
+                  // pointillé — un rangement par défaut, pas un lieu.
+                  grouped ? (group.universe ? 'uni--tray' : 'uni--loose') : '',
+                  drag?.kind === 'universe' && drag.id === universeId ? 'uni--dragging' : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
                 key={universeId ?? 'sans-univers'}
                 // Repli du groupe : tout ce qui n'est pas une ligne — l'en-tête,
                 // l'interstice de fin, un univers vide — range en fin de groupe.
@@ -642,11 +605,12 @@ export function Home({
                         {group.universe && <OriginBadge origin={group.universe.origin} />}
                         {/* Replié, l'en-tête doit dire ce qu'il cache : sinon le
                             repli n'est plus un rangement, c'est un trou. */}
-                        {folded && (
-                          <span className="uni-head__summary">
-                            {foldLabel(summarizeUniverse(group.boards, store.tasks))}
-                          </span>
-                        )}
+                        {/* Toujours affiché depuis l'en-tête « grand header » : le
+                            plateau d'un univers dit ce qu'il contient, replié
+                            ou non. Replié, c'est même tout ce qu'on en voit. */}
+                        <span className="uni-head__summary">
+                          {foldLabel(summarizeUniverse(group.boards, store.tasks))}
+                        </span>
                         {/* Le groupe sans univers n'est pas une ligne en base :
                             il n'a ni nom à changer ni existence à supprimer. */}
                         {group.universe && (
@@ -690,10 +654,13 @@ export function Home({
                     fin — mais il reste une cible de dépôt : c'est le `onDrop` de
                     la section qui la porte, pas les lignes. */}
                 {!folded && group.boards.map((board, index) => {
-                  const pills = QUADS.map((q) => ({
-                    ink: q.ink,
+                  // Les quatre cases, vides comprises : la mini-matrice se lit par
+                  // sa forme — une case vide est une information, pas un trou.
+                  const cells = QUADS.map((q) => ({
+                    key: q.key,
+                    label: q.label,
                     n: countOpen(store.tasks, board.id, q.key),
-                  })).filter((p) => p.n > 0);
+                  }));
                   const total = store.tasks.filter(
                     (t) => t.board_id === board.id && isOpenRow(t),
                   ).length;
@@ -788,16 +755,28 @@ export function Home({
                               onPointerLeave={pressEnd}
                               onContextMenu={(e) => e.preventDefault()}
                             >
-                              <span className="board-card__name">{board.name}</span>
-                              <span className="board-card__meta">{meta}</span>
+                              <span
+                                className="mini-grid"
+                                role="img"
+                                aria-label={cells.map((c) => `${c.label} ${c.n}`).join(', ')}
+                              >
+                                {cells.map((c) => (
+                                  <span
+                                    key={c.key}
+                                    className={`mini-grid__cell mini-grid__cell--${c.key}${c.n ? '' : ' mini-grid__cell--empty'}`}
+                                    aria-hidden="true"
+                                  >
+                                    {c.n || ''}
+                                  </span>
+                                ))}
+                              </span>
+                              <span className="board-card__text">
+                                <span className="board-card__name">{board.name}</span>
+                                <span className="board-card__meta">{meta}</span>
+                              </span>
                               <span className="board-card__pills">
                                 <SharedBadge role={board.role} />
                                 <OriginBadge origin={board.origin} />
-                                {pills.map((p, i) => (
-                                  <span key={i} className="pill" style={{ background: p.ink }}>
-                                    {p.n}
-                                  </span>
-                                ))}
                               </span>
                             </button>
                             {/* En ligne, il ne reste que `⋯`.
@@ -1068,6 +1047,7 @@ export function Home({
         />
       )}
     </div>
+    </>
   );
 }
 

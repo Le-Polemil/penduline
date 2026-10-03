@@ -7,7 +7,6 @@ import {
   planDelete,
   planPairDetach,
   planPairMove,
-  quadrant,
   reviewSignals,
   signalCount,
   subtasksOf,
@@ -20,6 +19,7 @@ import {
   type Task,
   type TaskWrite,
 } from '@penduline/shared';
+import { quadrant } from '../lib/quads';
 import { withVT } from '../lib/viewTransition';
 import type { Store } from '../data/store';
 import { Confirm } from '../components/Confirm';

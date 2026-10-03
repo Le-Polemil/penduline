@@ -5,9 +5,9 @@ import {
   focusDayLabel,
   focusToday,
   localDay,
-  quadrant,
   type Task,
 } from '@penduline/shared';
+import { quadrant } from '../lib/quads';
 import type { Store } from '../data/store';
 import { TaskCard } from '../components/TaskCard';
 import { useCompletion } from '../data/useCompletion';
