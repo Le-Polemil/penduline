@@ -56,6 +56,31 @@ Les trois lectures portent `readOnlyHint`.
 Tout ce que l'agent crée porte `origin = 'agent'`, et l'application web comme
 l'extension affichent une pastille « agent » sur ces lignes.
 
+### Les visuels (MCP Apps)
+
+Un hôte qui parle l'extension [MCP Apps](https://github.com/modelcontextprotocol/ext-apps)
+(`io.modelcontextprotocol/ui`, révision 2026-01-26) affiche un visuel à côté de
+six outils ; les autres hôtes n'en voient rien et se comportent comme avant.
+
+| Outil | Visuel |
+|---|---|
+| `list_tasks` | La matrice : quatre cases teintées, « À trier », pastilles « agent » et échéances, pied « N tâches ouvertes · N en retard ». Si l'hôte relaie les appels d'outils, cocher une tâche appelle `complete_task`. |
+| `list_boards` | « Vos matrices » : par univers, une barre empilée des quatre cases et le retard. |
+| `create_task`, `update_task` | Carte « Ajoutée dans … » / « Modifiée · … ». |
+| `move_task` | Carte « Planifier → Faire », et la partenaire si la paire a suivi. |
+| `complete_task` | Carte « Terminée », le retard à la clôture, la paire défaite. |
+
+Le câblage : une ressource `ui://penduline/visuel.html`
+(`text/html;profile=mcp-app`, `ui.ts` + `visuel.html`), désignée par
+`_meta.ui.resourceUri` sur chaque outil. Les données arrivent par
+`structuredContent` (`visuels.ts`, fonctions pures et testées) ; **le texte
+`content` est inchangé**, et si une lecture propre au visuel échoue, l'outil rend
+son texte sans visuel plutôt qu'une erreur. Les liens « Ouvrir » / « Voir »
+pointent vers `WEB_APP_URL`.
+
+Écrit à la main plutôt qu'avec `@modelcontextprotocol/ext-apps` : sa version 2
+exige le SDK MCP v2, et ce serveur est en v1.
+
 **Ce que l'agent ne peut pas faire** : supprimer (même en douceur), vider la
 corbeille, toucher au compte, ou lire les matrices d'un autre utilisateur — cette
 dernière garantie ne vient pas du code de ce dossier mais des policies RLS, que
@@ -74,7 +99,7 @@ défaut sur une URL ou un secret.
 | `SUPABASE_JWT_SECRET` | oui | Vérifie le JWT entrant, signe les deux jetons de 60 s. **≥ 32 caractères.** |
 | `MCP_TOKEN_SECRET` | oui | Signe le jeton d'accès MCP. **Distinct du précédent**, ≥ 32 caractères. |
 | `MCP_PUBLIC_URL` | oui | L'URL publique, telle que les métadonnées l'annoncent. |
-| `WEB_APP_URL` | oui | L'application web, vers laquelle `/authorize` renvoie pour le consentement. |
+| `WEB_APP_URL` | oui | L'application web, vers laquelle `/authorize` renvoie pour le consentement — et cible des liens des visuels. |
 | `PORT` | non (8787) | |
 | `MCP_QUOTA_CALLS_PER_MINUTE` | non (60) | Par autorisation, fenêtre glissante. |
 | `MCP_QUOTA_WRITES_PER_DAY` | non (500) | Idem. |
@@ -109,7 +134,7 @@ Une configuration incomplète ne démarre pas et liste d'un coup tout ce qui
 manque, en disant où ces variables se déclarent.
 
 ```bash
-npm run test -w @penduline/mcp       # 105 tests
+npm run test -w @penduline/mcp       # 149 tests
 npm run typecheck -w @penduline/mcp
 ```
 
