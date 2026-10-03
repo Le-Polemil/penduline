@@ -387,7 +387,15 @@ export function GlobalScreen({
                   // la disparition, au lecteur d'écran, de ce que cet écran
                   // apporte. L'étiquette reste inerte : aucun arrêt de
                   // tabulation de plus, et ils se comptent ici par matrice.
-                  <div className="bgroup" key={g.board.id} role="group" aria-label={`Matrice ${g.board.name}`}>
+                  <div
+                    className="bgroup"
+                    key={g.board.id}
+                    // La mini-case de l'accueil vole vers CE groupe : le couple
+                    // (matrice, case) est ce qui les apparie.
+                    data-board={g.board.id}
+                    role="group"
+                    aria-label={`Matrice ${g.board.name}`}
+                  >
                     <div className="bgroup__name">{g.board.name}</div>
                     <div className="bgroup__body">
                       {/* Zone « en retard » (#19), avant

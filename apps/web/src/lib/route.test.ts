@@ -7,8 +7,9 @@ const VIEWS: View[] = [
   { kind: 'global', scope: { kind: 'all' } },
   { kind: 'global', scope: { kind: 'universe', id: 'u-1' } },
   { kind: 'focus' },
-  { kind: 'review' },
-  { kind: 'stats' },
+  { kind: 'bilan', tab: 'retro' },
+  { kind: 'bilan', tab: 'review' },
+  { kind: 'bilan', tab: 'goals' },
 ];
 
 describe('route', () => {
@@ -17,8 +18,22 @@ describe('route', () => {
   });
 
   it('tolère le slash final', () => {
-    expect(pathToView('/revue/')).toEqual({ kind: 'review' });
+    expect(pathToView('/bilan/revue/')).toEqual({ kind: 'bilan', tab: 'review' });
     expect(pathToView('/matrice/abc/')).toEqual({ kind: 'board', id: 'abc' });
+  });
+
+  /* Une section a une page par défaut, et l'adresse doit finir par dire laquelle
+     on regarde : `/bilan` entre, puis `useRoute` la réécrit. */
+  it('accepte « /bilan » tout court et l’ouvre sur la rétrospective', () => {
+    expect(pathToView('/bilan')).toEqual({ kind: 'bilan', tab: 'retro' });
+    expect(viewToPath({ kind: 'bilan', tab: 'retro' })).toBe('/bilan/retrospective');
+  });
+
+  /* Elles ont été publiques le temps d'une version : les laisser tomber sur
+     l'accueil ferait perdre un favori sans le dire. */
+  it('reconnaît encore les deux adresses d’avant le regroupement', () => {
+    expect(pathToView('/revue')).toEqual({ kind: 'bilan', tab: 'review' });
+    expect(pathToView('/retrospective')).toEqual({ kind: 'bilan', tab: 'retro' });
   });
 
   it('échappe les identifiants', () => {
@@ -38,5 +53,7 @@ describe('viewTitle', () => {
     expect(viewTitle({ kind: 'board', id: 'x' }, 'Perso')).toBe('Perso');
     expect(viewTitle({ kind: 'board', id: 'x' })).toBeNull();
     expect(viewTitle({ kind: 'focus' })).toBe('Aujourd’hui');
+    // La section ET l'onglet : « Bilan » seul ne dirait pas ce qu'on regarde.
+    expect(viewTitle({ kind: 'bilan', tab: 'review' })).toBe('Bilan · Revue');
   });
 });

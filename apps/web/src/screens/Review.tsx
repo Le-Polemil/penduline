@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import {
   ageInDays,
   countOpen,
@@ -32,6 +32,7 @@ import { useReview } from '../data/useReview';
 import { useNow } from '../data/useNow';
 import { useAnnounce } from '../a11y/announce';
 import { readSnoozed, writeSnoozed } from '../data/suggestionPrefs';
+import { envoyerAuNid } from '../lib/transitions';
 import { markReviewed, readLastReview, readThresholds, writeThresholds } from '../data/reviewPrefs';
 
 /** Le seuil que chaque signal expose au réglage. */
@@ -145,9 +146,12 @@ interface Item {
  */
 export function ReviewScreen({
   store,
+  tabs,
   onOpenBoard,
 }: {
   store: Store;
+  /** La bande d'onglets du Bilan, posée en tête du bandeau. */
+  tabs?: ReactNode;
   onOpenBoard: (boardId: string, taskId?: string) => void;
 }) {
   const { tasks, patchTask } = store;
@@ -263,6 +267,9 @@ export function ReviewScreen({
 
   /** Enregistre le résultat, épingle la carte, et passe à la suivante. */
   function regler(i: Item, outcome: Outcome) {
+    // La carte réglée part au nid. Avant la mise à jour : après, c'est déjà la
+    // suivante qui occupe la place.
+    envoyerAuNid(document.querySelector('.rv-card'));
     setEpingles((prev) => [...prev.filter((p) => p.item.key !== i.key), { at: index, item: i }]);
     setOutcomes((prev) => ({ ...prev, [i.key]: outcome }));
     if (outcome.storeUndo) setLastWrite(i.key);
@@ -590,7 +597,7 @@ export function ReviewScreen({
 
   return (
     <>
-      <ScreenHero>
+      <ScreenHero tabs={tabs}>
         <div className="shero__row">
           <div className="shero__lead">
             <p className="shero__eyebrow">
@@ -762,6 +769,7 @@ export function ReviewScreen({
                   ))}
 
                 <article
+                  key={item.key}
                   className={`rv-card${item.signal.key === 'parking' ? ' rv-card--parking' : ''}`}
                   style={toneStyle(item.signal.key)}
                   aria-labelledby="rv-titre"

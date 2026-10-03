@@ -5,10 +5,9 @@ import { useStore, type Store } from './data/store';
 import { Home } from './screens/Home';
 import { Loader } from './components/Loader';
 import { MatrixScreen } from './screens/Matrix';
-import { GlobalScreen } from './screens/Global';
+import { GlobalScreen, type Scope } from './screens/Global';
 import { FocusScreen } from './screens/Focus';
-import { ReviewScreen } from './screens/Review';
-import { StatsScreen } from './screens/Stats';
+import { BilanScreen } from './screens/Bilan';
 import { AnnounceProvider, useAnnounce } from './a11y/announce';
 import { ToastProvider, useToast } from './components/Toast';
 import { Search, type SearchHit } from './components/Search';
@@ -20,10 +19,18 @@ import { AuthorizeScreen } from './screens/Authorize';
 import { readInvitation } from './lib/partage';
 import { HOME, viewTitle, type View } from './lib/route';
 import { useDocumentTitle } from './lib/useDocumentTitle';
+import {
+  marquerCarte,
+  marquerUnivers,
+  marquerVueGlobale,
+  sensEntre,
+  transitionDeVue,
+} from './lib/transitions';
 import { useRoute } from './lib/useRoute';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
 import { TopBar } from './components/TopBar';
+import { TabBar } from './components/TabBar';
 import { Icon } from './components/Icons';
 
 /**
@@ -232,6 +239,62 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view.kind, view.kind === 'board' ? view.id : null]);
 
+  /**
+   * Changer de vue. Partagée par la barre du haut et la barre d'onglets du
+   * téléphone : deux écritures de la même règle finiraient par diverger sur la
+   * portée par défaut de la vue globale.
+   */
+  function naviguer(to: 'home' | 'focus' | 'global' | 'bilan') {
+    // Le glissement rejoue le geste : vers la droite si l'on descend la barre,
+    // vers la gauche si on la remonte. La direction ne se devine pas en CSS —
+    // la même paire d'écrans se traverse dans les deux sens.
+    const cible: View =
+      to === 'home'
+        ? HOME
+        : to === 'global'
+          ? { kind: 'global', scope: { kind: 'all' } }
+          : to === 'bilan'
+            // La rétrospective ouvre le Bilan : c'est le récit, celui par quoi
+            // on commence quand on vient regarder en arrière.
+            ? { kind: 'bilan', tab: 'retro' }
+            : { kind: to };
+    transitionDeVue(sensEntre(view.kind, to), () => setView(cible));
+  }
+
+  /**
+   * Ouvrir une matrice : la carte de l'accueil devient la page.
+   *
+   * La carte est désignée AVANT l'appel, donc avant l'instantané de départ —
+   * c'est la seule fenêtre où l'écran d'origine est encore à l'écran.
+   */
+  function ouvrirMatrice(id: string) {
+    marquerCarte(id);
+    transitionDeVue('fwd', () => setView({ kind: 'board', id }), { carte: true });
+  }
+
+  /** Revenir : la matrice se replie dans sa carte, à sa place dans le plateau. */
+  function fermerMatrice(id: string) {
+    // Ici la carte n'existe pas encore : elle naît avec l'accueil, d'où
+    // `apres`, joué juste après l'échange du DOM.
+    transitionDeVue('back', () => setView(HOME), { carte: true, apres: () => marquerCarte(id) });
+  }
+
+  /**
+   * Ouvrir la vue globale. Depuis le plateau d'un univers, le plateau se déplie :
+   * chaque mini-case de chaque matrice vole vers son groupe dans la grande
+   * grille. Depuis ailleurs (les compteurs du héros), c'est un saut ordinaire.
+   */
+  function ouvrirGlobale(scope: Scope) {
+    const plateau = scope.kind === 'universe' && view.kind === 'home';
+    if (plateau) marquerUnivers(scope.id);
+    transitionDeVue(sensEntre(view.kind, 'global'), () => setView({ kind: 'global', scope }), {
+      univers: plateau,
+      // Les groupes naissent avec la vue globale : on ne peut les désigner
+      // qu'après l'échange du DOM.
+      apres: plateau ? marquerVueGlobale : undefined,
+    });
+  }
+
   function allerA(hit: SearchHit) {
     setSearching(false);
     setView({ kind: 'board', id: hit.boardId, focusTask: hit.taskId, openBin: hit.inBin });
@@ -246,7 +309,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
   // Une matrice supprimée depuis un autre appareil laisserait la vue pointer
   // dans le vide : on retombe alors sur l'accueil.
   const board = view.kind === 'board' ? store.boards.find((r) => r.id === view.id) ?? null : null;
-  const onHome = () => setView(HOME);
+  const onHome = () => (board ? fermerMatrice(board.id) : setView(HOME));
 
   return (
     <>
@@ -255,13 +318,7 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
       <TopBar
         view={view.kind}
         email={email}
-        onNavigate={(to) =>
-          setView(
-            to === 'home' ? HOME
-              : to === 'global' ? { kind: 'global', scope: { kind: 'all' } }
-              : { kind: to },
-          )
-        }
+        onNavigate={naviguer}
         onSearch={() => setSearching(true)}
         onApps={() => setApps(true)}
         onSignOut={() => void supabase.auth.signOut()}
@@ -277,8 +334,8 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           onHome={onHome}
           focusTask={view.kind === 'board' ? view.focusTask : undefined}
           openBin={view.kind === 'board' ? view.openBin : undefined}
-          onSwitch={(id) => setView({ kind: 'board', id })}
-          onGlobal={(scope) => setView({ kind: 'global', scope })}
+          onSwitch={ouvrirMatrice}
+          onGlobal={ouvrirGlobale}
         />
       ) : view.kind === 'global' ? (
         <GlobalScreen
@@ -292,23 +349,27 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
           onHome={onHome}
           onOpenBoard={(id) => setView({ kind: 'board', id })}
         />
-      ) : view.kind === 'review' ? (
-        <ReviewScreen
+      ) : view.kind === 'bilan' ? (
+        <BilanScreen
           store={store}
+          tab={view.tab}
+          onTab={(tab) => setView({ kind: 'bilan', tab })}
           // La tâche est mise en évidence à l'arrivée : la revue n'offre que des
           // décisions, tout le reste se fait sur la matrice.
           onOpenBoard={(id, taskId) => setView({ kind: 'board', id, focusTask: taskId })}
         />
-      ) : view.kind === 'stats' ? (
-        <StatsScreen store={store} />
       ) : (
         <Home
           store={store}
-          onOpen={(id) => setView({ kind: 'board', id })}
-          onGlobal={(scope) => setView({ kind: 'global', scope })}
-          onReview={() => setView({ kind: 'review' })}
+          onOpen={ouvrirMatrice}
+          onGlobal={ouvrirGlobale}
+          onReview={() => setView({ kind: 'bilan', tab: 'review' })}
         />
       )}
+      {/* Après l'écran, et non avant : elle flotte au-dessus de lui, et l'ordre
+          du document est celui du parcours au clavier — la navigation
+          secondaire vient en dernier. Masquée au-delà de 720 px. */}
+      <TabBar view={view.kind} onNavigate={naviguer} />
     </>
   );
 }

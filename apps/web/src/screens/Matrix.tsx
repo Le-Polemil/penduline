@@ -657,7 +657,7 @@ export function MatrixScreen({
 
   return (
     <>
-      <ScreenHero>
+      <ScreenHero variant="board">
         <div className="shero__row">
           <div className="shero__lead">
             {/* Le fil d'Ariane remplace le « ‹ Retour » : il dit OÙ l'on est,

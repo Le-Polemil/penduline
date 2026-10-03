@@ -421,6 +421,9 @@ export function Home({
 
             return (
               <section
+                // La transition d'ouverture d'un univers désigne SON plateau par
+                // là : c'est lui qui devient la page.
+                data-universe={group.universe?.id}
                 className={[
                   'uni',
                   // Un plateau par univers ; « Sans univers » reste un cadre en
@@ -692,6 +695,12 @@ export function Home({
                     >
                       <BoardGap active={hoverGap?.universeId === universeId && hoverGap.index === index} />
                       <div
+                        // La transition d'ouverture désigne UNE carte par cet
+                        // identifiant : c'est elle qui devient la page, et les
+                        // autres doivent rester anonymes (un
+                        // `view-transition-name` doit être unique dans le
+                        // document).
+                        data-board={board.id}
                         className={[
                           'board-row',
                           board.id === fresh ? 'board-row--fresh' : '',
@@ -766,7 +775,11 @@ export function Home({
                                     className={`mini-grid__cell mini-grid__cell--${c.key}${c.n ? '' : ' mini-grid__cell--empty'}`}
                                     aria-hidden="true"
                                   >
-                                    {c.n || ''}
+                                    {/* Le chiffre dans son propre élément : il
+                                        monte dans la pastille du héros pendant
+                                        l'ouverture, et n'a de nom à lui que
+                                        s'il en est un. */}
+                                    {c.n ? <span className="mini-grid__n">{c.n}</span> : ''}
                                   </span>
                                 ))}
                               </span>

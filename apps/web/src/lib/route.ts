@@ -1,4 +1,5 @@
 import type { Scope } from '../screens/Global';
+import type { BilanTab } from '../screens/Bilan';
 
 /**
  * Ce que l'application affiche.
@@ -18,10 +19,11 @@ export type View =
   | { kind: 'global'; scope: Scope }
   /** Le mode « aujourd'hui » (#49). Sans portée : il regarde tout le compte. */
   | { kind: 'focus' }
-  /** La revue périodique (#47). Sans portée : elle regarde tout le compte. */
-  | { kind: 'review' }
-  /** La rétrospective (#48). Sans portée : elle regarde tout le compte. */
-  | { kind: 'stats' };
+  /**
+   * Le recul : rétrospective (#48), revue (#47) et objectifs, sous une seule
+   * entrée de navigation. Sans portée — les trois regardent tout le compte.
+   */
+  | { kind: 'bilan'; tab: BilanTab };
 
 export const HOME: View = { kind: 'home' };
 
@@ -36,14 +38,27 @@ export const HOME: View = { kind: 'home' };
 const BOARD_PATH = /^\/matrice\/([^/]+)$/;
 const GLOBAL_PATH = /^\/globale(?:\/([^/]+))?$/;
 
+/**
+ * Les trois onglets du Bilan, et leur adresse.
+ *
+ * `/bilan` tout court est accepté et réécrit vers `/bilan/retrospective` : une
+ * section a une page par défaut, et l'adresse doit finir par dire laquelle on
+ * regarde — sinon « Retour » depuis un onglet ramène sur une adresse ambiguë.
+ */
+const BILAN_PATHS: Record<BilanTab, string> = {
+  retro: '/bilan/retrospective',
+  review: '/bilan/revue',
+  goals: '/bilan/objectifs',
+};
+const BILAN_TABS = Object.entries(BILAN_PATHS) as [BilanTab, string][];
+
 export function viewToPath(view: View): string {
   switch (view.kind) {
     case 'home': return '/';
     case 'board': return `/matrice/${encodeURIComponent(view.id)}`;
     case 'global': return view.scope.kind === 'all' ? '/globale' : `/globale/${encodeURIComponent(view.scope.id)}`;
     case 'focus': return '/aujourdhui';
-    case 'review': return '/revue';
-    case 'stats': return '/retrospective';
+    case 'bilan': return BILAN_PATHS[view.tab];
   }
 }
 
@@ -56,10 +71,21 @@ export function pathToView(pathname: string): View | null {
   const global = GLOBAL_PATH.exec(path);
   if (global) return { kind: 'global', scope: global[1] ? { kind: 'universe', id: decodeURIComponent(global[1]) } : { kind: 'all' } };
   if (path === '/aujourdhui') return { kind: 'focus' };
-  if (path === '/revue') return { kind: 'review' };
-  if (path === '/retrospective') return { kind: 'stats' };
+  if (path === '/bilan') return { kind: 'bilan', tab: 'retro' };
+  const onglet = BILAN_TABS.find(([, p]) => p === path);
+  if (onglet) return { kind: 'bilan', tab: onglet[0] };
+  // Les deux adresses d'avant le regroupement. Elles ont été publiques : les
+  // laisser tomber sur l'accueil ferait perdre un favori sans le dire.
+  if (path === '/revue') return { kind: 'bilan', tab: 'review' };
+  if (path === '/retrospective') return { kind: 'bilan', tab: 'retro' };
   return null;
 }
+
+const BILAN_TITLES: Record<BilanTab, string> = {
+  retro: 'Rétrospective',
+  review: 'Revue',
+  goals: 'Objectifs',
+};
 
 /** Le titre de l'onglet pour une vue : les libellés de la barre du haut, et le nom de la matrice ouverte. */
 export function viewTitle(view: View, boardName?: string): string | null {
@@ -68,7 +94,8 @@ export function viewTitle(view: View, boardName?: string): string | null {
     case 'board': return boardName ?? null;
     case 'global': return 'Vue globale';
     case 'focus': return 'Aujourd’hui';
-    case 'review': return 'Revue';
-    case 'stats': return 'Rétrospective';
+    // La section ET l'onglet : « Bilan » seul ne dirait pas ce qu'on regarde,
+    // et l'onglet seul perdrait d'où il vient.
+    case 'bilan': return `Bilan · ${BILAN_TITLES[view.tab]}`;
   }
 }

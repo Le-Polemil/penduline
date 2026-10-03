@@ -34,7 +34,7 @@ export function withVT(fn: () => void) {
  * Relu à CHAQUE appel plutôt que mémorisé : la préférence peut changer en cours de
  * session, et il n'y a rien à économiser sur un `matchMedia` ponctuel.
  */
-function mouvementReduit(): boolean {
+export function mouvementReduit(): boolean {
   return (
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&

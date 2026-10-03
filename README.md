@@ -119,6 +119,34 @@ deviennent égales et que l'ordre ne se perde. Confortable, mais fini.
 La configuration commune est `vitest.base.mts`, à la racine — pour qu'`apps/web` et
 `apps/extension` puissent l'étendre sans dépendre de `packages/shared`.
 
+## Icônes
+
+```bash
+npm run icons          # régénère les PNG dérivés depuis le tracé vectoriel
+```
+
+Les icônes matricielles **ne se retouchent pas à la main** : elles se régénèrent
+depuis un SVG. La PR #143 a fait pencher le col du nid de 8° dans les fichiers qui
+portent un tracé, aucun des onze PNG dérivés n'a suivi, et le dessin est resté
+incohérent avec lui-même en production pendant des semaines (#151). Le script est là
+pour que ça ne se reproduise pas.
+
+Deux tracés cohabitent aujourd'hui, et il faut savoir lequel sert à quoi :
+
+| Fichier | Dessin | Sert à |
+|---|---|---|
+| `apps/web/public/logo.svg` | le « P » de l'en-tête | le favicon, et les icônes d'extension (16 → 128), régénérées par le script |
+| `apps/web/public/logo.png` | le même, en matriciel | le logo de la barre du haut et du panneau |
+| `apps/web/public/icon.svg` | le nid plein, plus ancien | les icônes PWA et `apple-touch`, **pas encore alignées** |
+
+`logo.svg` vient d'une vectorisation de `logo.png` : fidèle en petite taille, pas
+assez pour les 192 / 512 / 1024 du manifeste. Tant qu'on n'a pas de vecteur propre,
+les icônes PWA restent sur l'ancien dessin — les régénérer depuis un tracé
+approximatif serait reculer. Le jour où il arrive : une entrée de plus dans
+`scripts/icons.mjs`.
+
+Le rasteriseur est `@resvg/resvg-js`, pur Rust, sans dépendance système à installer.
+
 ## État
 
 **App web** (maquette « Matrice Maison.dc.html ») : accueil matrices, matrice 2×2 +

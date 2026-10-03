@@ -1792,34 +1792,9 @@ button.uni-head__name:focus-visible {
   .home-global--stats:hover { background: var(--color-neutral-100); border-color: var(--color-neutral-400); }
 }
 
-.stats { max-width: 760px; margin: 0 auto; padding: 44px 24px 60px; animation: mm-in 0.3s ease backwards; }
-.stats-head { margin-bottom: 22px; }
-.stats-title { font: 400 36px/1.1 var(--font-heading); color: var(--color-text); margin: 0; }
-.stats-sub { font: 15px/1.5 var(--font-body); color: var(--color-neutral-700); margin: 8px 0 14px; }
-
-.stats-periods { display: flex; gap: 6px; flex-wrap: wrap; }
-.stats-period {
-  font: 600 13px var(--font-body); color: var(--color-neutral-700);
-  background: none; border: 1.5px solid var(--color-neutral-400); border-radius: 999px;
-  padding: 6px 14px; cursor: pointer; transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-@media (hover: hover) and (pointer: fine) {
-  .stats-period:hover { background: var(--color-accent-100); }
-}
-.stats-period--on {
-  color: var(--color-accent-800); background: var(--color-accent-100);
-  border-color: var(--color-accent-600);
-}
+.stats { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; animation: mm-in 0.3s ease backwards; }
 
 .stats-empty { font: 15px/1.6 var(--font-body); color: var(--color-neutral-700); margin: 24px 0; }
-
-/* La phrase avant les graphiques : c'est elle qu'on retient, et elle doit être
-   lue avant ce qui la fonde. */
-.stats-sentence {
-  font: 400 19px/1.5 var(--font-heading); color: var(--color-text);
-  background: var(--card-warm); border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm); padding: 18px 20px; margin: 0 0 20px;
-}
 
 .stats-fig {
   margin: 0 0 18px; padding: 16px 18px 14px;
@@ -1870,9 +1845,7 @@ button.uni-head__name:focus-visible {
 }
 
 @media (max-width: 720px) {
-  .stats { padding: 28px 16px 48px; }
-  .stats-title { font-size: 28px; }
-  .stats-sentence { font-size: 17px; padding: 15px 16px; }
+  .stats { padding: 20px 16px 48px; }
   /* `.home-lenses` passe en colonne dans le bloc de la revue (#47) plus haut,
      qui porte aussi la mise en garde sur `flex: 1 1 240px`. Pas de doublon. */
   /* Les libellés passent au-dessus de leur barre : à 390 px, 5,5 rem de gouttière
@@ -1883,10 +1856,6 @@ button.uni-head__name:focus-visible {
   .bar__track { grid-area: track; }
   .spark { grid-template-columns: 1fr; align-items: stretch; }
   .spark-axis { margin-left: 0; }
-}
-
-@media (hover: none) {
-  .stats-period { min-height: 44px; padding: 0 16px; display: inline-flex; align-items: center; }
 }
 
 /* ── Mode « aujourd'hui » (#49) ───────────────────────────────────────────── */
@@ -2582,21 +2551,14 @@ button.uni-head__name:focus-visible {
 }
 .topbar :focus-visible, .hero :focus-visible, .shero :focus-visible { outline-color: #f0a774; }
 
-/* Au téléphone, la navigation passe sous le logo et défile à l'horizontale :
-   cinq entrées ne tiennent pas, et les replier dans un menu cacherait
-   « Aujourd'hui » — la plus utilisée au doigt. */
+/* Au téléphone, la barre du haut ne garde que le logo, la recherche et le
+   compte : sa navigation descend en barre d'onglets (voir `.tabbar` en fin de
+   feuille), qui ne défile pas et reste sous le pouce. */
 @media (max-width: 720px) {
   .topbar__inner { padding: 10px 16px; gap: 10px; }
   .topbar__name { font-size: 21px; }
-  .topbar__right { order: 2; }
   .topbar__search { min-width: 0; width: 44px; padding: 0; justify-content: center; }
   .topbar__search-label, .topbar__kbd { display: none; }
-  .topbar__nav {
-    order: 3; flex-basis: 100%; margin: 0 -16px; padding: 0 16px 2px;
-    flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none;
-  }
-  .topbar__nav::-webkit-scrollbar { display: none; }
-  .topbar__link { flex: none; }
 }
 
 /* ── Héros de l'accueil ──────────────────────────────────────────────────────
@@ -3068,3 +3030,590 @@ button.uni-head__name:focus-visible {
 /* Les portées en pastilles, sous le titre. */
 .shero__scopes { display: flex; gap: 6px; flex-wrap: wrap; }
 .shero__chip-n { font: 700 12px var(--font-body); opacity: 0.8; }
+
+/* ── La barre d'onglets du téléphone ────────────────────────────────────────
+   Cinq vues en bas, fixes, toujours à portée de pouce. Elle remplace la ligne
+   de pastilles défilante de la barre du haut : celle-ci faisait NAÎTRE « Revue »
+   et « Rétrospective » hors champ — il fallait deviner qu'on pouvait faire
+   défiler pour apprendre qu'elles existent — et elle remontait avec la page,
+   donc elle n'était plus là au moment où l'on voulait aller ailleurs.
+
+   `--tabbar-h` sert trois fois : ici, pour dégager le bas des écrans, et pour
+   relever les notifications. Une valeur, pas trois constantes à tenir d'accord. */
+.tabbar { display: none; }
+@media (max-width: 720px) {
+  :root { --tabbar-h: 62px; }
+  /* La barre du haut garde le logo, la recherche et le compte ; sa navigation
+     descend. */
+  .topbar__nav { display: none; }
+
+  .tabbar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 55;
+    display: block; background: var(--band-base, #1d1a16);
+    border-radius: 22px 22px 0 0;
+    /* `max()` et non une addition : sur un écran sans barre gestuelle l'inset
+       vaut zéro, et additionner doublerait une marge déjà suffisante. */
+    padding: 6px 6px max(8px, env(safe-area-inset-bottom));
+  }
+  .tabbar__list { display: flex; margin: 0; padding: 0; list-style: none; }
+  .tabbar__item { flex: 1; min-width: 0; }
+  .tabbar__link {
+    width: 100%; min-height: var(--tabbar-h); padding: 0 2px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    border: none; background: none; cursor: pointer;
+    color: #c2b6a2; font: 600 11.5px var(--font-body);
+  }
+  .tabbar__link[aria-current='page'] { color: #f3e9d8; font-weight: 700; }
+  /* La pastille se remplit sur la vue courante : un repère de forme en plus de
+     la graisse, pour qui ne distingue pas deux beiges. */
+  .tabbar__pill {
+    width: 52px; height: 30px; display: grid; place-items: center;
+    border-radius: 999px; background: transparent; color: #f3e9d8;
+    transition: background 0.15s, color 0.15s;
+  }
+  .tabbar__link[aria-current='page'] .tabbar__pill { background: #f3e9d8; color: #1d1a16; }
+  /* Cinq mots dans 390 px : « Aujourd'hui » est le plus long, et il doit tenir
+     sur une ligne plutôt que de pousser la barre à deux étages. */
+  .tabbar__label {
+    max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .tabbar :focus-visible { outline-color: #f0a774; }
+
+  /* Les écrans dégagent la hauteur de la barre : sans ça, la dernière carte de
+     chaque liste finit dessous, et l'ajout en bas de case devient inatteignable. */
+  .home,
+  .matrix,
+  .review,
+  .stats,
+  .focus {
+    padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 28px);
+  }
+  /* Les notifications remontent d'autant : ancrées au bas de l'écran, elles
+     seraient sinon rendues sous la barre — et leur « Annuler » avec. */
+  .toast-stack {
+    bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);
+  }
+}
+
+/* ── « Bilan » : la bande d'onglets de la section ───────────────────────────
+   Posée en tête du bandeau d'encre, au-dessus du titre : un onglet change le
+   titre, il ne peut donc pas vivre dessous — il s'y lirait comme un filtre du
+   contenu courant. */
+.btabs {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  margin: 0 0 -6px; padding: 2px; border-radius: 999px;
+  background: color-mix(in srgb, #f3e9d8 10%, transparent); align-self: flex-start;
+}
+.btabs__tab {
+  min-height: 40px; padding: 0 18px; border: none; border-radius: 999px; cursor: pointer;
+  background: transparent; color: var(--band-muted); font: 600 14px var(--font-body);
+  transition: background 0.15s, color 0.15s;
+}
+.btabs__tab[aria-selected='true'] { background: var(--band-text); color: var(--band); font-weight: 700; }
+@media (hover: hover) and (pointer: fine) {
+  .btabs__tab:not([aria-selected='true']):hover { color: var(--band-text); }
+}
+
+/* ── Rétrospective : le récit ───────────────────────────────────────────────
+   Tout ce qui précède les chapitres vit dans le bandeau — période comprise :
+   on change de période à n'importe quel endroit du récit, et le réglage doit
+   rester là où on l'a laissé, pas remonter de six écrans. */
+.retro-lead { gap: 16px; max-width: 900px; }
+.retro-title { max-width: 860px; font-size: clamp(34px, 5.4vw, 62px); }
+.retro-lede { margin: 0; max-width: 72ch; font: 500 17px/1.5 var(--font-body); color: #d8cdb9; }
+.retro-controls { display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; padding-top: 4px; }
+.retro-periods { display: flex; gap: 6px; flex-wrap: wrap; }
+.retro-caveat { font: 600 13.5px var(--font-body); color: var(--band-muted); }
+.retro-toc { list-style: none; margin: 6px 0 0; padding: 0; display: flex; gap: 8px; flex-wrap: wrap; }
+.retro-toc__link {
+  min-height: 44px; display: flex; align-items: center; gap: 8px; padding: 0 14px 0 8px;
+  border-radius: 999px; background: color-mix(in srgb, #f3e9d8 10%, transparent);
+  color: var(--band-text); text-decoration: none; font: 600 13.5px var(--font-body);
+}
+.retro-toc__n {
+  width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px;
+  background: color-mix(in srgb, #f3e9d8 16%, transparent); font: 400 14px var(--font-heading);
+}
+@media (hover: hover) and (pointer: fine) {
+  .retro-toc__link:hover { background: var(--band-raised); }
+}
+
+/* « Le bilan » : la masse du travail abattu, une colonne par semaine. */
+.retro-grid { display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap; }
+.retro-grid__week { flex: 0 0 auto; width: 76px; display: flex; flex-direction: column; gap: 6px; }
+.retro-grid__dots {
+  flex: 1; display: flex; flex-wrap: wrap; align-content: flex-end; gap: 3px;
+  min-height: 28px; padding: 6px 4px; border-radius: 10px; background: var(--color-neutral-100);
+}
+.retro-grid__dot { width: 7px; height: 7px; border-radius: 2px; }
+.retro-grid__label {
+  font: 600 10.5px var(--font-body); color: var(--color-neutral-700); text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.retro-fin {
+  margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--color-divider);
+  display: flex; align-items: center; gap: 12px 18px; flex-wrap: wrap;
+}
+.retro-fin__text { margin: 0; font: 400 21px var(--font-heading); color: var(--color-text); }
+.retro-fin__go {
+  min-height: 44px; padding: 0 18px; border: 1.5px solid var(--color-divider); border-radius: 999px;
+  background: var(--card-warm); color: var(--color-accent-700); cursor: pointer;
+  font: 700 14px var(--font-body);
+}
+@media (hover: hover) and (pointer: fine) {
+  .retro-fin__go:hover { background: var(--color-accent-100); color: var(--color-accent-800); }
+}
+@media (max-width: 720px) {
+  .retro-toc { gap: 6px; }
+  .retro-toc__link { font-size: 12.5px; padding: 0 12px 0 6px; }
+}
+
+/* ── « Objectifs » : ce que chaque case a vraiment servi ────────────────────
+   Un score est un nombre, et un nombre sans sa règle se lit comme un jugement :
+   chaque case montre donc l'usage qu'elle demande, puis le détail de ce qui a
+   été compté. */
+.go-total { align-items: baseline; gap: 12px; }
+.go-total__n { font: 400 clamp(44px, 5vw, 64px)/1 var(--font-heading); color: var(--band-text); }
+.go-total__text { display: flex; flex-direction: column; font: 600 14px/1.3 var(--font-body); color: #d8cdb9; }
+.go-total__trend { font-weight: 500; color: var(--band-muted); }
+
+.go-cases { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 14px; }
+.go-case {
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 18px 20px; border-radius: var(--radius-lg);
+  background: var(--card-warm); box-shadow: var(--shadow-sm);
+  border-left: 5px solid var(--q-ink);
+}
+.go-case__head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.go-case__title { margin: 0; font: 400 21px var(--font-heading); color: var(--q-dark); }
+.go-case__intent { flex: 1; min-width: 0; font: 500 12.5px var(--font-body); color: var(--color-neutral-700); }
+.go-case__n { flex: none; font: 400 24px/1 var(--font-heading); color: var(--q-dark); }
+.go-case__empty { margin: 0; font: 500 13.5px var(--font-body); color: var(--color-neutral-700); }
+
+.go-lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.go-line {
+  display: flex; align-items: baseline; gap: 10px;
+  padding: 7px 0; border-top: 1px solid var(--color-divider);
+  font: 500 13.5px/1.4 var(--font-body); color: var(--color-text);
+}
+.go-line:first-child { border-top: none; }
+/* Le compte d'abord : c'est lui qui dit l'ampleur, le barème ne fait que
+   convertir. */
+.go-line__n {
+  flex: none; min-width: 26px; text-align: right;
+  font: 400 17px var(--font-heading); color: var(--q-dark);
+}
+.go-line__label { flex: 1; min-width: 0; }
+.go-line__when { color: var(--color-neutral-700); font-style: italic; }
+.go-line__points { flex: none; font: 700 13px var(--font-body); color: var(--color-neutral-700); }
+.go-line--cost .go-line__n,
+.go-line--cost .go-line__points { color: var(--color-danger); }
+
+.go-recap {
+  margin-top: 18px; padding: 14px 20px; border-radius: var(--radius-lg);
+  background: var(--color-surface); display: flex; flex-direction: column; gap: 4px;
+}
+.go-recap__line {
+  margin: 0; display: flex; align-items: baseline; justify-content: space-between; gap: 16px;
+  font: 500 14px var(--font-body); color: var(--color-neutral-700);
+}
+.go-recap__line strong { font: 700 15px var(--font-body); color: var(--color-text); }
+.go-recap__line--total {
+  margin-top: 4px; padding-top: 10px; border-top: 1.5px solid var(--color-divider);
+  font-weight: 700; color: var(--color-text);
+}
+.go-recap__line--total strong { font: 400 24px var(--font-heading); }
+
+.go-notes { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.go-notes .stats-note { margin: 0; }
+@media (max-width: 720px) {
+  .go-total { width: 100%; }
+}
+
+/* ── Transitions entre vues (planche « Navigation entre vues — E ») ─────────
+   Le bandeau d'encre ne clignote pas d'un écran à l'autre : il S'ÉTIRE. Le
+   contenu, lui, glisse dans le sens du geste — vers la gauche quand on descend
+   la barre, vers la droite quand on la remonte. C'est ce qui donne une
+   géométrie à une navigation : on sait d'où l'on vient sans avoir à le lire.
+
+   ⚠️ LES NOMS NE SONT POSÉS QUE PENDANT LE SAUT. Un `view-transition-name` doit
+   être unique dans le document au moment de l'instantané : hors transition,
+   aucun élément n'en porte, et deux écrans ne peuvent pas se disputer un nom.
+   C'est `lib/transitions.ts` qui pose `data-vt` sur `<html>`, et le retire.
+
+   ⚠️ La direction vient de l'attribut, PAS du CSS. La même paire d'écrans se
+   traverse dans les deux sens, et un glissement qui irait toujours du même côté
+   ferait mentir le geste. */
+:root[data-vt~='on'] .topbar { view-transition-name: pd-bar; }
+:root[data-vt~='on'] .hero,
+:root[data-vt~='on'] .shero { view-transition-name: pd-band; }
+:root[data-vt~='on'] .hero__wave,
+:root[data-vt~='on'] .shero__wave { view-transition-name: pd-wave; }
+:root[data-vt~='on'] .hero__branch,
+:root[data-vt~='on'] .shero__branch { view-transition-name: pd-branch; }
+:root[data-vt~='on'] .hero__nest,
+:root[data-vt~='on'] .shero__nest { view-transition-name: pd-nest; }
+/* Le corps de l'écran : un seul de ces conteneurs existe à la fois. */
+:root[data-vt~='on'] .home,
+:root[data-vt~='on'] .matrix,
+:root[data-vt~='on'] .review,
+:root[data-vt~='on'] .stats,
+:root[data-vt~='on'] .focus { view-transition-name: pd-body; }
+
+/* La barre du haut ne bouge pas : elle est le seul point fixe du saut, et la
+   voir glisser avec le reste donnerait le mal de mer. */
+:root[data-vt~='on']::view-transition-group(pd-bar) { animation: none; z-index: 50; }
+:root[data-vt~='on']::view-transition-old(pd-bar) { display: none; }
+:root[data-vt~='on']::view-transition-new(pd-bar) { animation: none; }
+
+/* Le bandeau s'étire de l'ancienne hauteur à la nouvelle. On jette l'ancien
+   instantané et on étire le nouveau : deux images superposées qui changent de
+   hauteur produiraient un fondu sale au milieu. */
+:root[data-vt~='on']::view-transition-group(pd-band) {
+  z-index: 1; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='on']::view-transition-old(pd-band) { display: none; }
+:root[data-vt~='on']::view-transition-new(pd-band) {
+  animation: none; inline-size: 100%; block-size: 100%; object-fit: fill;
+}
+:root[data-vt~='on']::view-transition-group(pd-wave) {
+  z-index: 3; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='on']::view-transition-old(pd-wave) { display: none; }
+:root[data-vt~='on']::view-transition-new(pd-wave) { animation: none; }
+
+/* La branche reste fixe, le nid suit la hauteur du bandeau. Les deux images
+   sont étirées plutôt que fondues : un masque qui se fond sur lui-même
+   fantôme. */
+:root[data-vt~='on']::view-transition-group(pd-branch) { z-index: 2; animation-duration: 380ms; }
+:root[data-vt~='on']::view-transition-group(pd-nest) { z-index: 2; animation-duration: 380ms; }
+:root[data-vt~='on']::view-transition-old(pd-branch),
+:root[data-vt~='on']::view-transition-new(pd-branch),
+:root[data-vt~='on']::view-transition-old(pd-nest),
+:root[data-vt~='on']::view-transition-new(pd-nest) {
+  inline-size: 100%; block-size: 100%; object-fit: fill;
+}
+:root[data-vt~='on']::view-transition-old(pd-nest) { animation: vt-out 160ms ease-out both; }
+:root[data-vt~='on']::view-transition-new(pd-nest) { animation: vt-in 160ms ease-out both; }
+
+/* Le corps glisse. 26 % et non 100 % : un écran qui sort du champ se lit comme
+   un remplacement, un écran qui se décale d'un quart se lit comme un voisin. */
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; } }
+@keyframes vt-body-out-l { to { opacity: 0; transform: translateX(-26%); } }
+@keyframes vt-body-in-r { from { opacity: 0; transform: translateX(26%); } }
+@keyframes vt-body-out-r { to { opacity: 0; transform: translateX(26%); } }
+@keyframes vt-body-in-l { from { opacity: 0; transform: translateX(-26%); } }
+:root[data-vt~='on']::view-transition-group(pd-body) { z-index: 4; animation: none; }
+:root[data-vt~='fwd']::view-transition-old(pd-body) {
+  animation: vt-body-out-l 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-vt~='fwd']::view-transition-new(pd-body) {
+  animation: vt-body-in-r 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-vt~='back']::view-transition-old(pd-body) {
+  animation: vt-body-out-r 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-vt~='back']::view-transition-new(pd-body) {
+  animation: vt-body-in-l 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+
+/* ── Accueil → Matrice (planche « E : la carte s'ouvre, le nid s'éclaire ») ──
+   La carte ne disparaît pas en fondu : elle DEVIENT la surface de la page. Ses
+   coins s'ouvrent, sa couleur rejoint le fond, et les quatre mini-cases de son
+   aperçu deviennent les vraies cases — chacune avec son propre retard, pour
+   que la grille se déplie au lieu de sauter d'un bloc. Le nom de la matrice fait
+   le trajet de la carte au bandeau d'un seul mouvement, et les chiffres de la
+   mini-grille montent dans les pastilles du héros.
+
+   ⚠️ Tout est scopé à `[data-vt~='carte']` ET à `[data-vt-board]`. Le premier
+   jeton réserve ces noms aux ouvertures de matrice : sur un saut ordinaire, les
+   cases morpheraient vers des mini-cases sans contrepartie. Le second désigne
+   LA carte concernée — l'accueil en affiche une par matrice, et un
+   `view-transition-name` doit être unique dans le document. */
+@keyframes vt-card-open { from { background-color: var(--card-warm); border-radius: var(--radius-lg); } to { background-color: var(--color-bg); border-radius: 0; } }
+@keyframes vt-card-close { from { background-color: var(--color-bg); border-radius: 0; } to { background-color: var(--card-warm); border-radius: var(--radius-lg); } }
+@keyframes vt-q-open { from { border-radius: 8px; } to { border-radius: var(--radius-lg); } }
+@keyframes vt-q-close { from { border-radius: var(--radius-lg); } to { border-radius: 8px; } }
+@keyframes vt-rise { from { opacity: 0; transform: translateY(10px); } }
+@keyframes vt-pop { from { opacity: 0; transform: scale(0.86); } }
+
+:root[data-vt~='carte'] [data-vt-board] .board-card { view-transition-name: pd-card; }
+:root[data-vt~='carte'] .matrix { view-transition-name: pd-card; }
+:root[data-vt~='carte'] [data-vt-board] .board-card__name { view-transition-name: pd-title; }
+:root[data-vt~='carte'] .shero--board .shero__title { view-transition-name: pd-title; }
+/* La carte devient la page : on jette les deux instantanés et on peint le
+   groupe lui-même, sinon un aperçu de 60 px étiré en pleine page baverait. */
+:root[data-vt~='carte']::view-transition-group(pd-card) {
+  z-index: 5; animation-duration: 400ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='carte']::view-transition-old(pd-card),
+:root[data-vt~='carte']::view-transition-new(pd-card) { display: none; }
+:root[data-vt~='fwd']::view-transition-image-pair(pd-card) {
+  animation: vt-card-open 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-vt~='back']::view-transition-image-pair(pd-card) {
+  animation: vt-card-close 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Le titre : un seul trajet, de 20 px dans la carte à 54 px dans le bandeau.
+   Les deux instantanés sont étirés l'un vers l'autre — un fondu laisserait voir
+   deux graisses superposées à mi-chemin. */
+:root[data-vt~='carte']::view-transition-group(pd-title) {
+  z-index: 10; animation-duration: 400ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='carte']::view-transition-old(pd-title),
+:root[data-vt~='carte']::view-transition-new(pd-title) {
+  inline-size: 100%; block-size: 100%; object-fit: fill;
+}
+:root[data-vt~='carte']::view-transition-old(pd-title) { animation: vt-out 140ms ease both; }
+:root[data-vt~='carte']::view-transition-new(pd-title) { animation: vt-in 240ms ease 60ms both; }
+
+/* faire */
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--faire { view-transition-name: pd-q-0; }
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--faire .mini-grid__n { view-transition-name: pd-pn-0; }
+:root[data-vt~='carte'] .axes .quad--faire { view-transition-name: pd-q-0; }
+:root[data-vt~='carte'] .shero--board .hero__count--faire { view-transition-name: pd-pb-0; }
+:root[data-vt~='carte'] .shero--board .hero__count--faire .hero__count-n { view-transition-name: pd-pn-0; }
+:root[data-vt~='carte']::view-transition-group(pd-q-0) {
+  z-index: 7; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='carte']::view-transition-group(pd-pn-0) {
+  z-index: 10; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='fwd']::view-transition-group(pd-q-0),
+:root[data-vt~='fwd']::view-transition-group(pd-pn-0) { animation-delay: 0ms; }
+:root[data-vt~='back']::view-transition-group(pd-q-0),
+:root[data-vt~='back']::view-transition-group(pd-pn-0) { animation-delay: 72ms; }
+/* La case est peinte par son groupe : les deux instantanés se fondraient en
+   bouillie, un aplat de la bonne teinte traverse proprement. */
+:root[data-vt~='carte']::view-transition-old(pd-q-0),
+:root[data-vt~='carte']::view-transition-new(pd-q-0) { display: none; }
+:root[data-vt~='carte']::view-transition-image-pair(pd-q-0) { background-color: var(--q-faire-bg); }
+:root[data-vt~='fwd']::view-transition-image-pair(pd-q-0) {
+  animation: vt-q-open 380ms cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+}
+:root[data-vt~='back']::view-transition-image-pair(pd-q-0) {
+  animation: vt-q-close 380ms cubic-bezier(0.22, 1, 0.36, 1) 72ms both;
+}
+/* `plus-lighter` : deux chiffres superposés en fondu croisé donnent un gris
+   sale au milieu, additionnés ils restent lisibles de bout en bout. */
+:root[data-vt~='carte']::view-transition-old(pd-pn-0),
+:root[data-vt~='carte']::view-transition-new(pd-pn-0) {
+  inline-size: 100%; block-size: 100%; object-fit: fill; mix-blend-mode: plus-lighter;
+}
+:root[data-vt~='fwd']::view-transition-old(pd-pn-0) { animation: vt-out 140ms linear 0ms both; }
+:root[data-vt~='fwd']::view-transition-new(pd-pn-0) { animation: vt-in 140ms linear 0ms both; }
+:root[data-vt~='back']::view-transition-old(pd-pn-0) { animation: vt-out 140ms linear 72ms both; }
+:root[data-vt~='back']::view-transition-new(pd-pn-0) { animation: vt-in 140ms linear 72ms both; }
+/* La pastille n'existe que du côté matrice : elle éclôt, elle ne morphe pas. */
+:root[data-vt~='carte']::view-transition-group(pd-pb-0) { z-index: 9; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-pb-0) {
+  transform-origin: 22px 50%; animation: vt-pop 200ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
+}
+:root[data-vt~='carte']::view-transition-old(pd-pb-0) { animation: vt-out 110ms ease both; }
+
+/* planifier */
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--planifier { view-transition-name: pd-q-1; }
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--planifier .mini-grid__n { view-transition-name: pd-pn-1; }
+:root[data-vt~='carte'] .axes .quad--planifier { view-transition-name: pd-q-1; }
+:root[data-vt~='carte'] .shero--board .hero__count--planifier { view-transition-name: pd-pb-1; }
+:root[data-vt~='carte'] .shero--board .hero__count--planifier .hero__count-n { view-transition-name: pd-pn-1; }
+:root[data-vt~='carte']::view-transition-group(pd-q-1) {
+  z-index: 7; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='carte']::view-transition-group(pd-pn-1) {
+  z-index: 10; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='fwd']::view-transition-group(pd-q-1),
+:root[data-vt~='fwd']::view-transition-group(pd-pn-1) { animation-delay: 24ms; }
+:root[data-vt~='back']::view-transition-group(pd-q-1),
+:root[data-vt~='back']::view-transition-group(pd-pn-1) { animation-delay: 48ms; }
+/* La case est peinte par son groupe : les deux instantanés se fondraient en
+   bouillie, un aplat de la bonne teinte traverse proprement. */
+:root[data-vt~='carte']::view-transition-old(pd-q-1),
+:root[data-vt~='carte']::view-transition-new(pd-q-1) { display: none; }
+:root[data-vt~='carte']::view-transition-image-pair(pd-q-1) { background-color: var(--q-planifier-bg); }
+:root[data-vt~='fwd']::view-transition-image-pair(pd-q-1) {
+  animation: vt-q-open 380ms cubic-bezier(0.22, 1, 0.36, 1) 24ms both;
+}
+:root[data-vt~='back']::view-transition-image-pair(pd-q-1) {
+  animation: vt-q-close 380ms cubic-bezier(0.22, 1, 0.36, 1) 48ms both;
+}
+/* `plus-lighter` : deux chiffres superposés en fondu croisé donnent un gris
+   sale au milieu, additionnés ils restent lisibles de bout en bout. */
+:root[data-vt~='carte']::view-transition-old(pd-pn-1),
+:root[data-vt~='carte']::view-transition-new(pd-pn-1) {
+  inline-size: 100%; block-size: 100%; object-fit: fill; mix-blend-mode: plus-lighter;
+}
+:root[data-vt~='fwd']::view-transition-old(pd-pn-1) { animation: vt-out 140ms linear 24ms both; }
+:root[data-vt~='fwd']::view-transition-new(pd-pn-1) { animation: vt-in 140ms linear 24ms both; }
+:root[data-vt~='back']::view-transition-old(pd-pn-1) { animation: vt-out 140ms linear 48ms both; }
+:root[data-vt~='back']::view-transition-new(pd-pn-1) { animation: vt-in 140ms linear 48ms both; }
+/* La pastille n'existe que du côté matrice : elle éclôt, elle ne morphe pas. */
+:root[data-vt~='carte']::view-transition-group(pd-pb-1) { z-index: 9; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-pb-1) {
+  transform-origin: 22px 50%; animation: vt-pop 200ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
+}
+:root[data-vt~='carte']::view-transition-old(pd-pb-1) { animation: vt-out 110ms ease both; }
+
+/* deleguer */
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--deleguer { view-transition-name: pd-q-2; }
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--deleguer .mini-grid__n { view-transition-name: pd-pn-2; }
+:root[data-vt~='carte'] .axes .quad--deleguer { view-transition-name: pd-q-2; }
+:root[data-vt~='carte'] .shero--board .hero__count--deleguer { view-transition-name: pd-pb-2; }
+:root[data-vt~='carte'] .shero--board .hero__count--deleguer .hero__count-n { view-transition-name: pd-pn-2; }
+:root[data-vt~='carte']::view-transition-group(pd-q-2) {
+  z-index: 7; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='carte']::view-transition-group(pd-pn-2) {
+  z-index: 10; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='fwd']::view-transition-group(pd-q-2),
+:root[data-vt~='fwd']::view-transition-group(pd-pn-2) { animation-delay: 48ms; }
+:root[data-vt~='back']::view-transition-group(pd-q-2),
+:root[data-vt~='back']::view-transition-group(pd-pn-2) { animation-delay: 24ms; }
+/* La case est peinte par son groupe : les deux instantanés se fondraient en
+   bouillie, un aplat de la bonne teinte traverse proprement. */
+:root[data-vt~='carte']::view-transition-old(pd-q-2),
+:root[data-vt~='carte']::view-transition-new(pd-q-2) { display: none; }
+:root[data-vt~='carte']::view-transition-image-pair(pd-q-2) { background-color: var(--q-deleguer-bg); }
+:root[data-vt~='fwd']::view-transition-image-pair(pd-q-2) {
+  animation: vt-q-open 380ms cubic-bezier(0.22, 1, 0.36, 1) 48ms both;
+}
+:root[data-vt~='back']::view-transition-image-pair(pd-q-2) {
+  animation: vt-q-close 380ms cubic-bezier(0.22, 1, 0.36, 1) 24ms both;
+}
+/* `plus-lighter` : deux chiffres superposés en fondu croisé donnent un gris
+   sale au milieu, additionnés ils restent lisibles de bout en bout. */
+:root[data-vt~='carte']::view-transition-old(pd-pn-2),
+:root[data-vt~='carte']::view-transition-new(pd-pn-2) {
+  inline-size: 100%; block-size: 100%; object-fit: fill; mix-blend-mode: plus-lighter;
+}
+:root[data-vt~='fwd']::view-transition-old(pd-pn-2) { animation: vt-out 140ms linear 48ms both; }
+:root[data-vt~='fwd']::view-transition-new(pd-pn-2) { animation: vt-in 140ms linear 48ms both; }
+:root[data-vt~='back']::view-transition-old(pd-pn-2) { animation: vt-out 140ms linear 24ms both; }
+:root[data-vt~='back']::view-transition-new(pd-pn-2) { animation: vt-in 140ms linear 24ms both; }
+/* La pastille n'existe que du côté matrice : elle éclôt, elle ne morphe pas. */
+:root[data-vt~='carte']::view-transition-group(pd-pb-2) { z-index: 9; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-pb-2) {
+  transform-origin: 22px 50%; animation: vt-pop 200ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
+}
+:root[data-vt~='carte']::view-transition-old(pd-pb-2) { animation: vt-out 110ms ease both; }
+
+/* eliminer */
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--eliminer { view-transition-name: pd-q-3; }
+:root[data-vt~='carte'] [data-vt-board] .mini-grid__cell--eliminer .mini-grid__n { view-transition-name: pd-pn-3; }
+:root[data-vt~='carte'] .axes .quad--eliminer { view-transition-name: pd-q-3; }
+:root[data-vt~='carte'] .shero--board .hero__count--eliminer { view-transition-name: pd-pb-3; }
+:root[data-vt~='carte'] .shero--board .hero__count--eliminer .hero__count-n { view-transition-name: pd-pn-3; }
+:root[data-vt~='carte']::view-transition-group(pd-q-3) {
+  z-index: 7; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='carte']::view-transition-group(pd-pn-3) {
+  z-index: 10; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+  animation-fill-mode: both;
+}
+:root[data-vt~='fwd']::view-transition-group(pd-q-3),
+:root[data-vt~='fwd']::view-transition-group(pd-pn-3) { animation-delay: 72ms; }
+:root[data-vt~='back']::view-transition-group(pd-q-3),
+:root[data-vt~='back']::view-transition-group(pd-pn-3) { animation-delay: 0ms; }
+/* La case est peinte par son groupe : les deux instantanés se fondraient en
+   bouillie, un aplat de la bonne teinte traverse proprement. */
+:root[data-vt~='carte']::view-transition-old(pd-q-3),
+:root[data-vt~='carte']::view-transition-new(pd-q-3) { display: none; }
+:root[data-vt~='carte']::view-transition-image-pair(pd-q-3) { background-color: var(--q-eliminer-bg); }
+:root[data-vt~='fwd']::view-transition-image-pair(pd-q-3) {
+  animation: vt-q-open 380ms cubic-bezier(0.22, 1, 0.36, 1) 72ms both;
+}
+:root[data-vt~='back']::view-transition-image-pair(pd-q-3) {
+  animation: vt-q-close 380ms cubic-bezier(0.22, 1, 0.36, 1) 0ms both;
+}
+/* `plus-lighter` : deux chiffres superposés en fondu croisé donnent un gris
+   sale au milieu, additionnés ils restent lisibles de bout en bout. */
+:root[data-vt~='carte']::view-transition-old(pd-pn-3),
+:root[data-vt~='carte']::view-transition-new(pd-pn-3) {
+  inline-size: 100%; block-size: 100%; object-fit: fill; mix-blend-mode: plus-lighter;
+}
+:root[data-vt~='fwd']::view-transition-old(pd-pn-3) { animation: vt-out 140ms linear 72ms both; }
+:root[data-vt~='fwd']::view-transition-new(pd-pn-3) { animation: vt-in 140ms linear 72ms both; }
+:root[data-vt~='back']::view-transition-old(pd-pn-3) { animation: vt-out 140ms linear 0ms both; }
+:root[data-vt~='back']::view-transition-new(pd-pn-3) { animation: vt-in 140ms linear 0ms both; }
+/* La pastille n'existe que du côté matrice : elle éclôt, elle ne morphe pas. */
+:root[data-vt~='carte']::view-transition-group(pd-pb-3) { z-index: 9; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-pb-3) {
+  transform-origin: 22px 50%; animation: vt-pop 200ms cubic-bezier(0.22, 1, 0.36, 1) 160ms both;
+}
+:root[data-vt~='carte']::view-transition-old(pd-pb-3) { animation: vt-out 110ms ease both; }
+
+/* L'en-tête d'une case arrive APRÈS elle : la case s'ouvre vide, puis son nom
+   et son compte montent d'un cran. Le nom n'existe que du côté matrice — sur
+   l'accueil, une mini-case n'a pas d'en-tête : il naît, il ne morphe pas. */
+:root[data-vt~='carte'] .axes .quad--faire .quad-head { view-transition-name: pd-qc-0; }
+:root[data-vt~='carte']::view-transition-group(pd-qc-0) { z-index: 8; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-qc-0) { animation: vt-rise 240ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both; }
+:root[data-vt~='carte']::view-transition-old(pd-qc-0) { animation: vt-out 100ms ease both; }
+:root[data-vt~='carte'] .axes .quad--planifier .quad-head { view-transition-name: pd-qc-1; }
+:root[data-vt~='carte']::view-transition-group(pd-qc-1) { z-index: 8; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-qc-1) { animation: vt-rise 240ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both; }
+:root[data-vt~='carte']::view-transition-old(pd-qc-1) { animation: vt-out 100ms ease both; }
+:root[data-vt~='carte'] .axes .quad--deleguer .quad-head { view-transition-name: pd-qc-2; }
+:root[data-vt~='carte']::view-transition-group(pd-qc-2) { z-index: 8; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-qc-2) { animation: vt-rise 240ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both; }
+:root[data-vt~='carte']::view-transition-old(pd-qc-2) { animation: vt-out 100ms ease both; }
+:root[data-vt~='carte'] .axes .quad--eliminer .quad-head { view-transition-name: pd-qc-3; }
+:root[data-vt~='carte']::view-transition-group(pd-qc-3) { z-index: 8; animation: none; }
+:root[data-vt~='carte']::view-transition-new(pd-qc-3) { animation: vt-rise 240ms cubic-bezier(0.22, 1, 0.36, 1) 140ms both; }
+:root[data-vt~='carte']::view-transition-old(pd-qc-3) { animation: vt-out 100ms ease both; }
+
+/* ── Ce qui arrive après un geste « au nid » ────────────────────────────────
+   La pièce réglée part vers le nid (`envoyerAuNid`), et la suivante prend sa
+   place en se présentant plutôt qu'en apparaissant. Les deux animations
+   rejouent parce que React remonte l'élément — `key` sur la tâche courante et
+   sur la carte de revue : sans remontage, une animation CSS ne redémarre pas
+   sur un élément qui n'a fait que changer de contenu. */
+@keyframes fx-dangle {
+  0% { opacity: 0; transform: rotate(-9deg) translateY(-10px); }
+  40% { opacity: 1; transform: rotate(5deg); }
+  70% { transform: rotate(-2deg); }
+  100% { transform: none; }
+}
+/* Le pivot est AU-DESSUS du titre : la tâche pend du nid, elle ne tourne pas
+   sur elle-même. */
+.fx-title { animation: fx-dangle 440ms ease-out 30ms both; transform-origin: 50% -24px; }
+
+@keyframes rv-deal { from { opacity: 0; transform: translateY(-14px) rotate(-1.5deg); } }
+.rv-card { animation: rv-deal 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+/* Le bilan n'est pas distribué : il conclut. */
+.rv-card--bilan, .rv-card--calme { animation: none; }
+
+/* ── Univers → Vue globale (planche « G : le plateau se déplie + le nid ») ───
+   Le plateau d'un univers devient la page, et chaque mini-case de chaque
+   matrice vole vers le groupe qui lui correspond dans la grande grille. C'est
+   la seule transition dont les noms sont posés en JavaScript : il en faut un
+   par couple (matrice, case), et leur nombre ne se connaît qu'à l'exécution.
+   Voir `marquerUnivers` dans `lib/transitions.ts`. */
+:root[data-vt~='univers']::view-transition-group(pd-tray) {
+  z-index: 4; animation-duration: 420ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='univers']::view-transition-old(pd-tray) { animation: vt-out 180ms ease both; }
+:root[data-vt~='univers']::view-transition-new(pd-tray) { animation: vt-in 260ms ease 120ms both; }
+/* Les groupes volent. Un seul sélecteur les couvre tous : leurs noms sont
+   nombreux et inconnus d'avance, mais ils partagent le même préfixe — et
+   `::view-transition-group(.pd-vol)` prend une CLASSE de transition, pas un
+   nom. C'est ce que `view-transition-class` sert à déclarer. */
+:root[data-vt~='univers'] .bgroup[data-vt-nom],
+:root[data-vt~='univers'] .mini-grid__cell[data-vt-nom] { view-transition-class: pd-vol; }
+:root[data-vt~='univers']::view-transition-group(.pd-vol) {
+  z-index: 7; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='univers']::view-transition-old(.pd-vol) { animation: vt-out 160ms ease both; }
+:root[data-vt~='univers']::view-transition-new(.pd-vol) { animation: vt-in 220ms ease 100ms both; }
