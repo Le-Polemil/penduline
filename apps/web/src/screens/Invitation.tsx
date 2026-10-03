@@ -8,6 +8,7 @@ import {
   INVITATION_PATH,
 } from '../lib/partage';
 import type { InvitationLue } from '@penduline/shared';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 
 /**
  * L'écran d'acceptation d'un lien d'invitation (#53).
@@ -23,6 +24,7 @@ import type { InvitationLue } from '@penduline/shared';
  * sans compte » sans un seul chemin de plus.
  */
 export function InvitationScreen({ jeton }: { jeton: string }) {
+  useDocumentTitle('Invitation');
   const [details, setDetails] = useState<InvitationLue | null>(null);
   const [chargement, setChargement] = useState(true);
   const [erreur, setErreur] = useState<string | null>(null);

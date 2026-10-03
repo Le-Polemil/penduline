@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Loader } from '../components/Loader';
 import { lireDemande, repondreDemande, type DemandeAutorisation } from '../lib/mcp';
+import { useDocumentTitle } from '../lib/useDocumentTitle';
 
 /**
  * L'écran de consentement du serveur MCP (#23).
@@ -15,6 +16,7 @@ import { lireDemande, repondreDemande, type DemandeAutorisation } from '../lib/m
  * quelqu'un d'autre.
  */
 export function AuthorizeScreen({ demande, jeton }: { demande: string; jeton: string }) {
+  useDocumentTitle('Autoriser une application');
   const [details, setDetails] = useState<DemandeAutorisation | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [envoi, setEnvoi] = useState(false);
