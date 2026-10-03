@@ -19,6 +19,7 @@ import { AuthorizeScreen } from './screens/Authorize';
 import { readInvitation } from './lib/partage';
 import { HOME, viewTitle, type View } from './lib/route';
 import { useDocumentTitle } from './lib/useDocumentTitle';
+import { sensEntre, transitionDeVue } from './lib/transitions';
 import { useRoute } from './lib/useRoute';
 import { InvitationScreen } from './screens/Invitation';
 import { ConnectedApps } from './components/ConnectedApps';
@@ -238,7 +239,10 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
    * portée par défaut de la vue globale.
    */
   function naviguer(to: 'home' | 'focus' | 'global' | 'bilan') {
-    setView(
+    // Le glissement rejoue le geste : vers la droite si l'on descend la barre,
+    // vers la gauche si on la remonte. La direction ne se devine pas en CSS —
+    // la même paire d'écrans se traverse dans les deux sens.
+    const cible: View =
       to === 'home'
         ? HOME
         : to === 'global'
@@ -247,8 +251,8 @@ function Workspace({ userId, email }: { userId: string; email: string | null }) 
             // La rétrospective ouvre le Bilan : c'est le récit, celui par quoi
             // on commence quand on vient regarder en arrière.
             ? { kind: 'bilan', tab: 'retro' }
-            : { kind: to },
-    );
+            : { kind: to };
+    transitionDeVue(sensEntre(view.kind, to), () => setView(cible));
   }
 
   function allerA(hit: SearchHit) {

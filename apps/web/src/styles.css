@@ -3230,3 +3230,91 @@ button.uni-head__name:focus-visible {
 @media (max-width: 720px) {
   .go-total { width: 100%; }
 }
+
+/* ── Transitions entre vues (planche « Navigation entre vues — E ») ─────────
+   Le bandeau d'encre ne clignote pas d'un écran à l'autre : il S'ÉTIRE. Le
+   contenu, lui, glisse dans le sens du geste — vers la gauche quand on descend
+   la barre, vers la droite quand on la remonte. C'est ce qui donne une
+   géométrie à une navigation : on sait d'où l'on vient sans avoir à le lire.
+
+   ⚠️ LES NOMS NE SONT POSÉS QUE PENDANT LE SAUT. Un `view-transition-name` doit
+   être unique dans le document au moment de l'instantané : hors transition,
+   aucun élément n'en porte, et deux écrans ne peuvent pas se disputer un nom.
+   C'est `lib/transitions.ts` qui pose `data-vt` sur `<html>`, et le retire.
+
+   ⚠️ La direction vient de l'attribut, PAS du CSS. La même paire d'écrans se
+   traverse dans les deux sens, et un glissement qui irait toujours du même côté
+   ferait mentir le geste. */
+:root[data-vt~='on'] .topbar { view-transition-name: pd-bar; }
+:root[data-vt~='on'] .hero,
+:root[data-vt~='on'] .shero { view-transition-name: pd-band; }
+:root[data-vt~='on'] .hero__wave,
+:root[data-vt~='on'] .shero__wave { view-transition-name: pd-wave; }
+:root[data-vt~='on'] .hero__branch,
+:root[data-vt~='on'] .shero__branch { view-transition-name: pd-branch; }
+:root[data-vt~='on'] .hero__nest,
+:root[data-vt~='on'] .shero__nest { view-transition-name: pd-nest; }
+/* Le corps de l'écran : un seul de ces conteneurs existe à la fois. */
+:root[data-vt~='on'] .home,
+:root[data-vt~='on'] .matrix,
+:root[data-vt~='on'] .review,
+:root[data-vt~='on'] .stats,
+:root[data-vt~='on'] .focus { view-transition-name: pd-body; }
+
+/* La barre du haut ne bouge pas : elle est le seul point fixe du saut, et la
+   voir glisser avec le reste donnerait le mal de mer. */
+:root[data-vt~='on']::view-transition-group(pd-bar) { animation: none; z-index: 50; }
+:root[data-vt~='on']::view-transition-old(pd-bar) { display: none; }
+:root[data-vt~='on']::view-transition-new(pd-bar) { animation: none; }
+
+/* Le bandeau s'étire de l'ancienne hauteur à la nouvelle. On jette l'ancien
+   instantané et on étire le nouveau : deux images superposées qui changent de
+   hauteur produiraient un fondu sale au milieu. */
+:root[data-vt~='on']::view-transition-group(pd-band) {
+  z-index: 1; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='on']::view-transition-old(pd-band) { display: none; }
+:root[data-vt~='on']::view-transition-new(pd-band) {
+  animation: none; inline-size: 100%; block-size: 100%; object-fit: fill;
+}
+:root[data-vt~='on']::view-transition-group(pd-wave) {
+  z-index: 3; animation-duration: 380ms; animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+:root[data-vt~='on']::view-transition-old(pd-wave) { display: none; }
+:root[data-vt~='on']::view-transition-new(pd-wave) { animation: none; }
+
+/* La branche reste fixe, le nid suit la hauteur du bandeau. Les deux images
+   sont étirées plutôt que fondues : un masque qui se fond sur lui-même
+   fantôme. */
+:root[data-vt~='on']::view-transition-group(pd-branch) { z-index: 2; animation-duration: 380ms; }
+:root[data-vt~='on']::view-transition-group(pd-nest) { z-index: 2; animation-duration: 380ms; }
+:root[data-vt~='on']::view-transition-old(pd-branch),
+:root[data-vt~='on']::view-transition-new(pd-branch),
+:root[data-vt~='on']::view-transition-old(pd-nest),
+:root[data-vt~='on']::view-transition-new(pd-nest) {
+  inline-size: 100%; block-size: 100%; object-fit: fill;
+}
+:root[data-vt~='on']::view-transition-old(pd-nest) { animation: vt-out 160ms ease-out both; }
+:root[data-vt~='on']::view-transition-new(pd-nest) { animation: vt-in 160ms ease-out both; }
+
+/* Le corps glisse. 26 % et non 100 % : un écran qui sort du champ se lit comme
+   un remplacement, un écran qui se décale d'un quart se lit comme un voisin. */
+@keyframes vt-out { to { opacity: 0; } }
+@keyframes vt-in { from { opacity: 0; } }
+@keyframes vt-body-out-l { to { opacity: 0; transform: translateX(-26%); } }
+@keyframes vt-body-in-r { from { opacity: 0; transform: translateX(26%); } }
+@keyframes vt-body-out-r { to { opacity: 0; transform: translateX(26%); } }
+@keyframes vt-body-in-l { from { opacity: 0; transform: translateX(-26%); } }
+:root[data-vt~='on']::view-transition-group(pd-body) { z-index: 4; animation: none; }
+:root[data-vt~='fwd']::view-transition-old(pd-body) {
+  animation: vt-body-out-l 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-vt~='fwd']::view-transition-new(pd-body) {
+  animation: vt-body-in-r 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-vt~='back']::view-transition-old(pd-body) {
+  animation: vt-body-out-r 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-vt~='back']::view-transition-new(pd-body) {
+  animation: vt-body-in-l 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
